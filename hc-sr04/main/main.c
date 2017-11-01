@@ -49,12 +49,17 @@ static const char* NEC_TAG = "NEC";
 #define rmt_item32_tIMEOUT_US  950   /*!< RMT receiver timeout value(us) */
 
 
+
+#define US2TICKS(us)	(us / 10 * RMT_TICK_10_US)
+#define TICKS2US(ticks)	(ticks * 10 / RMT_TICK_10_US)
+
+
 static inline void set_item_edge(rmt_item32_t* item, int low_us, int high_us)
 {
     item->level0 = 0;
-    item->duration0 = (low_us) / 10 * RMT_TICK_10_US;
+    item->duration0 = US2TICKS(low_us);
     item->level1 = 1;
-    item->duration1 = (high_us) / 10 * RMT_TICK_10_US;
+    item->duration1 = US2TICKS(high_us);
 }
 
 
@@ -116,17 +121,19 @@ static void rx_task()
     rmt_get_ringbuf_handle(channel, &rb);
     rmt_rx_start(channel, 1);
 
-    while(rb)
+    while (rb)
 	{
         size_t rx_size = 0;
         //try to receive data from ringbuffer.
         //RMT driver will push all the data it receives to its ringbuffer.
         //We just need to parse the value and return the spaces of ringbuffer.
         rmt_item32_t* item = (rmt_item32_t*) xRingbufferReceive(rb, &rx_size, 1000);
-        if(item)
+        if (item)
         {
-        	for (int i=0; i<rx_size; ++i)
-        		ESP_LOGI(NEC_TAG, "RMT RCV -- %d:%d | %d:%d | %dcm", item[i].level0, item[i].duration0, item[i].level1, item[i].duration1, item[i].duration1 / 58);
+        	for (int i=0; i<rx_size / sizeof(rmt_item32_t); ++i)
+        		ESP_LOGI(NEC_TAG, "RMT RCV -- %d:%d | %d:%d",
+						item[i].level0, TICKS2US(item[i].duration0),
+						item[i].level1, TICKS2US(item[i].duration1));
             //after parsing the data, return spaces to ringbuffer.
             vRingbufferReturnItem(rb, (void*) item);
         } else {
