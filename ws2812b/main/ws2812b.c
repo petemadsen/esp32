@@ -1,8 +1,5 @@
 /**
- *
- * Based on "NEC remote infrared RMT example"
- * https://github.com/espressif/esp-idf/tree/master/examples/peripherals/rmt_nec_tx_rx
- *
+ * ws2812b.c
  */
 #include <stdio.h>
 #include <string.h>
@@ -18,53 +15,71 @@
 
 #include "sdkconfig.h"
 
-static const char* NEC_TAG = "HCSR04";
+static const char* MY_TAG = "WS2812B";
 
 
-#define RMT_TX_CHANNEL    1     /*!< RMT channel for transmitter */
-#define RMT_TX_GPIO_NUM  18     /*!< GPIO number for transmitter signal */
-
-#define RMT_CLK_DIV      100    /*!< RMT counter clock divider */
-#define RMT_TICK_10_US    (80000000/RMT_CLK_DIV/100000)   /*!< RMT counter value for 10 us.(Source clock is APB clock) */
-
-#define HCSR04_MAX_TIMEOUT_US  25000   /*!< RMT receiver timeout value(us) */
+#define RMT_TX_CHANNEL    1     // RMT channel for transmitter
+#define RMT_TX_GPIO_NUM  18     // GPIO number for transmitter signal
+#define RMT_CLK_DIV      8    // RMT clock divider => 10MHz => 100ns
 
 
-#define US2TICKS(us)	(us / 10 * RMT_TICK_10_US)
-#define TICKS2US(ticks)	(ticks * 10 / RMT_TICK_10_US)
+// WS2812 timings, multitude of 100ns, see RMT_CLK_DIV
+#define WS2812B_BIT_1_HIGH	9 // 900ns (900ns +/- 150ns)
+#define WS2812B_BIT_1_LOW	3 // 300ns (350ns +/- 150ns)
+#define WS2812B_BIT_0_HIGH	3 // 300ns (350ns +/- 150ns)
+#define WS2812B_BIT_0_LOW	9 // 900ns (900ns +/- 150ns)
 
 
-static inline void set_item_edge(rmt_item32_t* item, int low_us, int high_us)
+/**
+ *
+ */
+static inline void set_led_color(rmt_item32_t* item, uint32_t rgb)
 {
-    item->level0 = 0;
-    item->duration0 = US2TICKS(low_us);
-    item->level1 = 1;
-    item->duration1 = US2TICKS(high_us);
+	uint32_t grb = ((rgb & 0xff0000) >> 8) | ((rgb & 0xff00) << 8) | (rgb & 0xff);
+
+	for (uint32_t m=(1<<23); m!=0; m>>=1)
+	{
+		item->level0 = 1;
+		item->duration0 = (m & grb ? WS2812B_BIT_1_HIGH : WS2812B_BIT_0_HIGH);
+		item->level1 = 0;
+		item->duration1 = (m & grb ? WS2812B_BIT_1_LOW : WS2812B_BIT_0_LOW);
+
+		++item;
+	}
 }
 
 
 /*
  * @brief RMT transmitter initialization
  */
-static void nec_tx_init()
+static bool init_rmt()
 {
     rmt_config_t rmt_tx;
+
+    rmt_tx.rmt_mode = RMT_MODE_TX;
     rmt_tx.channel = RMT_TX_CHANNEL;
     rmt_tx.gpio_num = RMT_TX_GPIO_NUM;
     rmt_tx.mem_block_num = 1;
     rmt_tx.clk_div = RMT_CLK_DIV;
-    rmt_tx.tx_config.loop_en = false;
 
+    // don't need but must be initialized!
+    rmt_tx.tx_config.loop_en = false;
+    rmt_tx.tx_config.carrier_en = false;
     rmt_tx.tx_config.carrier_duty_percent = 50;
     rmt_tx.tx_config.carrier_freq_hz = 38000;
     rmt_tx.tx_config.carrier_level = 1;
-    rmt_tx.tx_config.carrier_en = 0;	// off
-
-    rmt_tx.tx_config.idle_level = 0;
+    rmt_tx.tx_config.idle_level = RMT_IDLE_LEVEL_LOW;
     rmt_tx.tx_config.idle_output_en = true;
-    rmt_tx.rmt_mode = 0;
-    rmt_config(&rmt_tx);
-    rmt_driver_install(rmt_tx.channel, 0, 0);
+
+    esp_err_t err = rmt_config(&rmt_tx);
+    if (err != ESP_OK)
+    	return false;
+
+    err = rmt_driver_install(rmt_tx.channel, 0, 0);
+    if (err != ESP_OK)
+        return false;
+
+    return true;
 }
 
 
@@ -75,20 +90,31 @@ static void nec_tx_init()
 static void tx_task()
 {
     vTaskDelay(10);
-    nec_tx_init();
+    if (!init_rmt())
+    {
+    	ESP_LOGE(MY_TAG, "RMT init failed.");
+    	return;
+    }
 
     int channel = RMT_TX_CHANNEL;
 
-	int item_num = 32;
+    int leds_num = 8;
+	int item_num = leds_num * 24;
+
+	uint32_t color = 0xff0000;
+	int cur_pos = 0;
+
     for (;;)
 	{
-        ESP_LOGI(NEC_TAG, "RMT TX DATA");
+        ESP_LOGI(MY_TAG, "RMT TX DATA: 0x%x", color);
 
-		rmt_item32_t* items = malloc(item_num);
-		for (int i=0; i<item_num; ++i)
+		rmt_item32_t* items = malloc(sizeof(rmt_item32_t) * item_num);
+
+		for (int i=0; i<leds_num; ++i)
 		{
-			set_item_edge(&items[i], 900, 350);
+			set_led_color(items + i * 24, cur_pos==i ? 0x0000ff : 0);
 		}
+		cur_pos = (cur_pos + 1) % leds_num;
 
         // To send data according to the waveform items.
         rmt_write_items(channel, items, item_num, true);
@@ -98,7 +124,7 @@ static void tx_task()
 		
 		free(items);
 
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        vTaskDelay(100 / portTICK_PERIOD_MS);
     }
 
     vTaskDelete(NULL);
