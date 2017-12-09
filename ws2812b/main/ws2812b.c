@@ -1,12 +1,10 @@
 /**
  * ws2812b.c
  */
+#include "ws2812b.h"
+
 #include <stdio.h>
 #include <string.h>
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "freertos/queue.h"
-#include "freertos/semphr.h"
 #include "esp_err.h"
 #include "esp_log.h"
 #include "driver/rmt.h"
@@ -87,51 +85,52 @@ static bool init_rmt()
  * @brief RMT transmitter demo, this task will periodically send NEC data. (100 * 32 bits each time.)
  *
  */
-static void tx_task()
+static void tx_task(void* arg)
 {
     vTaskDelay(10);
+
     if (!init_rmt())
     {
     	ESP_LOGE(MY_TAG, "RMT init failed.");
     	return;
     }
 
+    struct leds_t* leds = (struct leds_t*)arg;
+	xSemaphoreGive(leds->sem);
+
     int channel = RMT_TX_CHANNEL;
 
-    int leds_num = 8;
-	int item_num = leds_num * 24;
-
-	uint32_t color = 0xff0000;
-	int cur_pos = 0;
+	int item_num = leds->num_leds * 24;
+	rmt_item32_t* items = malloc(sizeof(rmt_item32_t) * item_num);
 
     for (;;)
 	{
-        ESP_LOGI(MY_TAG, "RMT TX DATA: 0x%x", color);
+    	xSemaphoreTake(leds->sem, portMAX_DELAY);
+//        ESP_LOGI(MY_TAG, "RMT TX DATA);
 
-		rmt_item32_t* items = malloc(sizeof(rmt_item32_t) * item_num);
-
-		for (int i=0; i<leds_num; ++i)
+		for (int i=0; i<leds->num_leds; ++i)
 		{
-			set_led_color(items + i * 24, cur_pos==i ? 0x0000ff : 0);
+			set_led_color(items + i * 24, leds->leds[i]);
 		}
-		cur_pos = (cur_pos + 1) % leds_num;
 
         // To send data according to the waveform items.
         rmt_write_items(channel, items, item_num, true);
         // Wait until sending is done.
         rmt_wait_tx_done(channel, portMAX_DELAY);
-        // before we free the data, make sure sending is already done.
-		
-		free(items);
+
+    	xSemaphoreGive(leds->sem);
 
         vTaskDelay(100 / portTICK_PERIOD_MS);
     }
+
+    // before we free the data, make sure sending is already done.
+    free(items);
 
     vTaskDelete(NULL);
 }
 
 
-void ws2812b_init()
+void ws2812b_init(struct leds_t* leds)
 {
-    xTaskCreate(tx_task, "tx_task", 2048, NULL, 10, NULL);
+    xTaskCreate(tx_task, "tx_task", 2048, leds, 10, NULL);
 }
