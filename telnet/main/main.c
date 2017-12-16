@@ -18,7 +18,7 @@
 #include <lwip/netdb.h>
 
 #include "config.h"
-#include "http_server.h"
+#include "telnet.h"
 
 
 int led_on = 1;
@@ -120,7 +120,7 @@ void app_main(void)
 	wifi_init();
 
 
-	xTaskCreate(&http_server, "http_server", 2048, NULL, 5, NULL);
+	xTaskCreate(&telnet_server, "telnet_server", 2048, NULL, 5, NULL);
 //	xTaskCreate(&task_blinking_led, "blinking_led", 2048, NULL, 5, NULL);
 }
 
