@@ -84,7 +84,6 @@ static void ina219_i2c_task()
 
 	float current_lsb = d_max_iexpected / 32768.0;
 	uint16_t calibration = 0.04096 / (current_lsb * r_shunt);
-	calibration = 5851;
 	ESP_LOGI(M_TAG, "CALIBRATION: %u", calibration);
 	calibration = ina219_get(addr, INA219_CMD_CALIBRATION, calibration);
 	ESP_LOGI(M_TAG, "CALIBRATION: %u", calibration);
@@ -103,9 +102,9 @@ static void ina219_i2c_task()
 		float shunt_current = shunt_current_reg * current_lsb;
 
 		ESP_LOGI(M_TAG, "=>");
-		ESP_LOGI(M_TAG, "..shunt_voltage..: %u / %.3f", shunt_voltage_reg, shunt_voltage);
-		ESP_LOGI(M_TAG, "..bus_voltage....: %u / %.3f V", bus_voltage_reg, bus_voltage);
-		ESP_LOGI(M_TAG, "..shunt_current..: %u / %.3f A / %.3f A", shunt_current_reg, shunt_current_estimated, shunt_current);
+		ESP_LOGI(M_TAG, "..shunt_voltage..: %u / %.6f", shunt_voltage_reg, shunt_voltage);
+		ESP_LOGI(M_TAG, "..bus_voltage....: %u / %.6f V", bus_voltage_reg, bus_voltage);
+		ESP_LOGI(M_TAG, "..shunt_current..: %u / %.6f A / %.6f A", shunt_current_reg, shunt_current_estimated, shunt_current);
 
 		vTaskDelay(5000 / portTICK_PERIOD_MS);
 	}
