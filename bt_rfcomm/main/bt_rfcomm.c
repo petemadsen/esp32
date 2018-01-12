@@ -32,6 +32,8 @@
 #include "time.h"
 #include "sys/time.h"
 
+#include "bt_rfcomm.h"
+
 #define SPP_TAG "SPP_ACCEPTOR_DEMO"
 #define SPP_SERVER_NAME "SPP_SERVER"
 #define EXCAMPLE_DEVICE_NAME "ESP_SPP_ACCEPTOR"
@@ -46,6 +48,8 @@ static long data_num = 0;
 
 static const esp_spp_sec_t sec_mask = ESP_SPP_SEC_NONE;
 static const esp_spp_role_t role_slave = ESP_SPP_ROLE_SLAVE;
+
+static bt_rfcomm_parser m_parser = NULL;
 
 static void print_speed(void)
 {
@@ -84,16 +88,24 @@ static void esp_spp_cb(esp_spp_cb_event_t event, esp_spp_cb_param_t *param)
         ESP_LOGI(SPP_TAG, "ESP_SPP_CL_INIT_EVT");
         break;
     case ESP_SPP_DATA_IND_EVT:
+		{
 #if (SPP_SHOW_MODE == SPP_SHOW_DATA)
         ESP_LOGI(SPP_TAG, "ESP_SPP_DATA_IND_EVT len=%d handle=%d",
                  param->data_ind.len, param->data_ind.handle);
         esp_log_buffer_hex("", param->data_ind.data, param->data_ind.len);
 
+        uint16_t retlen = 0;
+        uint8_t* retval = m_parser(param->data_ind.data, param->data_ind.len, &retlen);
+        ESP_LOGI(SPP_TAG, "returned: %d", retlen);
+        if (retval)
+			esp_spp_write(param->write.handle, retlen, retval);
+		/*
 		uint8_t spp_data[3];
 		spp_data[0] = 'O';
 		spp_data[1] = 'K';
 		spp_data[2] = '\n';
 		esp_spp_write(param->write.handle, 3, spp_data);
+		*/
 #else
         gettimeofday(&time_new, NULL);
         data_num += param->data_ind.len;
@@ -101,6 +113,7 @@ static void esp_spp_cb(esp_spp_cb_event_t event, esp_spp_cb_param_t *param)
             print_speed();
         }
 #endif
+		}
         break;
     case ESP_SPP_CONG_EVT:
         ESP_LOGI(SPP_TAG, "ESP_SPP_CONG_EVT");
@@ -119,8 +132,10 @@ static void esp_spp_cb(esp_spp_cb_event_t event, esp_spp_cb_param_t *param)
 
 
 
-void bt_rfcomm_init()
+void bt_rfcomm_init(bt_rfcomm_parser parser)
 {
+	m_parser = parser;
+
     esp_bt_controller_config_t bt_cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
     if (esp_bt_controller_init(&bt_cfg) != ESP_OK) {
         ESP_LOGE(SPP_TAG, "%s initialize controller failed\n", __func__);
