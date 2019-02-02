@@ -1,8 +1,8 @@
 /*
- * ws2812b.h
+ * msgeq7.h
  */
-#ifndef MAIN_WS2812B_H_
-#define MAIN_WS2812B_H_
+#ifndef MAIN_MSGEQ7_H
+#define MAIN_MSGEQ7_H
 
 
 #include <freertos/FreeRTOS.h>
@@ -10,13 +10,8 @@
 #include "freertos/task.h"
 #include "freertos/queue.h"
 
-struct leds_t
-{
-	SemaphoreHandle_t sem;
-	uint16_t num_leds;
-	uint32_t* leds;
-//	rmt_item32_t* rmt_items;
-};
+
+extern void msgeq7_init();
 
 
-#endif /* MAIN_WS2812B_H_ */
+#endif /* MAIN_MSGEQ7_H */

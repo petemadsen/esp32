@@ -1,136 +1,100 @@
 /**
- * ws2812b.c
+ * msgeq7.c
  */
-#include "ws2812b.h"
-
 #include <stdio.h>
 #include <string.h>
-#include "esp_err.h"
-#include "esp_log.h"
-#include "driver/rmt.h"
-#include "driver/periph_ctrl.h"
-#include "soc/rmt_reg.h"
+
+#include <esp_err.h>
+#include <esp_log.h>
+#include <driver/gpio.h>
+#include <driver/adc.h>
+#include <esp_adc_cal.h>
 
 #include "sdkconfig.h"
-
-static const char* MY_TAG = "WS2812B";
-
-
-#define RMT_TX_CHANNEL    1     // RMT channel for transmitter
-#define RMT_TX_GPIO_NUM  18     // GPIO number for transmitter signal
-#define RMT_CLK_DIV      8    // RMT clock divider => 10MHz => 100ns
+#include "msgeq7.h"
+#include "config.h"
 
 
-// WS2812 timings, multitude of 100ns, see RMT_CLK_DIV
-#define WS2812B_BIT_1_HIGH	9 // 900ns (900ns +/- 150ns)
-#define WS2812B_BIT_1_LOW	3 // 300ns (350ns +/- 150ns)
-#define WS2812B_BIT_0_HIGH	3 // 300ns (350ns +/- 150ns)
-#define WS2812B_BIT_0_LOW	9 // 900ns (900ns +/- 150ns)
+#define DEFAULT_VREF 1100
 
 
-/**
- *
- */
-static inline void set_led_color(rmt_item32_t* item, uint32_t rgb)
+static esp_adc_cal_characteristics_t* adc_chars;
+static const adc_channel_t channel = ADC_CHANNEL_6;
+static const int NO_OF_SAMPLES = 64;
+static const adc_atten_t atten;
+static const adc_unit_t unit = ADC_UNIT_1;
+
+
+#define RESET_PIN	26
+#define STROBE_PIN	25
+
+
+static void msgeq7_task(void* arg)
 {
-	uint32_t grb = ((rgb & 0xff0000) >> 8) | ((rgb & 0xff00) << 8) | (rgb & 0xff);
+	// configure gpio
+	gpio_pad_select_gpio(RESET_PIN);
+	gpio_set_pull_mode(RESET_PIN, GPIO_PULLUP_ONLY);
+	gpio_set_direction(RESET_PIN, GPIO_MODE_OUTPUT);
 
-	for (uint32_t m=(1<<23); m!=0; m>>=1)
-	{
-		item->level0 = 1;
-		item->duration0 = (m & grb ? WS2812B_BIT_1_HIGH : WS2812B_BIT_0_HIGH);
-		item->level1 = 0;
-		item->duration1 = (m & grb ? WS2812B_BIT_1_LOW : WS2812B_BIT_0_LOW);
+	gpio_pad_select_gpio(STROBE_PIN);
+	gpio_set_pull_mode(STROBE_PIN, GPIO_PULLUP_ONLY);
+	gpio_set_direction(STROBE_PIN, GPIO_MODE_OUTPUT);
 
-		++item;
-	}
-}
+	// configure ADC
+	adc1_config_width(ADC_WIDTH_BIT_12);
+	adc1_config_channel_atten(channel, atten);
 
-
-/*
- * @brief RMT transmitter initialization
- */
-static bool init_rmt()
-{
-    rmt_config_t rmt_tx;
-
-    rmt_tx.rmt_mode = RMT_MODE_TX;
-    rmt_tx.channel = RMT_TX_CHANNEL;
-    rmt_tx.gpio_num = RMT_TX_GPIO_NUM;
-    rmt_tx.mem_block_num = 1;
-    rmt_tx.clk_div = RMT_CLK_DIV;
-
-    // don't need but must be initialized!
-    rmt_tx.tx_config.loop_en = false;
-    rmt_tx.tx_config.carrier_en = false;
-    rmt_tx.tx_config.carrier_duty_percent = 50;
-    rmt_tx.tx_config.carrier_freq_hz = 38000;
-    rmt_tx.tx_config.carrier_level = 1;
-    rmt_tx.tx_config.idle_level = RMT_IDLE_LEVEL_LOW;
-    rmt_tx.tx_config.idle_output_en = true;
-
-    esp_err_t err = rmt_config(&rmt_tx);
-    if (err != ESP_OK)
-    	return false;
-
-    err = rmt_driver_install(rmt_tx.channel, 0, 0);
-    if (err != ESP_OK)
-        return false;
-
-    return true;
-}
-
-
-/**
- * @brief RMT transmitter demo, this task will periodically send NEC data. (100 * 32 bits each time.)
- *
- */
-static void tx_task(void* arg)
-{
-    vTaskDelay(10);
-
-    if (!init_rmt())
-    {
-    	ESP_LOGE(MY_TAG, "RMT init failed.");
-    	return;
-    }
-
-    struct leds_t* leds = (struct leds_t*)arg;
-	xSemaphoreGive(leds->sem);
-
-    int channel = RMT_TX_CHANNEL;
-
-	int item_num = leds->num_leds * 24;
-	rmt_item32_t* items = malloc(sizeof(rmt_item32_t) * item_num);
+	adc_chars = calloc(1, sizeof(esp_adc_cal_characteristics_t));
+	esp_adc_cal_value_t val_type = esp_adc_cal_characterize(unit, atten, ADC_WIDTH_BIT_12, DEFAULT_VREF, adc_chars);
 
     for (;;)
 	{
-    	xSemaphoreTake(leds->sem, portMAX_DELAY);
-//        ESP_LOGI(MY_TAG, "RMT TX DATA);
+		printf("\n");
 
-		for (int i=0; i<leds->num_leds; ++i)
+		// reset
+		gpio_set_level(RESET_PIN, 1);
+        vTaskDelay(100 / portTICK_PERIOD_MS);
+		gpio_set_level(RESET_PIN, 0);
+		gpio_set_level(STROBE_PIN, 1);
+        vTaskDelay(100 / portTICK_PERIOD_MS);
+
+		for (int k=0; k<7; ++k)
 		{
-			set_led_color(items + i * 24, leds->leds[i]);
+			gpio_set_level(STROBE_PIN, 0);
+			vTaskDelay(100 / portTICK_PERIOD_MS);
+
+			uint32_t adc_reading = 0;
+			for (int i=0; i<NO_OF_SAMPLES; ++i)
+			{
+				adc_reading += adc1_get_raw((adc1_channel_t)channel);
+			}
+			adc_reading /= NO_OF_SAMPLES;
+
+			gpio_set_level(STROBE_PIN, 1);
+			vTaskDelay(100 / portTICK_PERIOD_MS);
+
+			uint32_t voltage = esp_adc_cal_raw_to_voltage(adc_reading, adc_chars);
+			printf("[%d] raw: %d\tvol: %dmV\n", k, adc_reading, voltage);
 		}
 
-        // To send data according to the waveform items.
-        rmt_write_items(channel, items, item_num, true);
-        // Wait until sending is done.
-        rmt_wait_tx_done(channel, portMAX_DELAY);
+#if 0
+		gpio_set_level(RESET_PIN, 1);
+		gpio_set_level(STROBE_PIN, 1);
 
-    	xSemaphoreGive(leds->sem);
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
 
-        vTaskDelay(100 / portTICK_PERIOD_MS);
+		gpio_set_level(RESET_PIN, 0);
+		gpio_set_level(STROBE_PIN, 0);
+#endif
+
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
-
-    // before we free the data, make sure sending is already done.
-    free(items);
 
     vTaskDelete(NULL);
 }
 
 
-void ws2812b_init(struct leds_t* leds)
+void msgeq7_init()
 {
-    xTaskCreate(tx_task, "tx_task", 2048, leds, 10, NULL);
+    xTaskCreate(msgeq7_task, "tx_task", 2048, NULL, 10, NULL);
 }
