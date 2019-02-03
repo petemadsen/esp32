@@ -15,7 +15,7 @@
 #include "config.h"
 
 
-#define DEFAULT_VREF 1100
+#define DEFAULT_VREF 3100
 
 
 static esp_adc_cal_characteristics_t* adc_chars;
@@ -53,15 +53,18 @@ static void msgeq7_task(void* arg)
 
 		// reset
 		gpio_set_level(RESET_PIN, 1);
-        vTaskDelay(100 / portTICK_PERIOD_MS);
+//        vTaskDelay(1 / portTICK_PERIOD_MS);
+		ets_delay_us(200);
 		gpio_set_level(RESET_PIN, 0);
 		gpio_set_level(STROBE_PIN, 1);
-        vTaskDelay(100 / portTICK_PERIOD_MS);
+//        vTaskDelay(1 / portTICK_PERIOD_MS);
+		ets_delay_us(200);
 
 		for (int k=0; k<7; ++k)
 		{
 			gpio_set_level(STROBE_PIN, 0);
-			vTaskDelay(100 / portTICK_PERIOD_MS);
+//			vTaskDelay(1 / portTICK_PERIOD_MS);
+			ets_delay_us(50);
 
 			uint32_t adc_reading = 0;
 			for (int i=0; i<NO_OF_SAMPLES; ++i)
@@ -71,10 +74,15 @@ static void msgeq7_task(void* arg)
 			adc_reading /= NO_OF_SAMPLES;
 
 			gpio_set_level(STROBE_PIN, 1);
-			vTaskDelay(100 / portTICK_PERIOD_MS);
+//			vTaskDelay(1 / portTICK_PERIOD_MS);
+			ets_delay_us(50);
 
 			uint32_t voltage = esp_adc_cal_raw_to_voltage(adc_reading, adc_chars);
-			printf("[%d] raw: %d\tvol: %dmV\n", k, adc_reading, voltage);
+			printf("[%d] raw: %d\tvol: %dmV", k, adc_reading, voltage);
+			if (voltage > 2000)
+				printf(" <--------\n");
+			else
+				printf("\n");
 		}
 
 #if 0

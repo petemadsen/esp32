@@ -52,7 +52,6 @@ static void button_task(void* arg)
 }
 
 
-static struct leds_t leds;
 void app_main()
 {
 	msgeq7_init();
