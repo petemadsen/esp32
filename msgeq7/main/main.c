@@ -11,10 +11,6 @@
 #include "msgeq7.h"
 #include "config.h"
 
-extern void ws2812b_init();
-
-#define min(a,b) ((a)<(b)?(a):(b))
-#define max(a,b) ((a)>(b)?(a):(b))
 
 #define CONFIG_BUTTON_PIN 5
 

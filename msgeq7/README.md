@@ -1,5 +1,15 @@
-# Project: ws2812b
+# Project: msgeq7
 
-* Using ESP32 RMT
-  * https://github.com/espressif/esp-idf/tree/master/examples/peripherals/rmt_nec_tx_rx
+Control MSGEQ7 with ESP32.
 
+## config.h
+You will need a config.h like this:
+
+```
+#ifndef MSGEQ7_H
+#define MSGEQ7_H
+
+extern const char* MY_TAG;
+
+#endif
+```
