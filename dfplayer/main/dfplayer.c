@@ -1,6 +1,9 @@
 /**
  * dfplayer.c
  */
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+
 #include "dfplayer.h"
 
 #include <stdio.h>
@@ -27,5 +30,5 @@ static void tx_task(void* arg)
 
 void dfplayer_init()
 {
-	xTaskCreate(tx_task, "tx_task", 2048, leds, 10, NULL);
+	xTaskCreate(tx_task, "tx_task", 2048, NULL, 10, NULL);
 }
