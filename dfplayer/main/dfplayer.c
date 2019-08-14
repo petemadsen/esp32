@@ -3,6 +3,7 @@
  */
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
+#include <freertos/event_groups.h>
 
 #include "dfplayer.h"
 
@@ -18,6 +19,10 @@
 #include "sdkconfig.h"
 
 static const char* MY_TAG = "DFPLAYER";
+
+
+static EventGroupHandle_t x_events;
+#define EVENT_BELL (1 << 0)
 
 
 #ifndef max
@@ -78,8 +83,8 @@ static unsigned int checksum(char msg[], int len)
 
 	unsigned char cs1 = (sum >> 8) & 0xff;
 	unsigned char cs2 = sum & 0xff;
-	printf("%x -> %x %x\n", sum, cs1, cs2);
-	printf("     -> %x %x\n\n", msg[7], msg[8]);
+//	printf("%x -> %x %x\n", sum, cs1, cs2);
+//	printf("     -> %x %x\n\n", msg[7], msg[8]);
 
 	return sum;
 }
@@ -88,6 +93,7 @@ static unsigned int checksum(char msg[], int len)
 static void parse_reply(const char* prefix, const uint8_t data[])
 {
 	printf("%s\n", prefix);
+#if 0
 //	printf("--rcv: %d bytes [%c]\n", len, data[2]);
 	printf("%02x . ", data[0]);
 	printf("%02x . ", data[1]);
@@ -100,6 +106,7 @@ static void parse_reply(const char* prefix, const uint8_t data[])
 	printf("%02x . ", data[8]);
 	printf("%02x", data[9]);
 	printf("\n");
+#endif
 
 	switch (data[POS_CMD])
 	{
@@ -161,7 +168,6 @@ static void dfplayer_task(void* arg)
 	char to_send[CMD_LEN];
 
 	bool need_reset = true;
-	bool play_bell = false;
 
 	for(;;)
 	{
@@ -186,22 +192,28 @@ static void dfplayer_task(void* arg)
 				if (has_flash(data))
 				{
 					need_reset = false;
-					play_bell = true;
 				}
 			}
 
 			vTaskDelay(1000 / portTICK_PERIOD_MS);
+			continue;
 		}
 
-		if (play_bell)
+
+		EventBits_t bits = xEventGroupGetBits(x_events);
+		if (bits & EVENT_BELL)
 		{
+			xEventGroupClearBits(x_events, EVENT_BELL);
+
+			//
+			printf("--play bell\n");
+
 			uart_write_bytes(uart_num, cmd_play1st, CMD_LEN);
 			int len = uart_read_bytes(uart_num, data, CMD_LEN,
 					100 / portTICK_PERIOD_MS);
 			if (len)
 			{
 				parse_reply("PLAY1ST", data);
-				play_bell = false;
 			}
 		}
 
@@ -222,7 +234,17 @@ static void dfplayer_task(void* arg)
 }
 
 
+void dfplayer_bell()
+{
+	xEventGroupSetBits(x_events, EVENT_BELL);
+}
+
+
 void dfplayer_init()
 {
+	x_events = xEventGroupCreate();
+	if (x_events == NULL)
+		ESP_LOGE(MY_TAG, "Could create event group.");
+
 	xTaskCreate(dfplayer_task, "dfplayer_task", 2048, NULL, 10, NULL);
 }

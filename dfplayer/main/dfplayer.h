@@ -8,4 +8,7 @@
 void dfplayer_init();
 
 
+void dfplayer_bell();
+
+
 #endif /* MAIN_DFPLAYER_H */
