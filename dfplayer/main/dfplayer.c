@@ -8,6 +8,8 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
+
 #include "esp_err.h"
 #include "esp_log.h"
 #include "driver/uart.h"
@@ -18,83 +20,54 @@
 static const char* MY_TAG = "DFPLAYER";
 
 
-// NORFLASH => 7e ff 06 09 00 00 04 ff dd ef
-// data length 6 bytes (ff 06 09 00 00 04)
-// 7e start byte $S
-// ff version
-// 06 length of bytes after length byte
-// 09 cmd
-// 00 no feedback
-// ...
-// ef end bit
-//
-//
-static const char msg_get_status[] = {
-//	0x7e, ff, 0x01, 0x42, 0x
-};
-
-static const char msg_play_1st_song[] = {
-	0x7E, 0xFF, 0x06, 0x03, 0x00, 0x00, 0x01, 0xFF, 0xE6, 0xEF
-};
-
-static const char query_num_flash_files[] = {
-	0x7E, 0xFF, 0x49, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xE6, 0xEF
-};
-
-
-static const char msg0[] = {
-	0x7E, 0xFF, 0x6, 0xC, 0x1, 0x0, 0x0, 0xFE, 0xEE, 0xEF
-};
-static const char msg1[] = {
-	0x7E, 0xFF, 0x6, 0x6, 0x1, 0x0, 0xA, 0xFE, 0xEA, 0xEF // volume 10
-};
-static const char msg2[] = {
-	0x7E, 0xFF, 0x6, 0x3, 0x1, 0x0, 0x1, 0xFE, 0xF6, 0xEF // play 1st song
-};
-
-#if 0
-DFRobot DFPlayer Mini Demo
-
-Initializing DFPlayer ... (May take 3~5 seconds)
-
->>  7E FF 6 C 1 0 0 FE EE EF
-
-DFPlayer Mini online.
-
->>  7E FF 6 6 1 0 A FE EA EF // volume 10
-
->>  7E FF 6 3 1 0 1 FE F6 EF // play 1st song
-
->>  7E FF 6 1 1 0 0 FE F9 EF
-
->>  7E FF 6 1 1 0 0 FE F9 EF
-
->>  7E FF 6 1 1 0 0 FE F9 EF
-
->>  7E FF 6 1 1 0 0 FE F9 EF
-
->>  7E FF 6 1 1 0 0 FE F9 EF
-
->>  7E FF 6 1 1 0 0 FE F9 EF
-
->>  7E FF 6 1 1 0 0 FE F9 EF
-
->>  7E FF 6 1 1 0 0 FE F9 EF
-
->>  7E FF 6 1 1 0 0 FE F9 EF
-
->>  7E FF 6 1 1 0 0 FE F9 EF
-
->>  7E FF 6 1 1 0 0 FE F9 EF
-
->>  7E FF 6 1 1 0 0 FE F9 EF
-
->>  7E FF 6 1 1 0 0 FE F9 EF
-
->>  7E FF 6 1 1 0 0 FE F9 EF
+#ifndef max
+#define max(a,b) ((a) > (b) ? (a) : (b))
 #endif
 
-static unsigned int checksum(const char* msg, int len)
+
+
+#define POS_CMD 3
+#define POS_ACK	4
+#define POS_BYTE_HIGH	5
+#define POS_BYTE_LOW	6
+#define POS_CS1			7
+#define POS_CS2			8
+
+#define CMD_RESET		0xc
+#define CMD_VOLUME		0x6
+#define CMD_PLAY		0x3
+#define CMD_PLAY_NEXT	0x1
+//
+#define REPLY_INIT		0x3f
+
+#define CMD_ACK			0x1
+#define CMD_NOACK		0x0
+
+
+static const unsigned int CMD_LEN = 10;
+static const char cmd_reset[] = {
+	0x7E, 0xFF, 0x6,
+	CMD_RESET, CMD_ACK, 0x0, 0x0,
+	0xFE, 0xEE, 0xEF
+};
+static const char cmd_volume10[] = {
+	0x7E, 0xFF, 0x6,
+	CMD_VOLUME, CMD_ACK, 0x0, 0xA,
+	0xFE, 0xEA, 0xEF
+};
+static const char cmd_play1st[] = {
+	0x7E, 0xFF, 0x6,
+	CMD_PLAY, CMD_ACK, 0x0, 0x1,
+	0xFE, 0xF6, 0xEF
+};
+static const char cmd_play_next[] = {
+	0x7E, 0xFF, 0x6,
+	CMD_PLAY_NEXT, CMD_ACK, 0x0, 0x0,
+	0xFE, 0xF9, 0xEF
+};
+
+
+static unsigned int checksum(char msg[], int len)
 {
 	unsigned int sum = 0;
 
@@ -103,20 +76,68 @@ static unsigned int checksum(const char* msg, int len)
 
 	sum = -sum;
 
-	unsigned char cs1 = (cs >> 8) & 0xff;
-	unsigned char cs2 = cs & 0xff;
-	printf("%x -> %x %x\n", cs, cs1, cs2);
+	unsigned char cs1 = (sum >> 8) & 0xff;
+	unsigned char cs2 = sum & 0xff;
+	printf("%x -> %x %x\n", sum, cs1, cs2);
 	printf("     -> %x %x\n\n", msg[7], msg[8]);
 
 	return sum;
 }
+
+
+static void parse_reply(const char* prefix, const uint8_t data[])
+{
+	printf("%s\n", prefix);
+//	printf("--rcv: %d bytes [%c]\n", len, data[2]);
+	printf("%02x . ", data[0]);
+	printf("%02x . ", data[1]);
+	printf("%02x . ", data[2]);
+	printf("%02x . ", data[3]);
+	printf("%02x . ", data[4]);
+	printf("%02x ", data[5]);
+	printf("%02x . ", data[6]);
+	printf("%02x ", data[7]);
+	printf("%02x . ", data[8]);
+	printf("%02x", data[9]);
+	printf("\n");
+
+	switch (data[POS_CMD])
+	{
+	case REPLY_INIT:
+		if (data[POS_BYTE_LOW] == 2)
+			printf("--> FLASH\n");
+//			ESP_LOGE(MY_TAG, "flash
+		break;
+	}
+}
+
+
+static void prepare_cmd(const char* cmd, char dest[])
+{
+	for (int i=0; i<CMD_LEN; ++i)
+		dest[i] = cmd[i];
+
+	unsigned int sum = checksum(dest, CMD_LEN);
+	unsigned char cs1 = (sum >> 8) & 0xff;
+	unsigned char cs2 = sum & 0xff;
+
+	printf(". %02x %02x\n", dest[POS_CS1], dest[POS_CS2]);
+	printf(". %02x %02x\n", cs1, cs2);
+}
+
+
+static bool has_flash(const uint8_t data[])
+{
+	return data[POS_CMD] == REPLY_INIT && data[POS_BYTE_LOW] == 2;
+}
+
 
 static void dfplayer_task(void* arg)
 {
 	const int uart_num = UART_NUM_2;
 	const int uart_rx = GPIO_NUM_19;// GPIO_NUM_4;
 	const int uart_tx = GPIO_NUM_21; // GPIO_NUM_5;
-	const int BUF_SIZE = 1024;
+	const int BUF_SIZE = max(CMD_LEN * 2, 256);
 
 	uart_config_t uart_config = {
 		.baud_rate = 9600,
@@ -137,27 +158,56 @@ static void dfplayer_task(void* arg)
 	ESP_ERROR_CHECK(uart_driver_install(uart_num, BUF_SIZE * 2, 0, 0, NULL, 0));
 
 	uint8_t* data = (uint8_t*)malloc(BUF_SIZE);
-	data[0] = 0x19;
-	data[1] = 0x80;
-	data[2] = 'A';
+	char to_send[CMD_LEN];
 
-
-	uart_write_bytes(uart_num, msg0, 10);
-	vTaskDelay(2000 / portTICK_PERIOD_MS);
-	uart_write_bytes(uart_num, msg1, 10);
-	vTaskDelay(2000 / portTICK_PERIOD_MS);
-	uart_write_bytes(uart_num, msg2, 10);
-	vTaskDelay(2000 / portTICK_PERIOD_MS);
+	bool need_reset = true;
+	bool play_bell = false;
 
 	for(;;)
 	{
+		if (need_reset)
+		{
+			printf("--sending RESET\n");
+			prepare_cmd(cmd_reset, to_send);
+//			uart_write_bytes(uart_num, to_send, CMD_LEN);
+			uart_write_bytes(uart_num, cmd_reset, CMD_LEN);
+
+			// wait for reply
+			for (;;)
+			{
+				printf("--waiting for reply\n");
+				int len = uart_read_bytes(uart_num, data, CMD_LEN,
+						4000 / portTICK_PERIOD_MS);
+				printf("%d\n", len);
+				if (!len)
+					break;
+
+				parse_reply("RESET", data);
+				if (has_flash(data))
+				{
+					need_reset = false;
+					play_bell = true;
+				}
+			}
+
+			vTaskDelay(1000 / portTICK_PERIOD_MS);
+		}
+
+		if (play_bell)
+		{
+			uart_write_bytes(uart_num, cmd_play1st, CMD_LEN);
+			int len = uart_read_bytes(uart_num, data, CMD_LEN,
+					100 / portTICK_PERIOD_MS);
+			if (len)
+			{
+				parse_reply("PLAY1ST", data);
+				play_bell = false;
+			}
+		}
+
         vTaskDelay(1000 / portTICK_PERIOD_MS);
-
-//		uart_write_bytes(uart_num, (const char*)data, 3);
-//		// works
-//		uart_write_bytes(uart_num, msg_play_1st_song, 10);
-		printf("--snd %c\n", data[2]);
-
+#if 0
+		// reply
 		int len = uart_read_bytes(uart_num, data, BUF_SIZE,
 				20 / portTICK_PERIOD_MS);
 		if (len)
@@ -167,11 +217,7 @@ static void dfplayer_task(void* arg)
 				printf(" %02x", data[i]);
 			printf("\n");
 		}
-//		uart_write_bytes(uart_num, (const char*)data, len);
-
-		data[2] = data[2] + 1;
-		if (data[2] == 'Z')
-			data[2] = 'A';
+#endif
 	}
 }
 
