@@ -1,3 +1,6 @@
+/**
+ * This code is public domain.
+ */
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <freertos/semphr.h>
@@ -26,6 +29,10 @@ static const char* MY_TAG = "DFPLAYER/main";
 SemaphoreHandle_t xBellBtnSem = NULL;
 SemaphoreHandle_t xLightBtnSem = NULL;
 
+
+#define BTN_DEBOUNCE_DIFF	50
+
+
 void IRAM_ATTR light_btn_isr_handler(void* arg)
 {
 	xSemaphoreGiveFromISR(xLightBtnSem, NULL);
@@ -45,15 +52,21 @@ static void light_btn_task(void* arg)
 	gpio_isr_handler_add(CONFIG_LIGHT_BTN_PIN, light_btn_isr_handler, NULL);
 
 	bool relay_on = false;
+	TickType_t last_run = xTaskGetTickCount();
 
 	for (;;)
 	{
 		if (xSemaphoreTake(xLightBtnSem, portMAX_DELAY) == true)
 		{
-			ESP_LOGI(MY_TAG, "light-btn");
+			TickType_t diff = xTaskGetTickCount() - last_run;
+			if (diff > BTN_DEBOUNCE_DIFF)
+			{
+				ESP_LOGI(MY_TAG, "light-btn");
+				last_run = xTaskGetTickCount();
 
-			relay_on = !relay_on;
-			gpio_set_level(CONFIG_RELAY_PIN, relay_on);
+				relay_on = !relay_on;
+				gpio_set_level(CONFIG_RELAY_PIN, relay_on);
+			}
 		}
 	}
 
@@ -75,13 +88,20 @@ static void bell_btn_task(void* arg)
 //	gpio_install_isr_service(0); //ESP_INTR_FLAG_DEFAULT
 	gpio_isr_handler_add(CONFIG_BELL_BTN_PIN, bell_btn_isr_handler, NULL);
 
+	TickType_t last_run = xTaskGetTickCount();
+
 	for (;;)
 	{
 		if (xSemaphoreTake(xBellBtnSem, portMAX_DELAY) == true)
 		{
-			ESP_LOGI(MY_TAG, "bell-btn");
+			TickType_t diff = xTaskGetTickCount() - last_run;
+			if (diff > BTN_DEBOUNCE_DIFF)
+			{
+				ESP_LOGI(MY_TAG, "bell-btn");
+				last_run = xTaskGetTickCount();
 
-			dfplayer_bell();
+				dfplayer_bell();
+			}
 		}
 	}
 
