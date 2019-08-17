@@ -1,5 +1,5 @@
 /**
- * dfplayer.c
+ * This code is public domain.
  */
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>

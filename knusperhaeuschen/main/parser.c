@@ -58,8 +58,9 @@ const char* parse_input(char* data, int data_len)
 	}
 	else if (strstr(line, "status") == line)
 	{
-		sprintf(buffer, "version: %s free-ram: %d\n",
+		sprintf(buffer, "version: %s light: %d free-ram: %d\n",
 				VERSION,
+				light_status(),
 				esp_get_free_heap_size());
 		return buffer;
 	}

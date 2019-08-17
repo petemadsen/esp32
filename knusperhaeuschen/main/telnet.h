@@ -1,3 +1,6 @@
+/**
+ * This code is public domain.
+ */
 #ifndef _TELNET_SERVER_H_
 #define _TELNET_SERVER_H_
 

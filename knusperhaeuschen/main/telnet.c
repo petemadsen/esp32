@@ -1,3 +1,6 @@
+/**
+ * This code is public domain.
+ */
 #include "sdkconfig.h"
 
 #include <esp_log.h>

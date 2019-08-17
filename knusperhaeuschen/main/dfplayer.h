@@ -1,5 +1,5 @@
-/*
- * dfplayer.h
+/**
+ * This code is public domain.
  */
 #ifndef MAIN_DFPLAYER_H
 #define MAIN_DFPLAYER_H

@@ -59,6 +59,7 @@ void light_btn_task(void* arg)
 	gpio_isr_handler_add(CONFIG_LIGHT_BTN_PIN, light_btn_isr_handler, NULL);
 
 	TickType_t last_run = xTaskGetTickCount();
+	light_off();
 
 	for (;;)
 	{
@@ -71,24 +72,18 @@ void light_btn_task(void* arg)
 		if (bits & LIGHT_ON)
 		{
 			xEventGroupClearBits(xLightEvents, LIGHT_ON);
-			if (ok_to_run)
-			{
-				last_run = xTaskGetTickCount();
-				ESP_LOGI(MY_TAG, "light-on");
-				relay_on = true;
-				gpio_set_level(CONFIG_RELAY_PIN, relay_on);
-			}
+
+			ESP_LOGI(MY_TAG, "light-on");
+			relay_on = true;
+			gpio_set_level(CONFIG_RELAY_PIN, relay_on);
 		}
 		else if (bits & LIGHT_OFF)
 		{
 			xEventGroupClearBits(xLightEvents, LIGHT_OFF);
-			if (ok_to_run)
-			{
-				last_run = xTaskGetTickCount();
-				ESP_LOGI(MY_TAG, "light-off");
-				relay_on = false;
-				gpio_set_level(CONFIG_RELAY_PIN, relay_on);
-			}
+
+			ESP_LOGI(MY_TAG, "light-off");
+			relay_on = false;
+			gpio_set_level(CONFIG_RELAY_PIN, relay_on);
 		}
 		else if (bits & LIGHT_TOGGLE)
 		{
@@ -122,4 +117,10 @@ void light_off()
 void light_toggle()
 {
 	xEventGroupSetBits(xLightEvents, LIGHT_TOGGLE);
+}
+
+
+int light_status()
+{
+	return relay_on;
 }
