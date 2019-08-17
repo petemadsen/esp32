@@ -63,31 +63,30 @@ void light_btn_task(void* arg)
 
 	for (;;)
 	{
-        vTaskDelay(10 / portTICK_PERIOD_MS);
+		EventBits_t bits = xEventGroupWaitBits(
+				xLightEvents,
+				LIGHT_ON | LIGHT_OFF | LIGHT_TOGGLE,
+				pdTRUE,		// auto clear
+				pdFALSE,	// any single bit will do
+				portMAX_DELAY);
 
 		TickType_t diff = xTaskGetTickCount() - last_run;
 		bool ok_to_run = (diff > BTN_DEBOUNCE_DIFF);
 
-		EventBits_t bits = xEventGroupGetBits(xLightEvents);
 		if (bits & LIGHT_ON)
 		{
-			xEventGroupClearBits(xLightEvents, LIGHT_ON);
-
 			ESP_LOGI(MY_TAG, "light-on");
 			relay_on = true;
 			gpio_set_level(CONFIG_RELAY_PIN, relay_on);
 		}
 		else if (bits & LIGHT_OFF)
 		{
-			xEventGroupClearBits(xLightEvents, LIGHT_OFF);
-
 			ESP_LOGI(MY_TAG, "light-off");
 			relay_on = false;
 			gpio_set_level(CONFIG_RELAY_PIN, relay_on);
 		}
 		else if (bits & LIGHT_TOGGLE)
 		{
-			xEventGroupClearBits(xLightEvents, LIGHT_TOGGLE);
 			if (ok_to_run)
 			{
 				last_run = xTaskGetTickCount();

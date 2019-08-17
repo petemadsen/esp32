@@ -16,10 +16,11 @@
 
 #include "config.h"
 #include "light.h"
+#include "dfplayer.h"
 
 //static const char* M_TAG = "DFPLAYER/parser";
 
-static const char* HELP = "knusperhaeuschen: ident status light ota exit quit reboot\n";
+static const char* HELP = "knusperhaeuschen: ident status light volume ota exit quit reboot\n";
 static const char* IDENT = "knusperhaeuschen\n";
 static const char* RET_ERR = "ERR\n";
 static const char* RET_OK = "OK\n";
@@ -56,11 +57,23 @@ const char* parse_input(char* data, int data_len)
 		else
 			return RET_ERR;
 	}
+	if (strstr(line, "volume ") == line)
+	{
+		int vol;
+		if (sscanf(line, "volume %d", &vol)==1 && vol>=0 && vol<=100)
+		{
+			dfplayer_set_volume_p(vol);
+			return RET_OK;
+		}
+		else
+			return RET_ERR;
+	}
 	else if (strstr(line, "status") == line)
 	{
-		sprintf(buffer, "version: %s light: %d free-ram: %d\n",
+		sprintf(buffer, "version: %s light: %d volume: %d free-ram: %d\n",
 				VERSION,
 				light_status(),
+				dfplayer_get_volume_p(),
 				esp_get_free_heap_size());
 		return buffer;
 	}

@@ -21,8 +21,13 @@
 static const char* MY_TAG = "DFPLAYER";
 
 
+static const int uart_num = UART_NUM_2;
+
+static int dfplayer_vol = 50;
+
 static EventGroupHandle_t x_events;
-#define EVENT_BELL (1 << 0)
+#define EVENT_BELL		(1 << 0)
+#define EVENT_VOLUME	(1 << 1)
 
 
 #ifndef max
@@ -81,8 +86,8 @@ static unsigned int checksum(char msg[], int len)
 
 	sum = -sum;
 
-	unsigned char cs1 = (sum >> 8) & 0xff;
-	unsigned char cs2 = sum & 0xff;
+//	unsigned char cs1 = (sum >> 8) & 0xff;
+//	unsigned char cs2 = sum & 0xff;
 //	printf("%x -> %x %x\n", sum, cs1, cs2);
 //	printf("     -> %x %x\n\n", msg[7], msg[8]);
 
@@ -119,10 +124,13 @@ static void parse_reply(const char* prefix, const uint8_t data[])
 }
 
 
-static void prepare_cmd(const char* cmd, char dest[])
+static void prepare_cmd(const char* cmd, char dest[], int param)
 {
 	for (int i=0; i<CMD_LEN; ++i)
 		dest[i] = cmd[i];
+
+	dest[POS_BYTE_LOW] = param & 0xff;
+	dest[POS_BYTE_HIGH] = (param >> 8) & 0xff;
 
 	unsigned int sum = checksum(dest, CMD_LEN);
 	unsigned char cs1 = (sum >> 8) & 0xff;
@@ -130,6 +138,15 @@ static void prepare_cmd(const char* cmd, char dest[])
 
 	printf(". %02x %02x\n", dest[POS_CS1], dest[POS_CS2]);
 	printf(". %02x %02x\n", cs1, cs2);
+
+	dest[POS_CS1] = cs1;
+	dest[POS_CS2] = cs2;
+
+#if 0
+	for (int i=0; i<CMD_LEN; ++i)
+		printf(".%02x.", dest[i]);
+	printf("\n");
+#endif
 }
 
 
@@ -141,7 +158,6 @@ static bool has_flash(const uint8_t data[])
 
 static void dfplayer_task(void* arg)
 {
-	const int uart_num = UART_NUM_2;
 	const int uart_rx = GPIO_NUM_13; // works: GPIO_NUM_19;
 	const int uart_tx = GPIO_NUM_12; // works: GPIO_NUM_21;
 	const int BUF_SIZE = max(CMD_LEN * 2, 256);
@@ -168,13 +184,14 @@ static void dfplayer_task(void* arg)
 	char to_send[CMD_LEN];
 
 	bool need_reset = true;
+	int track_num = 1;
 
 	for(;;)
 	{
 		if (need_reset)
 		{
 			printf("--sending RESET\n");
-			prepare_cmd(cmd_reset, to_send);
+			prepare_cmd(cmd_reset, to_send, 0);
 //			uart_write_bytes(uart_num, to_send, CMD_LEN);
 			uart_write_bytes(uart_num, cmd_reset, CMD_LEN);
 
@@ -193,6 +210,8 @@ static void dfplayer_task(void* arg)
 				{
 					need_reset = false;
 
+					// set volume
+//					dfplayer_set_volume_p(25);
 					uart_write_bytes(uart_num, cmd_volume10, CMD_LEN);
 				}
 			}
@@ -207,16 +226,36 @@ static void dfplayer_task(void* arg)
 		{
 			xEventGroupClearBits(x_events, EVENT_BELL);
 
-			//
-			printf("--play bell\n");
+			ESP_LOGI(MY_TAG, "play bell");
 
+#if 1
+			prepare_cmd(cmd_play1st, to_send, track_num);
+			if (++track_num > 2)
+				track_num = 1;
+			uart_write_bytes(uart_num, to_send, CMD_LEN);
+#else
 			uart_write_bytes(uart_num, cmd_play1st, CMD_LEN);
+#endif
 			int len = uart_read_bytes(uart_num, data, CMD_LEN,
 					100 / portTICK_PERIOD_MS);
 			if (len)
 			{
 				parse_reply("PLAY1ST", data);
 			}
+		}
+		else if (bits & EVENT_VOLUME)
+		{
+			xEventGroupClearBits(x_events, EVENT_VOLUME);
+
+			int raw_vol = (float)dfplayer_vol / (float)100 * 30;
+			ESP_LOGI(MY_TAG, "volume: %d (raw: %d)", dfplayer_vol, raw_vol);
+
+#if 1
+			prepare_cmd(cmd_volume10, to_send, raw_vol);
+			uart_write_bytes(uart_num, to_send, CMD_LEN);
+#else
+			uart_write_bytes(uart_num, cmd_volume10, CMD_LEN);
+#endif
 		}
 
         vTaskDelay(1000 / portTICK_PERIOD_MS);
@@ -248,5 +287,18 @@ void dfplayer_init()
 	if (x_events == NULL)
 		ESP_LOGE(MY_TAG, "Could create event group.");
 
-	xTaskCreate(dfplayer_task, "dfplayer_task", 2048, NULL, 10, NULL);
+	xTaskCreate(dfplayer_task, "dfplayer_task", 4096, NULL, 10, NULL);
+}
+
+
+void dfplayer_set_volume_p(int vol)
+{
+	dfplayer_vol = vol;
+	xEventGroupSetBits(x_events, EVENT_VOLUME);
+}
+
+
+int dfplayer_get_volume_p()
+{
+	return dfplayer_vol;
 }

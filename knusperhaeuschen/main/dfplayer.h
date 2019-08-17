@@ -11,4 +11,10 @@ void dfplayer_init();
 void dfplayer_bell();
 
 
+void dfplayer_set_volume_p(int vol_per_cent); // 0..100
+
+
+int dfplayer_get_volume_p();
+
+
 #endif /* MAIN_DFPLAYER_H */

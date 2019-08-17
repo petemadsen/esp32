@@ -18,4 +18,4 @@ void light_on();
 
 int light_status();
 
-#endifi
+#endif
