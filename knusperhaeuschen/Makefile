@@ -3,7 +3,7 @@
 # project subdirectory.
 #
 
-PROJECT_NAME := dfplayer
+PROJECT_NAME := knusperhaeuschen
 
 include $(IDF_PATH)/make/project.mk
 
