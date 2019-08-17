@@ -3,3 +3,4 @@
 .settings
 *.old
 build/
+config.h
