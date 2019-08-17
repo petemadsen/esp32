@@ -16,6 +16,9 @@
 #include "sdkconfig.h"
 
 #include "dfplayer.h"
+#include "telnet.h"
+#include "parser.h"
+#include "wifi.h"
 
 
 #define CONFIG_BELL_BTN_PIN		GPIO_NUM_19
@@ -113,9 +116,15 @@ void app_main()
 {
 	gpio_install_isr_service(0);
 
+	wifi_init();
+
 	dfplayer_init();
 
-    xTaskCreate(light_btn_task, "light_btn_task", 2048, NULL, 10, NULL);
+	parser_init();
 
-    xTaskCreate(bell_btn_task, "bell_btn_task", 2048, NULL, 10, NULL);
+    xTaskCreate(light_btn_task, "light_btn_task", 1024, NULL, 10, NULL);
+
+    xTaskCreate(bell_btn_task, "bell_btn_task", 1024, NULL, 10, NULL);
+
+	xTaskCreate(telnet_server, "telnet_task", 4096, &parse_input, 10, NULL);
 }
