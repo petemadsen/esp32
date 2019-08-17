@@ -23,7 +23,8 @@ static const char* MY_TAG = "DFPLAYER";
 
 static const int uart_num = UART_NUM_2;
 
-static int dfplayer_vol = 50;
+static int dfplayer_vol = 33;
+static int dfplayer_track = 1;
 
 static EventGroupHandle_t x_events;
 #define EVENT_BELL		(1 << 0)
@@ -136,8 +137,8 @@ static void prepare_cmd(const char* cmd, char dest[], int param)
 	unsigned char cs1 = (sum >> 8) & 0xff;
 	unsigned char cs2 = sum & 0xff;
 
-	printf(". %02x %02x\n", dest[POS_CS1], dest[POS_CS2]);
-	printf(". %02x %02x\n", cs1, cs2);
+//	printf(". %02x %02x\n", dest[POS_CS1], dest[POS_CS2]);
+//	printf(". %02x %02x\n", cs1, cs2);
 
 	dest[POS_CS1] = cs1;
 	dest[POS_CS2] = cs2;
@@ -226,9 +227,10 @@ static void dfplayer_task(void* arg)
 		{
 			xEventGroupClearBits(x_events, EVENT_BELL);
 
-			ESP_LOGI(MY_TAG, "play bell");
+			ESP_LOGI(MY_TAG, "play bell (%d)", dfplayer_track);
 
 #if 1
+			track_num = dfplayer_track;
 			prepare_cmd(cmd_play1st, to_send, track_num);
 			if (++track_num > 2)
 				track_num = 1;
@@ -301,4 +303,16 @@ void dfplayer_set_volume_p(int vol)
 int dfplayer_get_volume_p()
 {
 	return dfplayer_vol;
+}
+
+
+int dfplayer_get_track()
+{
+	return dfplayer_track;
+}
+
+
+void dfplayer_set_track(int track)
+{
+	dfplayer_track = track;
 }
