@@ -5,7 +5,10 @@
 #define PROJECT_WIFI_H
 
 
-void wifi_init();
+#include <esp_http_server.h>
+
+
+void wifi_init(void* arg);
 
 
 #endif
