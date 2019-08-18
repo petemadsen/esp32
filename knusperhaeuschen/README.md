@@ -15,6 +15,8 @@
 
 *TODO* blink if has wifi
 
+*TODO* light is not a push button but a switch button.
+
 ## Telnet/HTTP
 
 status

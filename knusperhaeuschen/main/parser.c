@@ -57,7 +57,14 @@ const char* parse_input(char* data, int data_len)
 		else
 			return RET_ERR;
 	}
-	else if (strstr(line, "volume ") == line)
+
+	if (strstr(line, "light") == line)
+	{
+		sprintf(buffer, "%d\n", light_status());
+		return buffer;
+	}
+
+	if (strstr(line, "volume ") == line)
 	{
 		int vol;
 		if (sscanf(line, "volume %d", &vol)==1 && vol>=0 && vol<=100)
@@ -65,10 +72,10 @@ const char* parse_input(char* data, int data_len)
 			dfplayer_set_volume_p(vol);
 			return RET_OK;
 		}
-		else
-			return RET_ERR;
+		return RET_ERR;
 	}
-	else if (strstr(line, "bell ") == line)
+
+	if (strstr(line, "bell ") == line)
 	{
 		int track;
 		if (sscanf(line, "bell %d", &track)==1 && track>=1 && track<=100)
@@ -76,10 +83,10 @@ const char* parse_input(char* data, int data_len)
 			dfplayer_set_track(track);
 			return RET_OK;
 		}
-		else
-			return RET_ERR;
+		return RET_ERR;
 	}
-	else if (strstr(line, "status") == line)
+
+	if (strstr(line, "status") == line)
 	{
 		sprintf(buffer, "version: %s light: %d bell %d volume: %d free-ram: %d\n",
 				VERSION,
@@ -89,12 +96,13 @@ const char* parse_input(char* data, int data_len)
 				esp_get_free_heap_size());
 		return buffer;
 	}
-	else if (strstr(line, "ota") == line)
 
+	if (strstr(line, "ota") == line)
 	{
 		return run_ota();
 	}
-	else if (strstr(line, "ident") == line)
+
+	if (strstr(line, "ident") == line)
 	{
 		return IDENT;
 	}

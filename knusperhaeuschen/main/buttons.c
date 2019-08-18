@@ -37,7 +37,6 @@ static void IRAM_ATTR gpio_isr_handler(void* arg)
 }
 
 
-
 static void gpio_task(void* arg)
 {
 	uint32_t iopin;
@@ -72,14 +71,13 @@ void buttons_init()
 {
 	gpio_evt_queue = xQueueCreate(10, sizeof(uint32_t));
 
-
 	gpio_pad_select_gpio(CONFIG_BELL_BTN_PIN);
 	gpio_set_direction(CONFIG_BELL_BTN_PIN, GPIO_MODE_INPUT);
 	gpio_set_intr_type(CONFIG_BELL_BTN_PIN, GPIO_INTR_NEGEDGE);
 
 	gpio_pad_select_gpio(CONFIG_LIGHT_BTN_PIN);
 	gpio_set_direction(CONFIG_LIGHT_BTN_PIN, GPIO_MODE_INPUT);
-	gpio_set_intr_type(CONFIG_LIGHT_BTN_PIN, GPIO_INTR_NEGEDGE);
+	gpio_set_intr_type(CONFIG_LIGHT_BTN_PIN, GPIO_INTR_ANYEDGE);
 
 	
 	gpio_install_isr_service(0); //ESP_INTR_FLAG_DEFAULT

@@ -24,6 +24,8 @@
 
 static const char* MY_TAG = "knusperhaeuschen/wifi";
 
+#define CONFIG_LED_PIN		GPIO_NUM_2
+
 
 // FreeRTOS event group to signal when we are connected etc...
 //static EventGroupHandle_t wifi_event_group;
@@ -39,10 +41,12 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
     switch (event->event_id) {
     case SYSTEM_EVENT_STA_START:
 		ESP_LOGI(MY_TAG, "SYSTEM_EVENT_STA_START");
+		gpio_set_level(CONFIG_LED_PIN, 0);
         esp_wifi_connect();
         break;
     case SYSTEM_EVENT_STA_GOT_IP:
 		ESP_LOGI(MY_TAG, "SYSTEM_EVENT_STA_GOT_IP");
+		gpio_set_level(CONFIG_LED_PIN, 1);
 //        xEventGroupSetBits(wifi_event_group, CONNECTED_BIT);
 		if (*http == NULL)
 		{
@@ -65,6 +69,7 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
         break;
     case SYSTEM_EVENT_STA_DISCONNECTED:
 		ESP_LOGI(MY_TAG, "SYSTEM_EVENT_STA_DISCONNECTED");
+		gpio_set_level(CONFIG_LED_PIN, 0);
         /* This is a workaround as ESP32 WiFi libs don't currently
            auto-reassociate. */
         esp_wifi_connect();
@@ -77,14 +82,21 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
 		}
         break;
     default:
+		ESP_LOGI(MY_TAG, "WTF: %d", event->event_id);
         break;
     }
+
     return ESP_OK;
 }
 
 
 void wifi_init(void* arg)
 {
+	// -- status led
+	gpio_pad_select_gpio(CONFIG_LED_PIN);
+	gpio_set_direction(CONFIG_LED_PIN, GPIO_MODE_OUTPUT);
+
+	// -- wifi
     tcpip_adapter_init();
 
 	tcpip_adapter_dhcpc_stop(TCPIP_ADAPTER_IF_STA); // no DHCP

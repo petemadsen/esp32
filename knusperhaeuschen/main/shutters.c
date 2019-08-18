@@ -1,40 +1,38 @@
-/* HTTP GET Example using plain POSIX sockets
-
-   This example code is in the Public Domain (or CC0 licensed, at your option.)
-
-   Unless required by applicable law or agreed to in writing, this
-   software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
-   CONDITIONS OF ANY KIND, either express or implied.
-*/
+/**
+ * http_request example.
+ */
 #include <string.h>
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "freertos/event_groups.h"
-#include "esp_system.h"
-#include "esp_wifi.h"
-#include "esp_event_loop.h"
-#include "esp_log.h"
-#include "nvs_flash.h"
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+#include <freertos/event_groups.h>
+#include <esp_system.h>
+#include <esp_wifi.h>
+#include <esp_event_loop.h>
+#include <esp_log.h>
+#include <nvs_flash.h>
 
-#include "lwip/err.h"
-#include "lwip/sockets.h"
-#include "lwip/sys.h"
-#include "lwip/netdb.h"
-#include "lwip/dns.h"
+#include <lwip/err.h>
+#include <lwip/sockets.h>
+#include <lwip/sys.h>
+#include <lwip/netdb.h>
+#include <lwip/dns.h>
 
 
 static const char* MY_TAG = "knusperhaeuschen/shutters";
 
-#define WEB_SERVER	"example.com"
-#define WEB_PORT	80
-#define WEB_URL		"http://example.com"
-static const char* REQUEST = "GET " WEB_URL " HTTP/1.0\r\n"
+//#define WEB_URL		"http://example.com"
+//#define WEB_SERVER	"example.com"
+//#define WEB_PORT	"80"
+#define WEB_URL		"http://192.168.1.86"
+#define WEB_SERVER	"192.168.1.86"
+#define WEB_PORT	"8080"
+static const char* REQUEST = "GET / HTTP/1.0\r\n"
 	"Host: " WEB_SERVER "\r\n"
 	"User-Agent: esp-idf/1.0 esp32\r\n"
 	"\r\n";
 
 
-void shutters_task(void *pvParameters)
+void shutters_task(void* pvParameters)
 {
     const struct addrinfo hints = {
         .ai_family = AF_INET,
@@ -47,15 +45,11 @@ void shutters_task(void *pvParameters)
 
 	for (;;)
 	{
-		// sleep
-		for (int i=0; i<60; ++i)
-			vTaskDelay(1000 / portTICK_PERIOD_MS);
-
 		ESP_LOGI(MY_TAG, "run");
 
 #if 1
 		// connect
-		int err = getaddrinfo(WEB_SERVER, "80", &hints, &res);
+		int err = getaddrinfo(WEB_SERVER, WEB_PORT, &hints, &res);
         if (err != 0 || res == NULL)
 		{
             ESP_LOGE(MY_TAG, "DNS lookup failed err=%d res=%p", err, res);
@@ -126,10 +120,9 @@ void shutters_task(void *pvParameters)
 
         ESP_LOGI(MY_TAG, "... done reading from socket. Last read return=%d errno=%d\r\n", r, errno);
         close(s);
-        for(int countdown = 10; countdown >= 0; countdown--) {
-            ESP_LOGI(MY_TAG, "%d... ", countdown);
-            vTaskDelay(1000 / portTICK_PERIOD_MS);
-        }
-        ESP_LOGI(MY_TAG, "Starting again!");
+
+		// sleep
+		for (int i=0; i<10; ++i)
+			vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
 }
