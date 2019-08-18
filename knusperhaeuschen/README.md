@@ -13,3 +13,5 @@
 *TODO* speaker make noise on startup
 
 *TODO* blink if has wifi
+
+*TODO* add http support
