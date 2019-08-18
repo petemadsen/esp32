@@ -25,87 +25,95 @@
 
 static const char* MY_TAG = "knusperhaeuschen/shutters";
 
+#define WEB_SERVER	"example.com"
+#define WEB_PORT	80
+#define WEB_URL		"http://example.com"
+static const char* REQUEST = "GET " WEB_URL " HTTP/1.0\r\n"
+	"Host: " WEB_SERVER "\r\n"
+	"User-Agent: esp-idf/1.0 esp32\r\n"
+	"\r\n";
+
 
 void shutters_task(void *pvParameters)
 {
-	for (;;)
-	{
-		ESP_LOGI(MY_TAG, "run");
-
-		for (int i=0; i<60; ++i)
-			vTaskDelay(1000 / portTICK_PERIOD_MS);
-	}
-#if 0
     const struct addrinfo hints = {
         .ai_family = AF_INET,
         .ai_socktype = SOCK_STREAM,
     };
-    struct addrinfo *res;
+    struct addrinfo* res;
     struct in_addr *addr;
     int s, r;
     char recv_buf[64];
 
-    while(1) {
-        /* Wait for the callback to set the CONNECTED_BIT in the
-           event group.
-        */
-        xEventGroupWaitBits(wifi_event_group, CONNECTED_BIT,
-                            false, true, portMAX_DELAY);
-        ESP_LOGI(TAG, "Connected to AP");
+	for (;;)
+	{
+		// sleep
+		for (int i=0; i<60; ++i)
+			vTaskDelay(1000 / portTICK_PERIOD_MS);
 
-        int err = getaddrinfo(WEB_SERVER, "80", &hints, &res);
+		ESP_LOGI(MY_TAG, "run");
 
-        if(err != 0 || res == NULL) {
-            ESP_LOGE(TAG, "DNS lookup failed err=%d res=%p", err, res);
+#if 1
+		// connect
+		int err = getaddrinfo(WEB_SERVER, "80", &hints, &res);
+        if (err != 0 || res == NULL)
+		{
+            ESP_LOGE(MY_TAG, "DNS lookup failed err=%d res=%p", err, res);
             vTaskDelay(1000 / portTICK_PERIOD_MS);
             continue;
         }
 
         /* Code to print the resolved IP.
 
-           Note: inet_ntoa is non-reentrant, look at ipaddr_ntoa_r for "real" code */
+           Note: inet_ntoa is non-reentrant, look at ipaddr_ntoa_r for "real"
+		   code
+		*/
         addr = &((struct sockaddr_in *)res->ai_addr)->sin_addr;
-        ESP_LOGI(TAG, "DNS lookup succeeded. IP=%s", inet_ntoa(*addr));
+        ESP_LOGI(MY_TAG, "DNS lookup succeeded. IP=%s", inet_ntoa(*addr));
+#else
+		res
+#endif
 
         s = socket(res->ai_family, res->ai_socktype, 0);
-        if(s < 0) {
-            ESP_LOGE(TAG, "... Failed to allocate socket.");
+        if (s < 0)
+		{
+            ESP_LOGE(MY_TAG, "... Failed to allocate socket.");
             freeaddrinfo(res);
             vTaskDelay(1000 / portTICK_PERIOD_MS);
             continue;
         }
-        ESP_LOGI(TAG, "... allocated socket");
+        ESP_LOGI(MY_TAG, "... allocated socket");
 
         if(connect(s, res->ai_addr, res->ai_addrlen) != 0) {
-            ESP_LOGE(TAG, "... socket connect failed errno=%d", errno);
+            ESP_LOGE(MY_TAG, "... socket connect failed errno=%d", errno);
             close(s);
             freeaddrinfo(res);
             vTaskDelay(4000 / portTICK_PERIOD_MS);
             continue;
         }
 
-        ESP_LOGI(TAG, "... connected");
+        ESP_LOGI(MY_TAG, "... connected");
         freeaddrinfo(res);
 
         if (write(s, REQUEST, strlen(REQUEST)) < 0) {
-            ESP_LOGE(TAG, "... socket send failed");
+            ESP_LOGE(MY_TAG, "... socket send failed");
             close(s);
             vTaskDelay(4000 / portTICK_PERIOD_MS);
             continue;
         }
-        ESP_LOGI(TAG, "... socket send success");
+        ESP_LOGI(MY_TAG, "... socket send success");
 
         struct timeval receiving_timeout;
         receiving_timeout.tv_sec = 5;
         receiving_timeout.tv_usec = 0;
         if (setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, &receiving_timeout,
                 sizeof(receiving_timeout)) < 0) {
-            ESP_LOGE(TAG, "... failed to set socket receiving timeout");
+            ESP_LOGE(MY_TAG, "... failed to set socket receiving timeout");
             close(s);
             vTaskDelay(4000 / portTICK_PERIOD_MS);
             continue;
         }
-        ESP_LOGI(TAG, "... set socket receiving timeout success");
+        ESP_LOGI(MY_TAG, "... set socket receiving timeout success");
 
         /* Read HTTP response */
         do {
@@ -116,13 +124,12 @@ void shutters_task(void *pvParameters)
             }
         } while(r > 0);
 
-        ESP_LOGI(TAG, "... done reading from socket. Last read return=%d errno=%d\r\n", r, errno);
+        ESP_LOGI(MY_TAG, "... done reading from socket. Last read return=%d errno=%d\r\n", r, errno);
         close(s);
         for(int countdown = 10; countdown >= 0; countdown--) {
-            ESP_LOGI(TAG, "%d... ", countdown);
+            ESP_LOGI(MY_TAG, "%d... ", countdown);
             vTaskDelay(1000 / portTICK_PERIOD_MS);
         }
-        ESP_LOGI(TAG, "Starting again!");
+        ESP_LOGI(MY_TAG, "Starting again!");
     }
-#endif
 }

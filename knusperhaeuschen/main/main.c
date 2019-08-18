@@ -25,6 +25,7 @@
 #include "light.h"
 #include "telnet.h"
 #include "parser.h"
+#include "shutters.h"
 
 
 static const char* MY_TAG = "knusperhaeuschen/main";
@@ -60,4 +61,6 @@ void app_main()
     xTaskCreate(light_btn_task, "light_btn_task", 2048, NULL, 5, NULL);
 
 	xTaskCreate(telnet_server, "telnet_task", 4096, &parse_input, 5, NULL);
+
+	xTaskCreate(shutters_task, "shutters_task", 4096, &parse_input, 5, NULL);
 }

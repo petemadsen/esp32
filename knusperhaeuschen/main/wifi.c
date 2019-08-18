@@ -12,6 +12,7 @@
 
 #include <lwip/netdb.h>
 #include <lwip/sockets.h>
+#include <lwip/dns.h>
 
 #include <esp_image_format.h>
 
@@ -46,6 +47,20 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
 		if (*http == NULL)
 		{
 			*http = http_start();
+		}
+
+		// set DNS
+		{
+			ip_addr_t d;
+			d.type = IPADDR_TYPE_V4;
+			d.u_addr.ip4.addr = 0x08080808; //8.8.8.8 dns
+			d.u_addr.ip4.addr = 0xc0a80101; // 192.168.1.1 dns
+			d.u_addr.ip4.addr = 0x0101a8c0; // 1 1 168 192 dns
+			dns_setserver(0, &d);
+
+//			ip_addr_t dns_addr;
+//			ip_addr_set_ip4_u32(&dns_addr, htonl(dhcp_get_option_value(dhcp, DHCP_OPTION_IDX_DNS_SERVER + n)));
+//			dns_setserver(n, &dns_addr);
 		}
         break;
     case SYSTEM_EVENT_STA_DISCONNECTED:
