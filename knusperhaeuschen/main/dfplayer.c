@@ -289,7 +289,7 @@ void dfplayer_init()
 	if (x_events == NULL)
 		ESP_LOGE(MY_TAG, "Could create event group.");
 
-	xTaskCreate(dfplayer_task, "dfplayer_task", 4096, NULL, 10, NULL);
+	xTaskCreate(dfplayer_task, "dfplayer_task", 4096, NULL, 5, NULL);
 }
 
 

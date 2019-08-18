@@ -11,3 +11,5 @@
 *TODO* Setting like bell track and volume should be saved.
 
 *TODO* speaker make noise on startup
+
+*TODO* blink if has wifi

@@ -4,6 +4,7 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <freertos/event_groups.h>
+#include <freertos/semphr.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -18,7 +19,6 @@
 #include "light.h"
 
 
-#define CONFIG_LIGHT_BTN_PIN	GPIO_NUM_21
 #define CONFIG_RELAY_PIN		GPIO_NUM_18
 
 
@@ -27,7 +27,7 @@ static const char* MY_TAG = "DFPLAYER/light";
 
 static bool relay_on = false;
 
-EventGroupHandle_t xLightEvents;
+static EventGroupHandle_t xLightEvents;
 #define LIGHT_OFF		(1 << 0)
 #define LIGHT_ON		(1 << 1)
 #define LIGHT_TOGGLE	(1 << 2)
@@ -36,27 +36,12 @@ EventGroupHandle_t xLightEvents;
 #define BTN_DEBOUNCE_DIFF	50
 
 
-void IRAM_ATTR light_btn_isr_handler(void* arg)
-{
-	BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-	BaseType_t res = xEventGroupSetBitsFromISR(xLightEvents, LIGHT_TOGGLE,
-			&xHigherPriorityTaskWoken);
-	if (res == pdPASS)
-		portYIELD_FROM_ISR();//(xHigherPriorityTaskWoken);
-}
 void light_btn_task(void* arg)
 {
 	xLightEvents = xEventGroupCreate();
 
 	gpio_pad_select_gpio(CONFIG_RELAY_PIN);
 	gpio_set_direction(CONFIG_RELAY_PIN, GPIO_MODE_OUTPUT);
-
-	gpio_pad_select_gpio(CONFIG_LIGHT_BTN_PIN);
-	gpio_set_direction(CONFIG_LIGHT_BTN_PIN, GPIO_MODE_INPUT);
-	gpio_set_intr_type(CONFIG_LIGHT_BTN_PIN, GPIO_INTR_NEGEDGE);
-//	gpio_install_isr_service(ESP_INTR_FLAG_DEFAULT);
-
-	gpio_isr_handler_add(CONFIG_LIGHT_BTN_PIN, light_btn_isr_handler, NULL);
 
 	TickType_t last_run = xTaskGetTickCount();
 	light_off();
@@ -68,7 +53,7 @@ void light_btn_task(void* arg)
 				LIGHT_ON | LIGHT_OFF | LIGHT_TOGGLE,
 				pdTRUE,		// auto clear
 				pdFALSE,	// any single bit will do
-				portMAX_DELAY);
+				100 /*portMAX_DELAY*/);
 
 		TickType_t diff = xTaskGetTickCount() - last_run;
 		bool ok_to_run = (diff > BTN_DEBOUNCE_DIFF);
