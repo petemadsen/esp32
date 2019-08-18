@@ -21,7 +21,7 @@
 #include "http.h"
 
 
-static const char* MY_TAG = "DFPLAYER/wifi";
+static const char* MY_TAG = "knusperhaeuschen/wifi";
 
 
 // FreeRTOS event group to signal when we are connected etc...

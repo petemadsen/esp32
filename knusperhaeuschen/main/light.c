@@ -22,7 +22,7 @@
 #define CONFIG_RELAY_PIN		GPIO_NUM_18
 
 
-static const char* MY_TAG = "DFPLAYER/light";
+static const char* MY_TAG = "knusperhaeuschen/light";
 
 
 static bool relay_on = false;

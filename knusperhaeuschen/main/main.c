@@ -26,7 +26,8 @@
 #include "telnet.h"
 #include "parser.h"
 
-static const char* MY_TAG = "DFPLAYER/main";
+
+static const char* MY_TAG = "knusperhaeuschen/main";
 
 
 void app_main()
@@ -35,10 +36,13 @@ void app_main()
 
     // -- initialize nvs.
     esp_err_t err = nvs_flash_init();
-    if (err == ESP_ERR_NVS_NO_FREE_PAGES) {
-        // OTA app partition table has a smaller NVS partition size than the non-OTA
-        // partition table. This size mismatch may cause NVS initialization to fail.
-        // If this happens, we erase NVS partition and initialize NVS again.
+    if (err == ESP_ERR_NVS_NO_FREE_PAGES)
+	{
+		ESP_LOGE(MY_TAG, "NVC no free pages.");
+        // OTA app partition table has a smaller NVS partition size than the
+		// non-OTA partition table. This size mismatch may cause NVS
+		// initialization to fail. If this happens, we erase NVS partition
+		// and initialize NVS again.
         ESP_ERROR_CHECK(nvs_flash_erase());
         err = nvs_flash_init();
     }

@@ -18,7 +18,7 @@
 
 #include "sdkconfig.h"
 
-static const char* MY_TAG = "DFPLAYER";
+static const char* MY_TAG = "knusperhaeuschen/dfplayer";
 
 
 static const int uart_num = UART_NUM_2;

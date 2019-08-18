@@ -21,13 +21,9 @@
 
 #define CONFIG_BELL_BTN_PIN		GPIO_NUM_19
 #define CONFIG_LIGHT_BTN_PIN	GPIO_NUM_21
-#define CONFIG_RELAY_PIN		GPIO_NUM_18
 
 
-static const char* MY_TAG = "DFPLAYER/main";
-
-static SemaphoreHandle_t xBellBtnSem = NULL;
-static SemaphoreHandle_t xLightBtnSem = NULL;
+static const char* MY_TAG = "knusperhaeuschen/main";
 
 
 #define BTN_DEBOUNCE_DIFF	50
