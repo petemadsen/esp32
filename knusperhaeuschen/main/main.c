@@ -29,6 +29,7 @@
 
 
 static const char* MY_TAG = "knusperhaeuschen/main";
+#include "ota.h"
 
 
 void app_main()
@@ -48,6 +49,8 @@ void app_main()
         err = nvs_flash_init();
     }
     ESP_ERROR_CHECK(err);
+
+	ota_init();
 
 	// --
 	buttons_init();

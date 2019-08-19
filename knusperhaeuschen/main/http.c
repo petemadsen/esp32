@@ -8,6 +8,7 @@ static esp_err_t status_handler(httpd_req_t* req);
 static esp_err_t light_handler(httpd_req_t* req);
 static esp_err_t bell_handler(httpd_req_t* req);
 static esp_err_t volume_handler(httpd_req_t* req);
+static esp_err_t ota_handler(httpd_req_t* req);
 
 
 static const char* RET_OK = "OK";
@@ -18,22 +19,27 @@ static httpd_uri_t basic_handlers[] = {
 	{
 		.uri	= "/status",
 		.method	= HTTP_GET,
-		.handler	= status_handler,
+		.handler= status_handler,
 	},
 	{
 		.uri	= "/light",
 		.method	= HTTP_GET,
-		.handler	= light_handler,
+		.handler= light_handler,
 	},
 	{
 		.uri	= "/bell",
 		.method	= HTTP_GET,
-		.handler	= bell_handler,
+		.handler= bell_handler,
 	},
 	{
 		.uri	= "/volume",
 		.method	= HTTP_GET,
-		.handler	= volume_handler,
+		.handler= volume_handler,
+	},
+	{
+		.uri	= "/ota",
+		.method	= HTTP_GET,
+		.handler= ota_handler,
 	}
 };
 
@@ -64,6 +70,15 @@ void http_stop(httpd_handle_t server)
 esp_err_t status_handler(httpd_req_t* req)
 {
 	char* p = parse_input("status", 6);
+//	httpd_resp_send(req, "OK", 2);
+	httpd_resp_send(req, p, strlen(p));
+	return ESP_OK;
+}
+
+
+esp_err_t ota_handler(httpd_req_t* req)
+{
+	char* p = parse_input("ota", 3);
 //	httpd_resp_send(req, "OK", 2);
 	httpd_resp_send(req, p, strlen(p));
 	return ESP_OK;
