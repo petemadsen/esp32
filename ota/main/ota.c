@@ -31,9 +31,17 @@
 #include "config.h"
 
 
-#define BUFFSIZE 1024
-#define TEXT_BUFFSIZE 1024
+#define BUFFSIZE			1024
+#define TEXT_BUFFSIZE		1024
 #define DEFAULT_FILENAME	"peterpan.bin"
+#define DEFAULT_SERVER_IP	"192.168.1.86"
+#define DEFAULT_SERVER_PORT	"8081"
+
+
+#define CFG_OTA_STORAGE	"ota"
+#define CFG_OTA_FILENAME "filename"
+#define CFG_OTA_FILENAME_LENGTH 30
+static char ota_filename[CFG_OTA_FILENAME_LENGTH];
 
 
 static const char* TAG = "ota";
@@ -146,7 +154,7 @@ static bool read_past_http_header(char text[], int total_len, esp_ota_handle_t u
 
 static bool connect_to_http_server()
 {
-    ESP_LOGI(TAG, "Server IP: %s Server Port:%s", EXAMPLE_SERVER_IP, EXAMPLE_SERVER_PORT);
+    ESP_LOGI(TAG, "Server IP: %s Server Port:%s", DEFAULT_SERVER_IP, DEFAULT_SERVER_PORT);
 
     int  http_connect_flag = -1;
     struct sockaddr_in sock_info;
@@ -160,8 +168,8 @@ static bool connect_to_http_server()
     // set connect info
     memset(&sock_info, 0, sizeof(struct sockaddr_in));
     sock_info.sin_family = AF_INET;
-    sock_info.sin_addr.s_addr = inet_addr(EXAMPLE_SERVER_IP);
-    sock_info.sin_port = htons(atoi(EXAMPLE_SERVER_PORT));
+    sock_info.sin_addr.s_addr = inet_addr(DEFAULT_SERVER_IP);
+    sock_info.sin_port = htons(atoi(DEFAULT_SERVER_PORT));
 
     // connect to http server
     http_connect_flag = connect(socket_id, (struct sockaddr *)&sock_info, sizeof(sock_info));
@@ -206,7 +214,8 @@ static void download_and_install()
         "User-Agent: esp-idf/1.0 esp32\r\n\r\n";
 
     char *http_request = NULL;
-    int get_len = asprintf(&http_request, GET_FORMAT, EXAMPLE_FILENAME, EXAMPLE_SERVER_IP, EXAMPLE_SERVER_PORT);
+    int get_len = asprintf(&http_request, GET_FORMAT, ota_filename,
+			DEFAULT_SERVER_IP, DEFAULT_SERVER_PORT);
     if (get_len < 0) {
         ESP_LOGE(TAG, "Failed to allocate memory for GET request buffer");
         task_fatal_error();
@@ -283,9 +292,9 @@ static void download_and_install()
 }
 
 
-static void ota_example_task(void *pvParameter)
+static void ota_example_task(void* pvParameter)
 {
-    ESP_LOGI(TAG, "Starting OTA example...");
+    ESP_LOGI(TAG, "Starting OTA...");
 
     const esp_partition_t *configured = esp_ota_get_boot_partition();
     const esp_partition_t *running = esp_ota_get_running_partition();
@@ -354,10 +363,6 @@ static void ota_example_task(void *pvParameter)
 }
 
 
-#define CFG_OTA_STORAGE	"ota"
-#define CFG_OTA_FILENAME "filename"
-#define CFG_OTA_FILENAME_LENGTH 30
-static char ota_filename[CFG_OTA_FILENAME_LENGTH];
 esp_err_t read_ota()
 {
 	esp_err_t err;
