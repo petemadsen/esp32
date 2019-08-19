@@ -1,7 +1,6 @@
 # Project: knusperhauschen
 
 * dfplayer
-* telnet
 * buttons
 * transistor switch
 * *TODO* ina219
