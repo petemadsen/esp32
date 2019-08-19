@@ -1,4 +1,5 @@
-/* OTA example
+/**
+ * Based on OTA example.
 
    This example code is in the Public Domain (or CC0 licensed, at your option.)
 
@@ -24,15 +25,18 @@
 
 #include "esp_image_format.h"
 
-#include "nvs.h"
-#include "nvs_flash.h"
+#include <nvs.h>
+#include <nvs_flash.h>
 
 #include "config.h"
 
+
 #define BUFFSIZE 1024
 #define TEXT_BUFFSIZE 1024
+#define DEFAULT_FILENAME	"peterpan.bin"
 
-static const char *TAG = "ota";
+
+static const char* TAG = "ota";
 /*an ota data write buffer ready to write to the flash*/
 static char ota_write_data[BUFFSIZE + 1] = { 0 };
 /*an packet receive buffer*/
@@ -42,17 +46,16 @@ static int binary_file_length = 0;
 /*socket id*/
 static int socket_id = -1;
 
-/* FreeRTOS event group to signal when we are connected & ready to make a request */
-static EventGroupHandle_t wifi_event_group;
 
-/* The event group allows multiple bits for each event,
-   but we only care about one event - are we connected
-   to the AP with an IP? */
+// Event group to signal when we are connected & ready to make a request */
+static EventGroupHandle_t wifi_event_group;
 const int CONNECTED_BIT = BIT0;
+
 
 static esp_err_t event_handler(void *ctx, system_event_t *event)
 {
-    switch (event->event_id) {
+    switch (event->event_id)
+	{
     case SYSTEM_EVENT_STA_START:
         esp_wifi_connect();
         break;
@@ -70,6 +73,7 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
     }
     return ESP_OK;
 }
+
 
 static void initialise_wifi(void)
 {
@@ -91,7 +95,10 @@ static void initialise_wifi(void)
     ESP_ERROR_CHECK( esp_wifi_start() );
 }
 
-/*read buffer by byte still delim ,return read bytes counts*/
+
+/*
+ * read buffer by byte still delim ,return read bytes counts
+ */
 static int read_until(char *buffer, char delim, int len)
 {
 //  /*TODO: delim check,buffer check,further: do an buffer length limited*/
@@ -102,10 +109,12 @@ static int read_until(char *buffer, char delim, int len)
     return i + 1;
 }
 
-/* resolve a packet from http socket
+
+/*
+ * resolve a packet from http socket
  * return true if packet including \r\n\r\n that means http packet header finished,start to receive packet body
  * otherwise return false
- * */
+ */
 static bool read_past_http_header(char text[], int total_len, esp_ota_handle_t update_handle)
 {
     /* i means current position */
@@ -134,6 +143,7 @@ static bool read_past_http_header(char text[], int total_len, esp_ota_handle_t u
     return false;
 }
 
+
 static bool connect_to_http_server()
 {
     ESP_LOGI(TAG, "Server IP: %s Server Port:%s", EXAMPLE_SERVER_IP, EXAMPLE_SERVER_PORT);
@@ -155,16 +165,20 @@ static bool connect_to_http_server()
 
     // connect to http server
     http_connect_flag = connect(socket_id, (struct sockaddr *)&sock_info, sizeof(sock_info));
-    if (http_connect_flag == -1) {
+    if (http_connect_flag == -1)
+	{
         ESP_LOGE(TAG, "Connect to server failed! errno=%d", errno);
         close(socket_id);
         return false;
-    } else {
+    }
+	else
+	{
         ESP_LOGI(TAG, "Connected to server");
         return true;
     }
     return false;
 }
+
 
 static void __attribute__((noreturn)) task_fatal_error()
 {
@@ -178,7 +192,6 @@ static void __attribute__((noreturn)) task_fatal_error()
 }
 
 
-
 static void download_and_install()
 {
     esp_err_t err;
@@ -187,7 +200,7 @@ static void download_and_install()
     esp_ota_handle_t update_handle = 0 ;
 
     /*send GET request to http server*/
-    const char *GET_FORMAT =
+    const char* GET_FORMAT =
         "GET %s HTTP/1.0\r\n"
         "Host: %s:%s\r\n"
         "User-Agent: esp-idf/1.0 esp32\r\n\r\n";
@@ -222,7 +235,8 @@ static void download_and_install()
 
     bool resp_body_start = false, flag = true;
     /*deal with all receive packet*/
-    while (flag) {
+    while (flag)
+	{
         memset(text, 0, TEXT_BUFFSIZE);
         memset(ota_write_data, 0, BUFFSIZE);
         int buff_len = recv(socket_id, text, TEXT_BUFFSIZE, 0);
@@ -295,7 +309,8 @@ static void ota_example_task(void *pvParameter)
     // connect to http server, download file and install
     for (int i=0; i<10; ++i)
     {
-		if (connect_to_http_server()) {
+		if (connect_to_http_server())
+		{
 			ESP_LOGI(TAG, "Connected to http server");
 			download_and_install();
 		} else {
@@ -338,18 +353,65 @@ static void ota_example_task(void *pvParameter)
 	esp_restart();
 }
 
+
+#define CFG_OTA_STORAGE	"ota"
+#define CFG_OTA_FILENAME "filename"
+#define CFG_OTA_FILENAME_LENGTH 30
+static char ota_filename[CFG_OTA_FILENAME_LENGTH];
+esp_err_t read_ota()
+{
+	esp_err_t err;
+
+	nvs_handle my_handle;
+    err = nvs_open(CFG_OTA_STORAGE, NVS_READWRITE, &my_handle);
+	if (err != ESP_OK)
+	{
+		ESP_LOGE(TAG, "Could not open storage: %s", CFG_OTA_STORAGE);
+		return err;
+	}
+
+	size_t keylen;
+	err = nvs_get_str(my_handle, CFG_OTA_FILENAME, NULL, &keylen);
+	if (err != ESP_OK)
+	{
+		ESP_LOGE(TAG, "Key not found: %s", CFG_OTA_FILENAME);
+		return err;
+	}
+	if (keylen > CFG_OTA_FILENAME_LENGTH)
+	{
+		ESP_LOGE(TAG, "Filename too long: %u", keylen);
+		return ESP_FAIL;
+	}
+
+	err = nvs_get_str(my_handle, CFG_OTA_FILENAME, ota_filename, &keylen);
+	ESP_LOGI(TAG, "Filename to load: %s", ota_filename);
+
+	return ESP_OK;
+}
+
+
 void app_main()
 {
     // Initialize NVS.
     esp_err_t err = nvs_flash_init();
-    if (err == ESP_ERR_NVS_NO_FREE_PAGES) {
-        // OTA app partition table has a smaller NVS partition size than the non-OTA
-        // partition table. This size mismatch may cause NVS initialization to fail.
-        // If this happens, we erase NVS partition and initialize NVS again.
+    if (err == ESP_ERR_NVS_NO_FREE_PAGES)
+	{
+        // OTA app partition table has a smaller NVS partition size than the
+		// non-OTA partition table. This size mismatch may cause NVS
+		// initialization to fail.
+		// If this happens, we erase NVS partition and initialize NVS again.
         ESP_ERROR_CHECK(nvs_flash_erase());
         err = nvs_flash_init();
+		ESP_LOGW(TAG, "Initializing VNS.");
     }
-    ESP_ERROR_CHECK( err );
+    ESP_ERROR_CHECK(err);
+
+	if (read_ota() != ESP_OK)
+	{
+		strcpy(ota_filename, DEFAULT_FILENAME);
+		ESP_LOGE(TAG, "Using default filename: %s", DEFAULT_FILENAME);
+	}
+	ESP_LOGI(TAG, "Using filename: %s", ota_filename);
 
     initialise_wifi();
     xTaskCreate(&ota_example_task, "ota_example_task", 8192, NULL, 5, NULL);
