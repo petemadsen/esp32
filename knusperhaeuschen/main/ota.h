@@ -8,6 +8,7 @@
 
 #define PROJECT_NAME "knusperhaeuschen.bin"
 
+
 esp_err_t ota_init()
 {
 	esp_err_t err;
@@ -27,7 +28,8 @@ esp_err_t ota_init()
 		return err;
 	}
 
-	return ESP_OK;
+	return nvs_commit(my_handle);
 }
+
 
 #endif

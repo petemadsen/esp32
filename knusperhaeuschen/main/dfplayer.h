@@ -23,4 +23,7 @@ void dfplayer_set_track(int track);
 int dfplayer_get_track();
 
 
+void dfplayer_play(int track);
+
+
 #endif /* MAIN_DFPLAYER_H */

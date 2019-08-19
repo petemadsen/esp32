@@ -24,11 +24,13 @@ static const char* MY_TAG = "knusperhaeuschen/dfplayer";
 static const int uart_num = UART_NUM_2;
 
 static int dfplayer_vol = 33;
-static int dfplayer_track = 1;
+static int dfplayer_bell_track = 1;
+static int dfplayer_play_track = 1;
 
 static EventGroupHandle_t x_events;
 #define EVENT_BELL		(1 << 0)
 #define EVENT_VOLUME	(1 << 1)
+#define EVENT_PLAY		(1 << 2)
 
 
 #ifndef max
@@ -61,12 +63,12 @@ static const char cmd_reset[] = {
 	CMD_RESET, CMD_ACK, 0x0, 0x0,
 	0xFE, 0xEE, 0xEF
 };
-static const char cmd_volume10[] = {
+static const char cmd_volume[] = { // volume 10
 	0x7E, 0xFF, 0x6,
 	CMD_VOLUME, CMD_ACK, 0x0, 0xA,
 	0xFE, 0xEA, 0xEF
 };
-static const char cmd_play1st[] = {
+static const char cmd_play[] = { // play first track, actually
 	0x7E, 0xFF, 0x6,
 	CMD_PLAY, CMD_ACK, 0x0, 0x1,
 	0xFE, 0xF6, 0xEF
@@ -213,7 +215,7 @@ static void dfplayer_task(void* arg)
 
 					// set volume
 //					dfplayer_set_volume_p(25);
-					uart_write_bytes(uart_num, cmd_volume10, CMD_LEN);
+					uart_write_bytes(uart_num, cmd_volume, CMD_LEN);
 				}
 			}
 
@@ -227,17 +229,14 @@ static void dfplayer_task(void* arg)
 		{
 			xEventGroupClearBits(x_events, EVENT_BELL);
 
-			ESP_LOGI(MY_TAG, "play bell (%d)", dfplayer_track);
+			ESP_LOGI(MY_TAG, "play bell (%d)", dfplayer_bell_track);
 
-#if 1
-			track_num = dfplayer_track;
-			prepare_cmd(cmd_play1st, to_send, track_num);
+			track_num = dfplayer_bell_track;
+			prepare_cmd(cmd_play, to_send, track_num);
 			if (++track_num > 2)
 				track_num = 1;
 			uart_write_bytes(uart_num, to_send, CMD_LEN);
-#else
-			uart_write_bytes(uart_num, cmd_play1st, CMD_LEN);
-#endif
+
 			int len = uart_read_bytes(uart_num, data, CMD_LEN,
 					100 / portTICK_PERIOD_MS);
 			if (len)
@@ -245,19 +244,34 @@ static void dfplayer_task(void* arg)
 				parse_reply("PLAY1ST", data);
 			}
 		}
-		else if (bits & EVENT_VOLUME)
+		if (bits & EVENT_VOLUME)
 		{
 			xEventGroupClearBits(x_events, EVENT_VOLUME);
 
 			int raw_vol = (float)dfplayer_vol / (float)100 * 30;
 			ESP_LOGI(MY_TAG, "volume: %d (raw: %d)", dfplayer_vol, raw_vol);
 
-#if 1
-			prepare_cmd(cmd_volume10, to_send, raw_vol);
+			prepare_cmd(cmd_volume, to_send, raw_vol);
 			uart_write_bytes(uart_num, to_send, CMD_LEN);
-#else
-			uart_write_bytes(uart_num, cmd_volume10, CMD_LEN);
-#endif
+		}
+		if (bits & EVENT_PLAY)
+		{
+			xEventGroupClearBits(x_events, EVENT_PLAY);
+
+			ESP_LOGI(MY_TAG, "play track (%d)", dfplayer_play_track);
+
+			track_num = dfplayer_play_track;
+			prepare_cmd(cmd_play, to_send, track_num);
+			if (++track_num > 2)
+				track_num = 1;
+			uart_write_bytes(uart_num, to_send, CMD_LEN);
+
+			int len = uart_read_bytes(uart_num, data, CMD_LEN,
+					100 / portTICK_PERIOD_MS);
+			if (len)
+			{
+				parse_reply("PLAY1ST", data);
+			}
 		}
 
         vTaskDelay(1000 / portTICK_PERIOD_MS);
@@ -308,11 +322,18 @@ int dfplayer_get_volume_p()
 
 int dfplayer_get_track()
 {
-	return dfplayer_track;
+	return dfplayer_bell_track;
 }
 
 
 void dfplayer_set_track(int track)
 {
-	dfplayer_track = track;
+	dfplayer_bell_track = track;
+}
+
+
+void dfplayer_play(int track)
+{
+	dfplayer_play_track = track;
+	xEventGroupSetBits(x_events, EVENT_PLAY);
 }

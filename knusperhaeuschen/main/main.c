@@ -50,7 +50,10 @@ void app_main()
     }
     ESP_ERROR_CHECK(err);
 
+	ESP_LOGI(MY_TAG, "Init OTA.");
 	ota_init();
+	ESP_LOGI(MY_TAG, "Done.");
+	vTaskDelay(5000 / portTICK_PERIOD_MS);
 
 	// --
 	buttons_init();
