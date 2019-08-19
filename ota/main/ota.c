@@ -22,6 +22,9 @@
 #include "esp_event_loop.h"
 #include "esp_log.h"
 #include "esp_ota_ops.h"
+#include "esp_http_client.h"
+#include "esp_flash_partitions.h"
+#include "esp_partition.h"
 
 #include "esp_image_format.h"
 
@@ -37,6 +40,9 @@
 #define DEFAULT_SERVER_IP	"192.168.1.86"
 #define DEFAULT_SERVER_PORT	"8081"
 
+#define DOWNLOAD_URL_MAXLEN	80
+static char download_url[DOWNLOAD_URL_MAXLEN];
+
 
 #define CFG_OTA_STORAGE	"ota"
 #define CFG_OTA_FILENAME "filename"
@@ -47,12 +53,6 @@ static char ota_filename[CFG_OTA_FILENAME_LENGTH];
 static const char* TAG = "ota";
 /*an ota data write buffer ready to write to the flash*/
 static char ota_write_data[BUFFSIZE + 1] = { 0 };
-/*an packet receive buffer*/
-static char text[BUFFSIZE + 1] = { 0 };
-/* an image total length*/
-static int binary_file_length = 0;
-/*socket id*/
-static int socket_id = -1;
 
 
 // Event group to signal when we are connected & ready to make a request */
@@ -104,94 +104,16 @@ static void initialise_wifi(void)
 }
 
 
-/*
- * read buffer by byte still delim ,return read bytes counts
- */
-static int read_until(char *buffer, char delim, int len)
+static void http_cleanup(esp_http_client_handle_t client)
 {
-//  /*TODO: delim check,buffer check,further: do an buffer length limited*/
-    int i = 0;
-    while (buffer[i] != delim && i < len) {
-        ++i;
-    }
-    return i + 1;
-}
-
-
-/*
- * resolve a packet from http socket
- * return true if packet including \r\n\r\n that means http packet header finished,start to receive packet body
- * otherwise return false
- */
-static bool read_past_http_header(char text[], int total_len, esp_ota_handle_t update_handle)
-{
-    /* i means current position */
-    int i = 0, i_read_len = 0;
-    while (text[i] != 0 && i < total_len) {
-        i_read_len = read_until(&text[i], '\n', total_len);
-        // if we resolve \r\n line,we think packet header is finished
-        if (i_read_len == 2) {
-            int i_write_len = total_len - (i + 2);
-            memset(ota_write_data, 0, BUFFSIZE);
-            /*copy first http packet body to write buffer*/
-            memcpy(ota_write_data, &(text[i + 2]), i_write_len);
-
-            esp_err_t err = esp_ota_write( update_handle, (const void *)ota_write_data, i_write_len);
-            if (err != ESP_OK) {
-                ESP_LOGE(TAG, "Error: esp_ota_write failed! err=0x%x", err);
-                return false;
-            } else {
-                ESP_LOGI(TAG, "esp_ota_write header OK");
-                binary_file_length += i_write_len;
-            }
-            return true;
-        }
-        i += i_read_len;
-    }
-    return false;
-}
-
-
-static bool connect_to_http_server()
-{
-    ESP_LOGI(TAG, "Server IP: %s Server Port:%s", DEFAULT_SERVER_IP, DEFAULT_SERVER_PORT);
-
-    int  http_connect_flag = -1;
-    struct sockaddr_in sock_info;
-
-    socket_id = socket(AF_INET, SOCK_STREAM, 0);
-    if (socket_id == -1) {
-        ESP_LOGE(TAG, "Create socket failed!");
-        return false;
-    }
-
-    // set connect info
-    memset(&sock_info, 0, sizeof(struct sockaddr_in));
-    sock_info.sin_family = AF_INET;
-    sock_info.sin_addr.s_addr = inet_addr(DEFAULT_SERVER_IP);
-    sock_info.sin_port = htons(atoi(DEFAULT_SERVER_PORT));
-
-    // connect to http server
-    http_connect_flag = connect(socket_id, (struct sockaddr *)&sock_info, sizeof(sock_info));
-    if (http_connect_flag == -1)
-	{
-        ESP_LOGE(TAG, "Connect to server failed! errno=%d", errno);
-        close(socket_id);
-        return false;
-    }
-	else
-	{
-        ESP_LOGI(TAG, "Connected to server");
-        return true;
-    }
-    return false;
+    esp_http_client_close(client);
+    esp_http_client_cleanup(client);
 }
 
 
 static void __attribute__((noreturn)) task_fatal_error()
 {
     ESP_LOGE(TAG, "Exiting task due to fatal error...");
-    close(socket_id);
     (void)vTaskDelete(NULL);
 
     while (1) {
@@ -200,101 +122,14 @@ static void __attribute__((noreturn)) task_fatal_error()
 }
 
 
-static void download_and_install()
+static void ota_example_task(void *pvParameter)
 {
     esp_err_t err;
-    const esp_partition_t *update_partition = NULL;
     /* update handle : set by esp_ota_begin(), must be freed via esp_ota_end() */
     esp_ota_handle_t update_handle = 0 ;
+    const esp_partition_t *update_partition = NULL;
 
-    /*send GET request to http server*/
-    const char* GET_FORMAT =
-        "GET %s HTTP/1.0\r\n"
-        "Host: %s:%s\r\n"
-        "User-Agent: esp-idf/1.0 esp32\r\n\r\n";
-
-    char *http_request = NULL;
-    int get_len = asprintf(&http_request, GET_FORMAT, ota_filename,
-			DEFAULT_SERVER_IP, DEFAULT_SERVER_PORT);
-    if (get_len < 0) {
-        ESP_LOGE(TAG, "Failed to allocate memory for GET request buffer");
-        task_fatal_error();
-    }
-    int res = send(socket_id, http_request, get_len, 0);
-    free(http_request);
-
-    if (res < 0) {
-        ESP_LOGE(TAG, "Send GET request to server failed");
-        task_fatal_error();
-    } else {
-        ESP_LOGI(TAG, "Send GET request to server succeeded");
-    }
-
-    update_partition = esp_ota_get_next_update_partition(NULL);
-    ESP_LOGI(TAG, "Writing to partition subtype %d at offset 0x%x",
-             update_partition->subtype, update_partition->address);
-    assert(update_partition != NULL);
-
-    err = esp_ota_begin(update_partition, OTA_SIZE_UNKNOWN, &update_handle);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "esp_ota_begin failed, error=%d", err);
-        task_fatal_error();
-    }
-    ESP_LOGI(TAG, "esp_ota_begin succeeded");
-
-    bool resp_body_start = false, flag = true;
-    /*deal with all receive packet*/
-    while (flag)
-	{
-        memset(text, 0, TEXT_BUFFSIZE);
-        memset(ota_write_data, 0, BUFFSIZE);
-        int buff_len = recv(socket_id, text, TEXT_BUFFSIZE, 0);
-        if (buff_len < 0) { /*receive error*/
-            ESP_LOGE(TAG, "Error: receive data error! errno=%d", errno);
-            task_fatal_error();
-        } else if (buff_len > 0 && !resp_body_start) { /*deal with response header*/
-            memcpy(ota_write_data, text, buff_len);
-            resp_body_start = read_past_http_header(text, buff_len, update_handle);
-        } else if (buff_len > 0 && resp_body_start) { /*deal with response body*/
-            memcpy(ota_write_data, text, buff_len);
-            err = esp_ota_write( update_handle, (const void *)ota_write_data, buff_len);
-            if (err != ESP_OK) {
-                ESP_LOGE(TAG, "Error: esp_ota_write failed! err=0x%x", err);
-                task_fatal_error();
-            }
-            binary_file_length += buff_len;
-            ESP_LOGI(TAG, "Have written image length %d", binary_file_length);
-        } else if (buff_len == 0) {  /*packet over*/
-            flag = false;
-            ESP_LOGI(TAG, "Connection closed, all packets received");
-            close(socket_id);
-        } else {
-            ESP_LOGE(TAG, "Unexpected recv result");
-        }
-    }
-
-    ESP_LOGI(TAG, "Total Write binary data length : %d", binary_file_length);
-
-    if (esp_ota_end(update_handle) != ESP_OK) {
-        ESP_LOGE(TAG, "esp_ota_end failed!");
-        task_fatal_error();
-    }
-
-    err = esp_ota_set_boot_partition(update_partition);
-    if (err != ESP_OK) {
-        ESP_LOGE(TAG, "esp_ota_set_boot_partition failed! err=0x%x", err);
-        task_fatal_error();
-    }
-
-    ESP_LOGI(TAG, "Prepare to restart system!");
-    esp_restart();
-    return ;
-}
-
-
-static void ota_example_task(void* pvParameter)
-{
-    ESP_LOGI(TAG, "Starting OTA...");
+    ESP_LOGI(TAG, "Starting OTA example...");
 
     const esp_partition_t *configured = esp_ota_get_boot_partition();
     const esp_partition_t *running = esp_ota_get_running_partition();
@@ -313,53 +148,85 @@ static void ota_example_task(void* pvParameter)
     xEventGroupWaitBits(wifi_event_group, CONNECTED_BIT,
                         false, true, portMAX_DELAY);
     ESP_LOGI(TAG, "Connect to Wifi ! Start to Connect to Server....");
+    
+    esp_http_client_config_t config = {
+        .url = download_url,
+//        .cert_pem = (char *)server_cert_pem_start,
+    };
+    esp_http_client_handle_t client = esp_http_client_init(&config);
+    if (client == NULL) {
+        ESP_LOGE(TAG, "Failed to initialise HTTP connection");
+        task_fatal_error();
+    }
+    err = esp_http_client_open(client, 0);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to open HTTP connection: %s", esp_err_to_name(err));
+        esp_http_client_cleanup(client);
+        task_fatal_error();
+    }
+    esp_http_client_fetch_headers(client);
 
+    update_partition = esp_ota_get_next_update_partition(NULL);
+    ESP_LOGI(TAG, "Writing to partition subtype %d at offset 0x%x",
+             update_partition->subtype, update_partition->address);
+    assert(update_partition != NULL);
 
-    // connect to http server, download file and install
-    for (int i=0; i<10; ++i)
-    {
-		if (connect_to_http_server())
-		{
-			ESP_LOGI(TAG, "Connected to http server");
-			download_and_install();
-		} else {
-			ESP_LOGE(TAG, "Connect to http server failed!");
-//			task_fatal_error();
-		}
+    err = esp_ota_begin(update_partition, OTA_SIZE_UNKNOWN, &update_handle);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "esp_ota_begin failed (%s)", esp_err_to_name(err));
+        http_cleanup(client);
+        task_fatal_error();
+    }
+    ESP_LOGI(TAG, "esp_ota_begin succeeded");
 
-		vTaskDelay(1000 / portTICK_PERIOD_MS);
+    int binary_file_length = 0;
+    /*deal with all receive packet*/
+    while (1) {
+        int data_read = esp_http_client_read(client, ota_write_data, BUFFSIZE);
+        if (data_read < 0) {
+            ESP_LOGE(TAG, "Error: SSL data read error");
+            http_cleanup(client);
+            task_fatal_error();
+        } else if (data_read > 0) {
+            err = esp_ota_write( update_handle, (const void *)ota_write_data, data_read);
+            if (err != ESP_OK) {
+                http_cleanup(client);
+                task_fatal_error();
+            }
+            binary_file_length += data_read;
+            ESP_LOGD(TAG, "Written image length %d", binary_file_length);
+        } else if (data_read == 0) {
+            ESP_LOGI(TAG, "Connection closed,all data received");
+            break;
+        }
+    }
+    ESP_LOGI(TAG, "Total Write binary data length : %d", binary_file_length);
+
+    if (esp_ota_end(update_handle) != ESP_OK) {
+        ESP_LOGE(TAG, "esp_ota_end failed!");
+        http_cleanup(client);
+        task_fatal_error();
     }
 
+    if (esp_partition_check_identity(esp_ota_get_running_partition(), update_partition) == true) {
+        ESP_LOGI(TAG, "The current running firmware is same as the firmware just downloaded");
+        int i = 0;
+        ESP_LOGI(TAG, "When a new firmware is available on the server, press the reset button to download it");
+        while(1) {
+            ESP_LOGI(TAG, "Waiting for a new firmware ... %d", ++i);
+            vTaskDelay(2000 / portTICK_PERIOD_MS);
+        }
+    }
 
-    // no update found
-	esp_partition_iterator_t ota = esp_partition_find(ESP_PARTITION_TYPE_APP, ESP_PARTITION_SUBTYPE_DATA_OTA, NULL);
-	while (ota)
-	{
-		const esp_partition_t* part = esp_partition_get(ota);
-
-		if (strcmp(part->label, "factory") != 0)
-		{
-			esp_image_metadata_t data;
-			const esp_partition_pos_t part_pos = {
-					.offset = part->address,
-					.size = part->size,
-			};
-			if (esp_image_load(ESP_IMAGE_VERIFY, &part_pos, &data) == ESP_OK)
-			{
-				ESP_LOGE(TAG, "Found one: %s", part->label);
-				ESP_LOGE(TAG, "Booting in 10sec.");
-				vTaskDelay(10000 / portTICK_PERIOD_MS);
-				esp_ota_set_boot_partition(part);
-			}
-		}
-
-		ota = esp_partition_next(ota);
-	}
-
-	// finally reboot
-	ESP_LOGE(TAG, "Failed. Rebooting in 10sec.");
-	vTaskDelay(10000 / portTICK_PERIOD_MS);
-	esp_restart();
+    err = esp_ota_set_boot_partition(update_partition);
+    if (err != ESP_OK) {
+        ESP_LOGE(TAG, "esp_ota_set_boot_partition failed (%s)!", esp_err_to_name(err));
+        http_cleanup(client);
+        task_fatal_error();
+    }
+    ESP_LOGI(TAG, "Prepare to restart system!");
+    esp_restart();
+    return ;
 }
 
 
@@ -411,12 +278,22 @@ void app_main()
     }
     ESP_ERROR_CHECK(err);
 
+	// create download url
 	if (read_ota() != ESP_OK)
 	{
 		strcpy(ota_filename, DEFAULT_FILENAME);
 		ESP_LOGE(TAG, "Using default filename: %s", DEFAULT_FILENAME);
 	}
 	ESP_LOGI(TAG, "Using filename: %s", ota_filename);
+	int len = snprintf(download_url, DOWNLOAD_URL_MAXLEN, "http://%s:%s/%s",
+			DEFAULT_SERVER_IP, DEFAULT_SERVER_PORT, ota_filename);
+	if (len >= DOWNLOAD_URL_MAXLEN)
+	{
+		ESP_LOGE(TAG, "Download URL too long!");
+        task_fatal_error();
+	}
+	ESP_LOGI(TAG, "Using url: %s", download_url);
+	vTaskDelay(5000 / portTICK_PERIOD_MS);
 
     initialise_wifi();
     xTaskCreate(&ota_example_task, "ota_example_task", 8192, NULL, 5, NULL);
