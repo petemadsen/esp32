@@ -26,7 +26,7 @@ static const char* MY_TAG = "knusperhaeuschen/shutters";
 #define WEB_URL		"http://192.168.1.86"
 #define WEB_SERVER	"192.168.1.86"
 #define WEB_PORT	"8080"
-static const char* REQUEST = "GET / HTTP/1.0\r\n"
+static const char* REQUEST = "GET /knusperhaeuschen/touch HTTP/1.0\r\n"
 	"Host: " WEB_SERVER "\r\n"
 	"User-Agent: esp-idf/1.0 esp32\r\n"
 	"\r\n";
@@ -45,6 +45,10 @@ void shutters_task(void* pvParameters)
 
 	for (;;)
 	{
+		// sleep
+		for (int i=0; i<10; ++i)
+			vTaskDelay(1000 / portTICK_PERIOD_MS);
+
 		ESP_LOGI(MY_TAG, "run");
 
 #if 1
@@ -120,9 +124,5 @@ void shutters_task(void* pvParameters)
 
         ESP_LOGI(MY_TAG, "... done reading from socket. Last read return=%d errno=%d\r\n", r, errno);
         close(s);
-
-		// sleep
-		for (int i=0; i<10; ++i)
-			vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
 }

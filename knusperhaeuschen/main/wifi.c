@@ -1,5 +1,5 @@
 /**
- * This code is public domain.
+ * This code is public domain. Have fun.
  */
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
@@ -23,6 +23,7 @@
 
 
 static const char* MY_TAG = "knusperhaeuschen/wifi";
+#include "sntp.h"
 
 #define CONFIG_LED_PIN		GPIO_NUM_2
 
@@ -66,7 +67,14 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
 //			ip_addr_set_ip4_u32(&dns_addr, htonl(dhcp_get_option_value(dhcp, DHCP_OPTION_IDX_DNS_SERVER + n)));
 //			dns_setserver(n, &dns_addr);
 		}
+
+		{
+			project_sntp_init();
+			project_sntp_update();
+		}
+
         break;
+
     case SYSTEM_EVENT_STA_DISCONNECTED:
 		ESP_LOGI(MY_TAG, "SYSTEM_EVENT_STA_DISCONNECTED");
 		gpio_set_level(CONFIG_LED_PIN, 0);

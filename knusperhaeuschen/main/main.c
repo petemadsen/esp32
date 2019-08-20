@@ -29,6 +29,7 @@
 
 static const char* MY_TAG = "knusperhaeuschen/main";
 #include "ota.h"
+#include "sntp.h"
 
 
 void app_main()
@@ -54,7 +55,6 @@ void app_main()
 	ESP_LOGI(MY_TAG, "Done.");
 	vTaskDelay(5000 / portTICK_PERIOD_MS);
 
-	// --
 	buttons_init();
 
 	wifi_init(&server);
