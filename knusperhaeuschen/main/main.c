@@ -11,6 +11,8 @@
 #include <math.h>
 
 #include <esp_log.h>
+#include <esp_http_server.h>
+
 #include <driver/gpio.h>
 
 #include <nvs.h>
@@ -29,7 +31,7 @@
 
 static const char* MY_TAG = "knusperhaeuschen/main";
 #include "ota.h"
-#include "sntp.h"
+#include "my_sleep.h"
 
 
 void app_main()
@@ -66,4 +68,22 @@ void app_main()
     xTaskCreate(light_btn_task, "light_btn_task", 2048, NULL, 5, NULL);
 
 	xTaskCreate(shutters_task, "shutters_task", 4096, &parse_input, 5, NULL);
+
+	xTaskCreate(my_sleep_task, "sleep_task", 4096, NULL, 5, NULL);
+
+#if 0
+	gpio_wakeup_enable(GPIO_NUM_19, GPIO_INTR_LOW_LEVEL);
+	gpio_wakeup_enable(GPIO_NUM_21, GPIO_INTR_LOW_LEVEL);
+	for (;;)
+	{
+		esp_sleep_enable_timer_wakeup(20 * 1000 * 1000);
+		esp_sleep_enable_gpio_wakeup();
+
+		int64_t t_enter = esp_timer_get_time();
+		esp_light_sleep_start();
+		int64_t t_end = esp_timer_get_time();
+
+		printf("--diff-- %lld\n", (t_end - t_enter));
+	}
+#endif
 }

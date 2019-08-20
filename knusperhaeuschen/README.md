@@ -16,6 +16,26 @@
 
 *TODO* light is not a push button but a switch button.
 
-## Telnet/HTTP
+*TODO* save settings
 
-status
+
+## HTTP
+
+* /status
+
+* /play?NUM
+
+* /bell
+
+* /bell?NUM
+
+* /volume
+
+* /volume?NUM
+
+
+## Save Power
+
+* Reduce speed from 240 to 80 MHz
+* Sleep at night
+* Use PIR

@@ -204,7 +204,7 @@ static void dfplayer_task(void* arg)
 				printf("--waiting for reply\n");
 				int len = uart_read_bytes(uart_num, data, CMD_LEN,
 						4000 / portTICK_PERIOD_MS);
-				printf("%d\n", len);
+				printf("len %d\n", len);
 				if (!len)
 					break;
 

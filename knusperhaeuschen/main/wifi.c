@@ -3,7 +3,6 @@
  */
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
-#include <freertos/event_groups.h>
 
 #include <esp_system.h>
 #include <esp_wifi.h>
@@ -16,24 +15,21 @@
 
 #include <esp_image_format.h>
 
+#include "http.h"
+#include "wifi.h"
+
 #include "config.h"
 
 
-#include "http.h"
-
-
 static const char* MY_TAG = "knusperhaeuschen/wifi";
-#include "sntp.h"
 
 #define CONFIG_LED_PIN		GPIO_NUM_2
 
 
-// FreeRTOS event group to signal when we are connected etc...
-//static EventGroupHandle_t wifi_event_group;
-/* The event group allows multiple bits for each event,
-   but we only care about one event - are we connected
-   to the AP with an IP? */
-const int CONNECTED_BIT = BIT0;
+EventGroupHandle_t wifi_event_group;
+const int WIFI_CONNECTED = BIT0;
+static bool reconnect = true;
+
 
 static esp_err_t event_handler(void *ctx, system_event_t *event)
 {
@@ -45,10 +41,11 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
 		gpio_set_level(CONFIG_LED_PIN, 0);
         esp_wifi_connect();
         break;
+
     case SYSTEM_EVENT_STA_GOT_IP:
 		ESP_LOGI(MY_TAG, "SYSTEM_EVENT_STA_GOT_IP");
 		gpio_set_level(CONFIG_LED_PIN, 1);
-//        xEventGroupSetBits(wifi_event_group, CONNECTED_BIT);
+        xEventGroupSetBits(wifi_event_group, WIFI_CONNECTED);
 		if (*http == NULL)
 		{
 			*http = http_start();
@@ -58,8 +55,6 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
 		{
 			ip_addr_t d;
 			d.type = IPADDR_TYPE_V4;
-			d.u_addr.ip4.addr = 0x08080808; //8.8.8.8 dns
-			d.u_addr.ip4.addr = 0xc0a80101; // 192.168.1.1 dns
 			d.u_addr.ip4.addr = 0x0101a8c0; // 1 1 168 192 dns
 			dns_setserver(0, &d);
 
@@ -68,20 +63,15 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
 //			dns_setserver(n, &dns_addr);
 		}
 
-		{
-			project_sntp_init();
-			project_sntp_update();
-		}
-
         break;
 
     case SYSTEM_EVENT_STA_DISCONNECTED:
 		ESP_LOGI(MY_TAG, "SYSTEM_EVENT_STA_DISCONNECTED");
 		gpio_set_level(CONFIG_LED_PIN, 0);
-        /* This is a workaround as ESP32 WiFi libs don't currently
-           auto-reassociate. */
-        esp_wifi_connect();
-//        xEventGroupClearBits(wifi_event_group, CONNECTED_BIT);
+
+		if (reconnect)
+			esp_wifi_connect();
+        xEventGroupClearBits(wifi_event_group, WIFI_CONNECTED);
 
 		if (*http)
 		{
@@ -89,6 +79,7 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
 			http = NULL;
 		}
         break;
+
     default:
 		ESP_LOGI(MY_TAG, "WTF: %d", event->event_id);
         break;
@@ -115,7 +106,7 @@ void wifi_init(void* arg)
 	inet_pton(AF_INET, CONFIG_NETMASK, &ipInfo.netmask);
 	tcpip_adapter_set_ip_info(TCPIP_ADAPTER_IF_STA, &ipInfo);
 
-//    wifi_event_group = xEventGroupCreate();
+    wifi_event_group = xEventGroupCreate();
     ESP_ERROR_CHECK(esp_event_loop_init(event_handler, arg));
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
@@ -130,4 +121,19 @@ void wifi_init(void* arg)
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
     ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config));
     ESP_ERROR_CHECK(esp_wifi_start());
+}
+
+
+void wifi_stop()
+{
+	reconnect = false;
+	esp_wifi_stop();
+}
+
+
+void wifi_start()
+{
+	reconnect = true;
+	esp_wifi_start();
+	esp_wifi_connect();
 }

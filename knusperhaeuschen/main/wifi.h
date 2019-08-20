@@ -5,10 +5,19 @@
 #define PROJECT_WIFI_H
 
 
-#include <esp_http_server.h>
+#include <freertos/event_groups.h>
 
+
+extern EventGroupHandle_t wifi_event_group;
+extern const int WIFI_CONNECTED;
 
 void wifi_init(void* arg);
+
+
+void wifi_stop();
+
+
+void wifi_start();
 
 
 #endif
