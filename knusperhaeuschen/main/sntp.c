@@ -37,4 +37,8 @@ void project_sntp_update()
 	ESP_LOGI(MY_TAG, "%04d-%02d-%02d %02d:%02d:%02d",
 			timeinfo.tm_year, timeinfo.tm_mon, timeinfo.tm_mday,
 			timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);
+
+	char buf[64];
+	strftime(buf, sizeof(buf), "%c", &timeinfo);
+	ESP_LOGI(MY_TAG, "%s", buf);
 }
