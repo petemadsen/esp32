@@ -39,7 +39,7 @@ void my_sleep_task(void* arg)
 
 		update_time();
 
-		if (timeinfo.tm_min == 24)
+		if (timeinfo.tm_min == 36)
 			night_mode();
 
 		// -- wait 60 secs

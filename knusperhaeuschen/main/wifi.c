@@ -30,6 +30,8 @@ EventGroupHandle_t wifi_event_group;
 const int WIFI_CONNECTED = BIT0;
 static bool reconnect = true;
 
+static httpd_handle_t server = NULL;
+
 
 static esp_err_t event_handler(void *ctx, system_event_t *event)
 {
@@ -89,7 +91,7 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
 }
 
 
-void wifi_init(void* arg)
+void wifi_init()
 {
 	// -- status led
 	gpio_pad_select_gpio(CONFIG_LED_PIN);
@@ -107,7 +109,7 @@ void wifi_init(void* arg)
 	tcpip_adapter_set_ip_info(TCPIP_ADAPTER_IF_STA, &ipInfo);
 
     wifi_event_group = xEventGroupCreate();
-    ESP_ERROR_CHECK(esp_event_loop_init(event_handler, arg));
+    ESP_ERROR_CHECK(esp_event_loop_init(event_handler, &server));
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
     ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
@@ -134,6 +136,5 @@ void wifi_stop()
 void wifi_start()
 {
 	reconnect = true;
-	esp_wifi_start();
-	esp_wifi_connect();
+	wifi_init();
 }

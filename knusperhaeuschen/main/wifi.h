@@ -11,7 +11,7 @@
 extern EventGroupHandle_t wifi_event_group;
 extern const int WIFI_CONNECTED;
 
-void wifi_init(void* arg);
+void wifi_init();
 
 
 void wifi_stop();

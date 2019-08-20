@@ -36,8 +36,6 @@ static const char* MY_TAG = "knusperhaeuschen/main";
 
 void app_main()
 {
-	static httpd_handle_t server = NULL;
-
     // -- initialize nvs.
     esp_err_t err = nvs_flash_init();
     if (err == ESP_ERR_NVS_NO_FREE_PAGES)
@@ -59,7 +57,7 @@ void app_main()
 
 	buttons_init();
 
-	wifi_init(&server);
+	wifi_init();
 
 	dfplayer_init();
 
