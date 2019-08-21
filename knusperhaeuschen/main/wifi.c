@@ -91,7 +91,7 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
 }
 
 
-void wifi_init()
+void wifi_init(bool b)
 {
 	// -- status led
 	gpio_pad_select_gpio(CONFIG_LED_PIN);
@@ -108,33 +108,56 @@ void wifi_init()
 	inet_pton(AF_INET, CONFIG_NETMASK, &ipInfo.netmask);
 	tcpip_adapter_set_ip_info(TCPIP_ADAPTER_IF_STA, &ipInfo);
 
-    wifi_event_group = xEventGroupCreate();
-    ESP_ERROR_CHECK(esp_event_loop_init(event_handler, &server));
+	if (b)
+	{
+		wifi_event_group = xEventGroupCreate();
+		ESP_ERROR_CHECK(esp_event_loop_init(event_handler, &server));
+	}
+
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
     ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
-    wifi_config_t wifi_config = {
-        .sta = {
-            .ssid = CONFIG_SSID,
-            .password = CONFIG_PASS,
-        },
-    };
+
+#if 1
+	wifi_start();
+#else
     ESP_LOGI(MY_TAG, "Setting WiFi configuration SSID %s...", wifi_config.sta.ssid);
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
     ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config));
     ESP_ERROR_CHECK(esp_wifi_start());
+#endif
+
+	// save power
+//	esp_wifi_set_ps(WIFI_PS_MIN_MODEM);
+	esp_wifi_set_ps(WIFI_PS_MAX_MODEM);
+
 }
 
 
 void wifi_stop()
 {
 	reconnect = false;
-	esp_wifi_stop();
+
+	esp_wifi_disconnect();
+	ESP_ERROR_CHECK(esp_wifi_stop());
+	esp_wifi_deinit();
 }
 
 
 void wifi_start()
 {
 	reconnect = true;
-	wifi_init();
+
+    wifi_config_t wifi_config = {
+        .sta = {
+            .ssid = CONFIG_SSID,
+            .password = CONFIG_PASS,
+        },
+    };
+
+    ESP_LOGI(MY_TAG, "Setting WiFi configuration SSID %s...", wifi_config.sta.ssid);
+    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
+    ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config));
+    ESP_ERROR_CHECK(esp_wifi_start());
+	printf("--wifi-start\n");
 }

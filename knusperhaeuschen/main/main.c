@@ -13,6 +13,9 @@
 #include <esp_log.h>
 #include <esp_http_server.h>
 
+#include <esp_bt.h>
+#include <driver/adc.h>
+
 #include <driver/gpio.h>
 
 #include <nvs.h>
@@ -33,9 +36,12 @@ static const char* MY_TAG = "knusperhaeuschen/main";
 #include "ota.h"
 #include "my_sleep.h"
 
+RTC_DATA_ATTR static int boot_count = 0;
 
 void app_main()
 {
+	++boot_count;
+
     // -- initialize nvs.
     esp_err_t err = nvs_flash_init();
     if (err == ESP_ERR_NVS_NO_FREE_PAGES)
@@ -55,9 +61,13 @@ void app_main()
 	ESP_LOGI(MY_TAG, "Done.");
 	vTaskDelay(5000 / portTICK_PERIOD_MS);
 
+	// save power
+//	esp_bt_controller_disable();
+	adc_power_off();
+
 	buttons_init();
 
-	wifi_init();
+	wifi_init(true);
 
 	dfplayer_init();
 
