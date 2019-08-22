@@ -9,6 +9,7 @@
 #include <rom/uart.h>
 
 #include "wifi.h"
+#include "my_settings.h"
 
 
 static const char* MY_TAG = "knusperhaeuschen/sleep";
@@ -17,8 +18,11 @@ static const char* MY_TAG = "knusperhaeuschen/sleep";
 static struct tm timeinfo = { 0 };
 
 
-static void update_time();
-static void night_mode();
+static void update_time(void);
+
+
+#define SETTING_HOUR_FROM	"sleep.night_from"
+#define SETTING_HOUR_TO		"sleep.night_to"
 
 
 void my_sleep_task(void* arg)
@@ -31,7 +35,12 @@ void my_sleep_task(void* arg)
 	sntp_setservername(0, "pool.ntp.org");
 	sntp_init();
 
-	int secs = 0;
+	int hour_from = 22;
+	int hour_to = 7;
+	settings_get(SETTING_HOUR_FROM, &hour_from);
+	settings_get(SETTING_HOUR_TO, &hour_to);
+
+	uint32_t mins = 0;
 	for (;;)
 	{
 //		xEventGroupWaitBits(wifi_event_group, WIFI_CONNECTED, false, true,
@@ -40,20 +49,25 @@ void my_sleep_task(void* arg)
 
 		update_time();
 
-#if 1
-//		if (timeinfo.tm_min == 30 || timeinfo.tm_min == 33)
-		if (secs == 1 || secs == 3)
-			night_mode();
-#else
-		if (secs == 1)
-			wifi_stop();
-		else if (secs ==2)
-			wifi_init(false);
-#endif
+		// enter night mode?
+		if (timeinfo.tm_year != 0)
+		{
+			bool is_night = timeinfo.tm_hour > hour_from || timeinfo.tm_hour < hour_to;
+			is_night = true;
+
+			if (is_night && mins != 0)
+			{
+				ESP_LOGW(MY_TAG, "Entering NIGHT MODE");
+				wifi_stop();
+				uart_tx_wait_idle(CONFIG_CONSOLE_UART_NUM); // wait for line output
+//				ESP_ERROR_CHECK(esp_sleep_enable_timer_wakeup(3600LL * 10001000LL));
+				esp_deep_sleep(3600LL * 1000000LL);
+			}
+		}
 
 		// -- wait 60 secs
 		vTaskDelay(60 * 1000 / portTICK_PERIOD_MS);
-		++secs;
+		++mins;
 	}
 }
 
@@ -91,33 +105,3 @@ void update_time()
 	strftime(buf, sizeof(buf), "%c", &timeinfo);
 	ESP_LOGI(MY_TAG, "%s", buf);
 }
-
-
-void night_mode()
-{
-	ESP_LOGI(MY_TAG, "Entering NIGHT MODE");
-	wifi_stop();
-
-	const int max_num_runs = 1;
-	for (int run=0; run<max_num_runs; ++run)
-	{
-		ESP_LOGI(MY_TAG, "--night %d/%d", (run+1), max_num_runs);
-		uart_tx_wait_idle(CONFIG_CONSOLE_UART_NUM); // wait for line output
-
-//		ESP_ERROR_CHECK(esp_light_sleep_start());
-
-		ESP_ERROR_CHECK(esp_sleep_enable_timer_wakeup(60 * 1000 * 1000));
-		esp_deep_sleep_start();
-//		esp_deep_sleep_start(1000000LL * 60); // does not work
-#if 0
-		update_time();
-
-		if (timeinfo.tm_min == 42)
-			night_mode();
-#endif
-	}
-
-	wifi_start();
-	ESP_LOGI(MY_TAG, "Leaving NIGHT MODE");
-}
-

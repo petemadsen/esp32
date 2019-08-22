@@ -10,15 +10,12 @@
 
 
 extern EventGroupHandle_t wifi_event_group;
-extern const int WIFI_CONNECTED;
+extern const EventBits_t WIFI_CONNECTED;
+
 
 void wifi_init(bool b);
 
 
 void wifi_stop();
-
-
-void wifi_start();
-
 
 #endif

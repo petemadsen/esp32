@@ -7,7 +7,10 @@
 #include <freertos/FreeRTOS.h>
 #include <esp_err.h>
 
+esp_err_t settings_init();
+
 esp_err_t settings_set(const char* key, int32_t val);
+
 esp_err_t settings_get(const char* key, int32_t* val);
 
 

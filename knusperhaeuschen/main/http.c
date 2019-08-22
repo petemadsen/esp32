@@ -8,6 +8,7 @@
 
 
 #define VERSION "0.0.2"
+extern uint32_t g_boot_count;
 
 
 static esp_err_t status_handler(httpd_req_t* req);
@@ -100,14 +101,16 @@ static bool get_int(httpd_req_t* req, int* val)
 
 esp_err_t status_handler(httpd_req_t* req)
 {
-	char* buf = malloc(80);
-	int buflen = snprintf(buf, 80,
-						  "version: %s light: %d bell %d volume: %d free-ram: %d",
+	const size_t bufsize = 160;
+	char* buf = malloc(bufsize);
+	int buflen = snprintf(buf, bufsize,
+						  "version %s light %d bell %d volume %d free-ram %u boots %u",
 						  VERSION,
 						  light_status(),
 						  dfplayer_get_track(),
 						  dfplayer_get_volume_p(),
-						  esp_get_free_heap_size());
+						  esp_get_free_heap_size(),
+						  g_boot_count);
 	httpd_resp_send(req, buf, buflen);
 
 	free(buf);

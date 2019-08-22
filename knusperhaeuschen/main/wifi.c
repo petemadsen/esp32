@@ -27,7 +27,7 @@ static const char* MY_TAG = "knusperhaeuschen/wifi";
 
 
 EventGroupHandle_t wifi_event_group;
-const int WIFI_CONNECTED = BIT0;
+const EventBits_t WIFI_CONNECTED = BIT0;
 static bool reconnect = true;
 
 static httpd_handle_t server = NULL;
@@ -118,46 +118,26 @@ void wifi_init(bool b)
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
     ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
 
-#if 1
-	wifi_start();
-#else
-    ESP_LOGI(MY_TAG, "Setting WiFi configuration SSID %s...", wifi_config.sta.ssid);
-    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
-    ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config));
-    ESP_ERROR_CHECK(esp_wifi_start());
-#endif
+	wifi_config_t wifi_config = {
+		.sta = {
+			.ssid = CONFIG_SSID,
+			.password = CONFIG_PASS,
+		},
+	};
+
+	ESP_LOGI(MY_TAG, "Setting WiFi configuration SSID %s...", wifi_config.sta.ssid);
+	ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
+	ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config));
+	ESP_ERROR_CHECK(esp_wifi_start());
 
 	// save power
 //	esp_wifi_set_ps(WIFI_PS_MIN_MODEM);
 	esp_wifi_set_ps(WIFI_PS_MAX_MODEM);
-
 }
 
 
 void wifi_stop()
 {
 	reconnect = false;
-
-	esp_wifi_disconnect();
 	ESP_ERROR_CHECK(esp_wifi_stop());
-	esp_wifi_deinit();
-}
-
-
-void wifi_start()
-{
-	reconnect = true;
-
-    wifi_config_t wifi_config = {
-        .sta = {
-            .ssid = CONFIG_SSID,
-            .password = CONFIG_PASS,
-        },
-    };
-
-    ESP_LOGI(MY_TAG, "Setting WiFi configuration SSID %s...", wifi_config.sta.ssid);
-    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
-    ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config));
-    ESP_ERROR_CHECK(esp_wifi_start());
-	printf("--wifi-start\n");
 }

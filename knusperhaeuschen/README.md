@@ -36,6 +36,20 @@
 
 ## Save Power
 
-* Reduce speed from 240 to 80 MHz
+* *TODO* Reduce speed from 240 to 80 MHz
 * Sleep at night
-* Use PIR
+* *TODO* Use PIR
+* *TODO* switch off ADC
+* *TODO* switch off dfplayer
+
+
+### Sleep at Night
+
+In order to enter the night mode we need to know the time. We use the SNTP
+module to get it.
+
+During the night, the module goes to sleep but wakes up every hour. It tries
+to update/get the time and to go sleep again.
+
+Wake up and wait about one minute before
+going to sleep again.
