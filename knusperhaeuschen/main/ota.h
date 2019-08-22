@@ -1,35 +1,19 @@
+/**
+ * This code is public domain.
+ */
 #ifndef PROJECT_OTA_H
 #define PROJECT_OTA_H
 
-
-#define CFG_OTA_STORAGE	"ota"
-#define CFG_OTA_FILENAME "filename"
-#define CFG_OTA_FILENAME_LENGTH 30
-
-#define PROJECT_NAME "knusperhaeuschen.bin"
+#include <esp_err.h>
 
 
-esp_err_t ota_init()
-{
-	esp_err_t err;
+esp_err_t ota_init();
 
-	nvs_handle my_handle;
-    err = nvs_open(CFG_OTA_STORAGE, NVS_READWRITE, &my_handle);
-	if (err != ESP_OK)
-	{
-		ESP_LOGE(MY_TAG, "Could not open storage: %s", CFG_OTA_STORAGE);
-		return err;
-	}
-
-	err = nvs_set_str(my_handle, CFG_OTA_FILENAME, PROJECT_NAME);
-	if (err != ESP_OK)
-	{
-		ESP_LOGE(MY_TAG, "Could not set filename: %s", CFG_OTA_FILENAME);
-		return err;
-	}
-
-	return nvs_commit(my_handle);
-}
+/**
+ * @brief Marks the factory parition as *boot*.
+ * @return
+ */
+const char* ota_reboot();
 
 
 #endif

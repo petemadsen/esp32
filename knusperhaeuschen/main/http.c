@@ -1,7 +1,13 @@
+/**
+ * This code is public domain.
+ */
 #include "http.h"
-#include "parser.h"
 #include "light.h"
 #include "dfplayer.h"
+#include "ota.h"
+
+
+#define VERSION "0.0.2"
 
 
 static esp_err_t status_handler(httpd_req_t* req);
@@ -94,18 +100,31 @@ static bool get_int(httpd_req_t* req, int* val)
 
 esp_err_t status_handler(httpd_req_t* req)
 {
-	char* p = parse_input("status", 6);
-//	httpd_resp_send(req, "OK", 2);
-	httpd_resp_send(req, p, strlen(p));
+	char* buf = malloc(80);
+	int buflen = snprintf(buf, 80,
+						  "version: %s light: %d bell %d volume: %d free-ram: %d",
+						  VERSION,
+						  light_status(),
+						  dfplayer_get_track(),
+						  dfplayer_get_volume_p(),
+						  esp_get_free_heap_size());
+	httpd_resp_send(req, buf, buflen);
+
+	free(buf);
 	return ESP_OK;
 }
 
 
 esp_err_t ota_handler(httpd_req_t* req)
 {
-	char* p = parse_input("ota", 3);
-//	httpd_resp_send(req, "OK", 2);
-	httpd_resp_send(req, p, strlen(p));
+	const char* err = ota_reboot();
+	if (!err)
+	{
+		httpd_resp_send(req, RET_OK, strlen(RET_OK));
+		esp_restart();
+	}
+
+	httpd_resp_send(req, err, strlen(err));
 	return ESP_OK;
 }
 

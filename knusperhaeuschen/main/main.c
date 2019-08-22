@@ -13,7 +13,7 @@
 #include <esp_log.h>
 #include <esp_http_server.h>
 
-#include <esp_bt.h>
+//#include <esp_bt.h>
 #include <driver/adc.h>
 
 #include <driver/gpio.h>
@@ -28,13 +28,12 @@
 #include "wifi.h"
 #include "dfplayer.h"
 #include "light.h"
-#include "parser.h"
 #include "shutters.h"
+#include "ota.h"
+#include "my_sleep.h"
 
 
 static const char* MY_TAG = "knusperhaeuschen/main";
-#include "ota.h"
-#include "my_sleep.h"
 
 RTC_DATA_ATTR static int boot_count = 0;
 
@@ -71,11 +70,9 @@ void app_main()
 
 	dfplayer_init();
 
-	parser_init();
-
     xTaskCreate(light_btn_task, "light_btn_task", 2048, NULL, 5, NULL);
 
-	xTaskCreate(shutters_task, "shutters_task", 4096, &parse_input, 5, NULL);
+	xTaskCreate(shutters_task, "shutters_task", 4096, NULL, 5, NULL);
 
 	xTaskCreate(my_sleep_task, "sleep_task", 4096, NULL, 5, NULL);
 
@@ -94,4 +91,5 @@ void app_main()
 		printf("--diff-- %lld\n", (t_end - t_enter));
 	}
 #endif
+	esp_partition_t x;
 }
