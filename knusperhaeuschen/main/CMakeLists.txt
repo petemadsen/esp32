@@ -17,6 +17,7 @@ set(COMPONENT_SRCS
 	http.c
 	shutters.c
 	ota.c
+	my_settings.c
 )
 
 register_component()

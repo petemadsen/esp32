@@ -91,5 +91,4 @@ void app_main()
 		printf("--diff-- %lld\n", (t_end - t_enter));
 	}
 #endif
-	esp_partition_t x;
 }

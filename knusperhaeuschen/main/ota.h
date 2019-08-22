@@ -11,7 +11,7 @@ esp_err_t ota_init();
 
 /**
  * @brief Marks the factory parition as *boot*.
- * @return
+ * @return NULL on sucess. Error string otherwise.
  */
 const char* ota_reboot();
 

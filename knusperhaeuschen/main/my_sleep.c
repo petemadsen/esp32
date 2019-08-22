@@ -1,5 +1,5 @@
 /**
- * This code is public domain. Have fun.
+ * This code is public domain.
  */
 #include <esp_wifi.h>
 #include <esp_log.h>
@@ -40,7 +40,7 @@ void my_sleep_task(void* arg)
 
 		update_time();
 
-#if 0
+#if 1
 //		if (timeinfo.tm_min == 30 || timeinfo.tm_min == 33)
 		if (secs == 1 || secs == 3)
 			night_mode();
@@ -104,10 +104,11 @@ void night_mode()
 		ESP_LOGI(MY_TAG, "--night %d/%d", (run+1), max_num_runs);
 		uart_tx_wait_idle(CONFIG_CONSOLE_UART_NUM); // wait for line output
 
-//		ESP_ERROR_CHECK(esp_sleep_enable_timer_wakeup(60 * 1000 * 1000));
 //		ESP_ERROR_CHECK(esp_light_sleep_start());
-//		esp_deep_sleep_start();
-		esp_deep_sleep_start(1000000LL * 60); // does not work
+
+		ESP_ERROR_CHECK(esp_sleep_enable_timer_wakeup(60 * 1000 * 1000));
+		esp_deep_sleep_start();
+//		esp_deep_sleep_start(1000000LL * 60); // does not work
 #if 0
 		update_time();
 

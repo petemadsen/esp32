@@ -39,11 +39,14 @@ esp_err_t ota_init()
 	err = nvs_set_str(my_handle, CFG_OTA_FILENAME, PROJECT_NAME);
 	if (err != ESP_OK)
 	{
+		nvs_close(my_handle);
 		ESP_LOGE(MY_TAG, "Could not set filename: %s", CFG_OTA_FILENAME);
 		return err;
 	}
 
-	return nvs_commit(my_handle);
+	err = nvs_commit(my_handle);
+	nvs_close(my_handle);
+	return err;
 }
 
 

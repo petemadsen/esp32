@@ -15,6 +15,7 @@
 #include "esp_log.h"
 #include "driver/uart.h"
 #include "soc/rmt_reg.h"
+#include "my_settings.h"
 
 #include "sdkconfig.h"
 
@@ -55,6 +56,10 @@ static EventGroupHandle_t x_events;
 
 #define CMD_ACK			0x1
 #define CMD_NOACK		0x0
+
+
+#define SETTING_VOL		"dfplayer.volume"
+#define SETTING_BELL	"dfplayer.bell_track"
 
 
 static const unsigned int CMD_LEN = 10;
@@ -303,13 +308,24 @@ void dfplayer_init()
 	if (x_events == NULL)
 		ESP_LOGE(MY_TAG, "Could create event group.");
 
+	settings_get(SETTING_VOL, &dfplayer_vol);
+	settings_get(SETTING_BELL, &dfplayer_bell_track);
+
+	ESP_LOGI(MY_TAG, "volume %d", dfplayer_vol);
+	ESP_LOGI(MY_TAG, "bell track %d", dfplayer_bell_track);
+
 	xTaskCreate(dfplayer_task, "dfplayer_task", 4096, NULL, 5, NULL);
 }
 
 
 void dfplayer_set_volume_p(int vol)
 {
+	if (vol == dfplayer_vol)
+		return;
+
 	dfplayer_vol = vol;
+	settings_set(SETTING_VOL, dfplayer_vol);
+
 	xEventGroupSetBits(x_events, EVENT_VOLUME);
 }
 
@@ -328,7 +344,11 @@ int dfplayer_get_track()
 
 void dfplayer_set_track(int track)
 {
+	if (track == dfplayer_bell_track)
+		return;
+
 	dfplayer_bell_track = track;
+	settings_set(SETTING_BELL, dfplayer_bell_track);
 }
 
 

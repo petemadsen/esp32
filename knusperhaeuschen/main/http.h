@@ -1,3 +1,6 @@
+/**
+ * This code is public domain.
+ */
 #ifndef PROJECT_HTTP_H
 #define PROJECT_HTTP_H
 

@@ -1,3 +1,6 @@
+/**
+ * This code is public domain.
+ */
 #ifndef MY_SLEEP_H
 #define MY_SLEEP_H
 

@@ -5,6 +5,7 @@
 #define PROJECT_WIFI_H
 
 
+#include <freertos/FreeRTOS.h>
 #include <freertos/event_groups.h>
 
 
