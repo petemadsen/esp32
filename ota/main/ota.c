@@ -37,7 +37,7 @@
 #define BUFFSIZE			1024
 #define TEXT_BUFFSIZE		1024
 #define DEFAULT_FILENAME	"peterpan.bin"
-#define DEFAULT_SERVER_IP	"192.168.1.86"
+#define DEFAULT_SERVER_IP	"192.168.1.51"
 #define DEFAULT_SERVER_PORT	"8081"
 
 #define DOWNLOAD_URL_MAXLEN	80
@@ -129,7 +129,7 @@ static void ota_example_task(void *pvParameter)
     esp_ota_handle_t update_handle = 0 ;
     const esp_partition_t *update_partition = NULL;
 
-    ESP_LOGI(TAG, "Starting OTA example...");
+    ESP_LOGI(TAG, "Starting OTA...");
 
     const esp_partition_t *configured = esp_ota_get_boot_partition();
     const esp_partition_t *running = esp_ota_get_running_partition();
