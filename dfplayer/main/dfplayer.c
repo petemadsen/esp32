@@ -1,5 +1,5 @@
 /**
- * dfplayer.c
+ * This code is public domain.
  */
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
@@ -15,14 +15,23 @@
 #include "esp_log.h"
 #include "driver/uart.h"
 #include "soc/rmt_reg.h"
+#include "my_settings.h"
 
 #include "sdkconfig.h"
 
-static const char* MY_TAG = "DFPLAYER";
+static const char* MY_TAG = "knusperhaeuschen/dfplayer";
 
+
+static const int uart_num = UART_NUM_2;
+
+static int dfplayer_vol = 33;
+static int dfplayer_bell_track = 1;
+static int dfplayer_play_track = 1;
 
 static EventGroupHandle_t x_events;
-#define EVENT_BELL (1 << 0)
+#define EVENT_BELL		(1 << 0)
+#define EVENT_VOLUME	(1 << 1)
+#define EVENT_PLAY		(1 << 2)
 
 
 #ifndef max
@@ -49,18 +58,22 @@ static EventGroupHandle_t x_events;
 #define CMD_NOACK		0x0
 
 
+#define SETTING_VOL		"dfplayer.volume"
+#define SETTING_BELL	"dfplayer.bell_track"
+
+
 static const unsigned int CMD_LEN = 10;
 static const char cmd_reset[] = {
 	0x7E, 0xFF, 0x6,
 	CMD_RESET, CMD_ACK, 0x0, 0x0,
 	0xFE, 0xEE, 0xEF
 };
-static const char cmd_volume10[] = {
+static const char cmd_volume[] = { // volume 10
 	0x7E, 0xFF, 0x6,
 	CMD_VOLUME, CMD_ACK, 0x0, 0xA,
 	0xFE, 0xEA, 0xEF
 };
-static const char cmd_play1st[] = {
+static const char cmd_play[] = { // play first track, actually
 	0x7E, 0xFF, 0x6,
 	CMD_PLAY, CMD_ACK, 0x0, 0x1,
 	0xFE, 0xF6, 0xEF
@@ -81,8 +94,8 @@ static unsigned int checksum(char msg[], int len)
 
 	sum = -sum;
 
-	unsigned char cs1 = (sum >> 8) & 0xff;
-	unsigned char cs2 = sum & 0xff;
+//	unsigned char cs1 = (sum >> 8) & 0xff;
+//	unsigned char cs2 = sum & 0xff;
 //	printf("%x -> %x %x\n", sum, cs1, cs2);
 //	printf("     -> %x %x\n\n", msg[7], msg[8]);
 
@@ -119,17 +132,29 @@ static void parse_reply(const char* prefix, const uint8_t data[])
 }
 
 
-static void prepare_cmd(const char* cmd, char dest[])
+static void prepare_cmd(const char* cmd, char dest[], int param)
 {
 	for (int i=0; i<CMD_LEN; ++i)
 		dest[i] = cmd[i];
+
+	dest[POS_BYTE_LOW] = param & 0xff;
+	dest[POS_BYTE_HIGH] = (param >> 8) & 0xff;
 
 	unsigned int sum = checksum(dest, CMD_LEN);
 	unsigned char cs1 = (sum >> 8) & 0xff;
 	unsigned char cs2 = sum & 0xff;
 
-	printf(". %02x %02x\n", dest[POS_CS1], dest[POS_CS2]);
-	printf(". %02x %02x\n", cs1, cs2);
+//	printf(". %02x %02x\n", dest[POS_CS1], dest[POS_CS2]);
+//	printf(". %02x %02x\n", cs1, cs2);
+
+	dest[POS_CS1] = cs1;
+	dest[POS_CS2] = cs2;
+
+#if 0
+	for (int i=0; i<CMD_LEN; ++i)
+		printf(".%02x.", dest[i]);
+	printf("\n");
+#endif
 }
 
 
@@ -141,9 +166,8 @@ static bool has_flash(const uint8_t data[])
 
 static void dfplayer_task(void* arg)
 {
-	const int uart_num = UART_NUM_2;
-	const int uart_rx = GPIO_NUM_19;// GPIO_NUM_4;
-	const int uart_tx = GPIO_NUM_21; // GPIO_NUM_5;
+	const int uart_rx = GPIO_NUM_13; // works: GPIO_NUM_19;
+	const int uart_tx = GPIO_NUM_12; // works: GPIO_NUM_21;
 	const int BUF_SIZE = max(CMD_LEN * 2, 256);
 
 	uart_config_t uart_config = {
@@ -168,13 +192,14 @@ static void dfplayer_task(void* arg)
 	char to_send[CMD_LEN];
 
 	bool need_reset = true;
+	int track_num = 1;
 
 	for(;;)
 	{
 		if (need_reset)
 		{
 			printf("--sending RESET\n");
-			prepare_cmd(cmd_reset, to_send);
+			prepare_cmd(cmd_reset, to_send, 0);
 //			uart_write_bytes(uart_num, to_send, CMD_LEN);
 			uart_write_bytes(uart_num, cmd_reset, CMD_LEN);
 
@@ -184,7 +209,7 @@ static void dfplayer_task(void* arg)
 				printf("--waiting for reply\n");
 				int len = uart_read_bytes(uart_num, data, CMD_LEN,
 						4000 / portTICK_PERIOD_MS);
-				printf("%d\n", len);
+				printf("len %d\n", len);
 				if (!len)
 					break;
 
@@ -192,6 +217,10 @@ static void dfplayer_task(void* arg)
 				if (has_flash(data))
 				{
 					need_reset = false;
+
+					// set volume
+//					dfplayer_set_volume_p(25);
+					uart_write_bytes(uart_num, cmd_volume, CMD_LEN);
 				}
 			}
 
@@ -205,10 +234,43 @@ static void dfplayer_task(void* arg)
 		{
 			xEventGroupClearBits(x_events, EVENT_BELL);
 
-			//
-			printf("--play bell\n");
+			ESP_LOGI(MY_TAG, "play bell (%d)", dfplayer_bell_track);
 
-			uart_write_bytes(uart_num, cmd_play1st, CMD_LEN);
+			track_num = dfplayer_bell_track;
+			prepare_cmd(cmd_play, to_send, track_num);
+			if (++track_num > 2)
+				track_num = 1;
+			uart_write_bytes(uart_num, to_send, CMD_LEN);
+
+			int len = uart_read_bytes(uart_num, data, CMD_LEN,
+					100 / portTICK_PERIOD_MS);
+			if (len)
+			{
+				parse_reply("PLAY1ST", data);
+			}
+		}
+		if (bits & EVENT_VOLUME)
+		{
+			xEventGroupClearBits(x_events, EVENT_VOLUME);
+
+			int raw_vol = (float)dfplayer_vol / (float)100 * 30;
+			ESP_LOGI(MY_TAG, "volume: %d (raw: %d)", dfplayer_vol, raw_vol);
+
+			prepare_cmd(cmd_volume, to_send, raw_vol);
+			uart_write_bytes(uart_num, to_send, CMD_LEN);
+		}
+		if (bits & EVENT_PLAY)
+		{
+			xEventGroupClearBits(x_events, EVENT_PLAY);
+
+			ESP_LOGI(MY_TAG, "play track (%d)", dfplayer_play_track);
+
+			track_num = dfplayer_play_track;
+			prepare_cmd(cmd_play, to_send, track_num);
+			if (++track_num > 2)
+				track_num = 1;
+			uart_write_bytes(uart_num, to_send, CMD_LEN);
+
 			int len = uart_read_bytes(uart_num, data, CMD_LEN,
 					100 / portTICK_PERIOD_MS);
 			if (len)
@@ -246,5 +308,52 @@ void dfplayer_init()
 	if (x_events == NULL)
 		ESP_LOGE(MY_TAG, "Could create event group.");
 
-	xTaskCreate(dfplayer_task, "dfplayer_task", 2048, NULL, 10, NULL);
+	settings_get(SETTING_VOL, &dfplayer_vol);
+	settings_get(SETTING_BELL, &dfplayer_bell_track);
+
+	ESP_LOGI(MY_TAG, "volume %d", dfplayer_vol);
+	ESP_LOGI(MY_TAG, "bell track %d", dfplayer_bell_track);
+
+	xTaskCreate(dfplayer_task, "dfplayer_task", 4096, NULL, 5, NULL);
+}
+
+
+void dfplayer_set_volume_p(int vol)
+{
+	if (vol == dfplayer_vol)
+		return;
+
+	dfplayer_vol = vol;
+	settings_set(SETTING_VOL, dfplayer_vol);
+
+	xEventGroupSetBits(x_events, EVENT_VOLUME);
+}
+
+
+int dfplayer_get_volume_p()
+{
+	return dfplayer_vol;
+}
+
+
+int dfplayer_get_track()
+{
+	return dfplayer_bell_track;
+}
+
+
+void dfplayer_set_track(int track)
+{
+	if (track == dfplayer_bell_track)
+		return;
+
+	dfplayer_bell_track = track;
+	settings_set(SETTING_BELL, dfplayer_bell_track);
+}
+
+
+void dfplayer_play(int track)
+{
+	dfplayer_play_track = track;
+	xEventGroupSetBits(x_events, EVENT_PLAY);
 }
