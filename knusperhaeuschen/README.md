@@ -2,45 +2,39 @@
 
 * dfplayer
 * buttons
-* transistor switch
-* *TODO* ina219
+* load transistor switch
+* **TODO** ina219
   * will monitor system voltage and send warning notifications to awShutters
     and turn off wifi and more
 * HTTP support
-
-*TODO* Setting like bell track and volume should be saved.
-
-*TODO* speaker make noise on startup
-
-*TODO* blink if has wifi
-
-*TODO* light is not a push button but a switch button.
-
-*TODO* save settings
+* save settings
+* show blue led if has wifi
+* **TODO** speaker makes noises when not operating
 
 
 ## HTTP
 
-* /status
+* `/status` returns various system parameters
 
-* /play?NUM
+* `/play?NUM`
 
-* /bell
+* `/bell`
 
-* /bell?NUM
+* `/bell?NUM`
 
-* /volume
+* `/volume`
 
-* /volume?NUM
+* `/volume?NUM`
+
+* `ota` initiates the OTA process
 
 
 ## Save Power
 
-* *TODO* Reduce speed from 240 to 80 MHz
+* Reducing speed from 160 to 80 MHz provides around 6mA less power consumption.
 * Sleep at night
-* *TODO* Use PIR
-* *TODO* switch off ADC
-* *TODO* switch off dfplayer
+* **TODO** Use PIR to wake up
+* **TODO** turn off dfplayer
 
 
 ### Sleep at Night

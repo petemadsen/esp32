@@ -3,12 +3,16 @@
  */
 #include "http.h"
 #include "light.h"
-#include "dfplayer.h"
+#include "tone.h"
 #include "ota.h"
 
+#include <lwip/apps/sntp.h>
 
-#define VERSION "0.0.2"
+#define VERSION "0.0.6"
 extern uint32_t g_boot_count;
+
+
+static void reboot_task(void* arg);
 
 
 static esp_err_t status_handler(httpd_req_t* req);
@@ -101,16 +105,23 @@ static bool get_int(httpd_req_t* req, int* val)
 
 esp_err_t status_handler(httpd_req_t* req)
 {
-	const size_t bufsize = 160;
+	time_t now;
+	struct tm timeinfo;
+	time(&now);
+	localtime_r(&now, &timeinfo);
+
+	uint32_t uptime = 0;
+
+	const size_t bufsize = 320;
 	char* buf = malloc(bufsize);
 	int buflen = snprintf(buf, bufsize,
-						  "version %s light %d bell %d volume %d free-ram %u boots %u",
+						  "version %s light %d free-ram %u boots %u uptime %u time %02d:%02d",
 						  VERSION,
 						  light_status(),
-						  dfplayer_get_track(),
-						  dfplayer_get_volume_p(),
 						  esp_get_free_heap_size(),
-						  g_boot_count);
+						  g_boot_count,
+						  uptime,
+						  timeinfo.tm_hour, timeinfo.tm_min);
 	httpd_resp_send(req, buf, buflen);
 
 	free(buf);
@@ -121,10 +132,12 @@ esp_err_t status_handler(httpd_req_t* req)
 esp_err_t ota_handler(httpd_req_t* req)
 {
 	const char* err = ota_reboot();
-	if (!err)
+	if (!err || true)
 	{
 		httpd_resp_send(req, RET_OK, strlen(RET_OK));
-		esp_restart();
+		xTaskCreate(reboot_task, "reboot_task", 2048, NULL, 5, NULL);
+//		esp_restart();
+		return ESP_OK;
 	}
 
 	httpd_resp_send(req, err, strlen(err));
@@ -163,6 +176,7 @@ esp_err_t bell_handler(httpd_req_t* req)
 {
 	const char* ret = RET_ERR;
 
+#if 0
 	int track;
 	if (get_int(req, &track) && track >= 1)
 	{
@@ -177,6 +191,7 @@ esp_err_t bell_handler(httpd_req_t* req)
 		free(buf);
 		return ESP_OK;
 	}
+#endif
 
 	httpd_resp_send(req, ret, strlen(ret));
 	return ESP_OK;
@@ -187,12 +202,14 @@ esp_err_t play_handler(httpd_req_t* req)
 {
 	const char* ret = RET_ERR;
 
+#if 0
 	int track;
 	if (get_int(req, &track) && track >= 1 && track <= 9)
 	{
 		dfplayer_play(track);
 		ret = RET_OK;
 	}
+#endif
 
 	httpd_resp_send(req, ret, strlen(ret));
 	return ESP_OK;
@@ -203,6 +220,7 @@ esp_err_t volume_handler(httpd_req_t* req)
 {
 	const char* ret = RET_ERR;
 
+#if 0
 	int volume;
 	if (get_int(req, &volume) && volume >= 0 && volume <= 100)
 	{
@@ -217,8 +235,15 @@ esp_err_t volume_handler(httpd_req_t* req)
 		free(buf);
 		return ESP_OK;
 	}
+#endif
 
 	httpd_resp_send(req, ret, strlen(ret));
 	return ESP_OK;
 }
 
+
+static void reboot_task(void* arg)
+{
+	vTaskDelay(3000 / portTICK_PERIOD_MS);
+	esp_restart();
+}

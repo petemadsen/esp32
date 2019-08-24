@@ -11,15 +11,16 @@
 #include <nvs.h>
 
 
-#define CFG_OTA_STORAGE	"ota"
-#define CFG_OTA_FILENAME "filename"
+#define CFG_OTA_STORAGE			"ota"
+#define CFG_OTA_FILENAME		"filename"
 #define CFG_OTA_FILENAME_LENGTH 30
 
 
 static const char* ERR_NOFACTORY = "NOFACTORY";
 static const char* ERR_NOBOOT = "NOBOOT";
 
-#define PROJECT_NAME "knusperhaeuschen.bin"
+#define BIN_NAME "knusperhaeuschen.bin"
+
 
 static const char* MY_TAG = "knusperhaeuschen/ota";
 
@@ -36,7 +37,7 @@ esp_err_t ota_init()
 		return err;
 	}
 
-	err = nvs_set_str(my_handle, CFG_OTA_FILENAME, PROJECT_NAME);
+	err = nvs_set_str(my_handle, CFG_OTA_FILENAME, BIN_NAME);
 	if (err != ESP_OK)
 	{
 		nvs_close(my_handle);
@@ -59,6 +60,5 @@ const char* ota_reboot()
 	if (esp_ota_set_boot_partition(factory) != ESP_OK)
 		return ERR_NOBOOT;
 
-//	esp_restart();
 	return NULL;
 }

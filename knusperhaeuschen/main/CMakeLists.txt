@@ -9,7 +9,6 @@ file(GLOB HEADERS "*.h")
 set(COMPONENT_SRCS
 	${HEADERS}
 	light.c
-	dfplayer.c
 	main.c
 	my_sleep.c
 	wifi.c
@@ -18,6 +17,7 @@ set(COMPONENT_SRCS
 	shutters.c
 	ota.c
 	my_settings.c
+	tone.c
 )
 
 register_component()

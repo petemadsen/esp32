@@ -33,9 +33,10 @@ void my_sleep_task(void* arg)
 	// -- init
 	sntp_setoperatingmode(SNTP_OPMODE_POLL);
 	sntp_setservername(0, "pool.ntp.org");
+	setenv("TZ", "CET-1CEST-2,M3.5.0/02:00:00,M10.5.0/03:00:00", 1);
 	sntp_init();
 
-	int hour_from = 22;
+	int hour_from = 21;
 	int hour_to = 7;
 	settings_get(SETTING_HOUR_FROM, &hour_from);
 	settings_get(SETTING_HOUR_TO, &hour_to);
@@ -50,10 +51,10 @@ void my_sleep_task(void* arg)
 		update_time();
 
 		// enter night mode?
-		if (timeinfo.tm_year != 0)
+		if (timeinfo.tm_year > 1980)
 		{
-			bool is_night = timeinfo.tm_hour > hour_from || timeinfo.tm_hour < hour_to;
-			is_night = true;
+			bool is_night = timeinfo.tm_hour >= hour_from || timeinfo.tm_hour < hour_to;
+//			is_night = true;
 
 			if (is_night && mins != 0)
 			{

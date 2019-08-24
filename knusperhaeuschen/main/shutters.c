@@ -16,7 +16,7 @@
 static const char* MY_TAG = "knusperhaeuschen/shutters";
 
 
-static const char* base_url = "http://192.168.1.86:8080/knusperhaeuschen/touch";
+static const char* base_url = "http://192.168.1.51:8080/knusperhaeuschen/touch";
 
 
 esp_err_t _http_event_handle(esp_http_client_event_t *evt)
@@ -76,8 +76,8 @@ void shutters_task(void* pvParameters)
 		}
 		esp_http_client_cleanup(client);
 
-		// -- wait 60 secs
-		vTaskDelay(60 * 1000 / portTICK_PERIOD_MS);
+		// -- wait 3600 secs = 1h
+		vTaskDelay(3600 * 1000 / portTICK_PERIOD_MS);
 	}
 }
 
