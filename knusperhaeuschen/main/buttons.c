@@ -47,6 +47,7 @@ static void gpio_task(void* arg)
 				ESP_LOGI(MY_TAG, "button %d", iopin);
 				last_run = xTaskGetTickCount();
 
+				/*
 				switch (iopin)
 				{
 				case CONFIG_BELL_BTN_PIN:
@@ -56,6 +57,7 @@ static void gpio_task(void* arg)
 					light_toggle();
 					break;
 				}
+				*/
 			}
 		}
 	}
@@ -68,10 +70,12 @@ void buttons_init()
 
 	gpio_pad_select_gpio(CONFIG_BELL_BTN_PIN);
 	gpio_set_direction(CONFIG_BELL_BTN_PIN, GPIO_MODE_INPUT);
+	gpio_set_pull_mode(CONFIG_BELL_BTN_PIN, GPIO_PULLUP_ONLY);
 	gpio_set_intr_type(CONFIG_BELL_BTN_PIN, GPIO_INTR_NEGEDGE);
 
 	gpio_pad_select_gpio(CONFIG_LIGHT_BTN_PIN);
 	gpio_set_direction(CONFIG_LIGHT_BTN_PIN, GPIO_MODE_INPUT);
+	gpio_set_pull_mode(CONFIG_LIGHT_BTN_PIN, GPIO_PULLUP_ONLY);
 	gpio_set_intr_type(CONFIG_LIGHT_BTN_PIN, GPIO_INTR_ANYEDGE);
 
 	gpio_install_isr_service(0); //ESP_INTR_FLAG_DEFAULT

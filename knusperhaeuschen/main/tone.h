@@ -1,3 +1,6 @@
+/**
+ * This code is public domain.
+ */
 #ifndef PROJECT_TONE_H
 #define PROJECT_TONE_H
 

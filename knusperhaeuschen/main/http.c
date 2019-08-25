@@ -8,7 +8,8 @@
 
 #include <lwip/apps/sntp.h>
 
-#define VERSION "0.0.6"
+#define VERSION "0.0.8"
+
 extern uint32_t g_boot_count;
 
 
@@ -110,12 +111,12 @@ esp_err_t status_handler(httpd_req_t* req)
 	time(&now);
 	localtime_r(&now, &timeinfo);
 
-	uint32_t uptime = 0;
+	int64_t uptime = xTaskGetTickCount() / 1000 / 1000;
 
 	const size_t bufsize = 320;
 	char* buf = malloc(bufsize);
 	int buflen = snprintf(buf, bufsize,
-						  "version %s light %d free-ram %u boots %u uptime %u time %02d:%02d",
+						  "version %s light %d free-ram %u boots %u uptime %lld time %02d:%02d",
 						  VERSION,
 						  light_status(),
 						  esp_get_free_heap_size(),
@@ -132,11 +133,10 @@ esp_err_t status_handler(httpd_req_t* req)
 esp_err_t ota_handler(httpd_req_t* req)
 {
 	const char* err = ota_reboot();
-	if (!err || true)
+	if (!err)
 	{
 		httpd_resp_send(req, RET_OK, strlen(RET_OK));
 		xTaskCreate(reboot_task, "reboot_task", 2048, NULL, 5, NULL);
-//		esp_restart();
 		return ESP_OK;
 	}
 
@@ -201,6 +201,9 @@ esp_err_t bell_handler(httpd_req_t* req)
 esp_err_t play_handler(httpd_req_t* req)
 {
 	const char* ret = RET_ERR;
+
+	tone_bell();
+	ret = RET_OK;
 
 #if 0
 	int track;

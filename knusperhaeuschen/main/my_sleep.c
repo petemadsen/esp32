@@ -61,8 +61,19 @@ void my_sleep_task(void* arg)
 				ESP_LOGW(MY_TAG, "Entering NIGHT MODE");
 				wifi_stop();
 				uart_tx_wait_idle(CONFIG_CONSOLE_UART_NUM); // wait for line output
-//				ESP_ERROR_CHECK(esp_sleep_enable_timer_wakeup(3600LL * 10001000LL));
 				esp_deep_sleep(3600LL * 1000000LL);
+			}
+		}
+		// reboot/sleep if no wifi
+		if (mins > 10)
+		{
+			EventBits_t bits = xEventGroupGetBits(wifi_event_group);
+			if ((bits & WIFI_CONNECTED) == 0)
+			{
+				ESP_LOGW(MY_TAG, "Entering SECURITY MODE");
+				wifi_stop();
+				uart_tx_wait_idle(CONFIG_CONSOLE_UART_NUM); // wait for line output
+				esp_deep_sleep(600LL * 1000000LL);
 			}
 		}
 
