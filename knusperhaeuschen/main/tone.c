@@ -1,4 +1,4 @@
-/* RMT transmit example
+/* based on "RMT transmit example"
 
    This example code is in the Public Domain (or CC0 licensed, at your option.)
 
@@ -6,8 +6,8 @@
    software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
    CONDITIONS OF ANY KIND, either express or implied.
 */
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
 #include <freertos/event_groups.h>
 
 #include <esp_log.h>
@@ -80,8 +80,9 @@ void rmt_tx_int()
     config.channel = RMT_TX_CHANNEL;
     config.gpio_num = RMT_TX_GPIO;
     config.mem_block_num = 1;
+    config.tx_config.loop_en = 0;
 	config.tx_config.loop_en = 1;
-    // enable the carrier to be able to hear the Morse sound
+	// enable the carrier to be able to hear the Morse sound
     // if the RMT_TX_GPIO is connected to a speaker
 	config.tx_config.carrier_en = 0;
 	config.tx_config.idle_output_en = 1;
@@ -94,6 +95,7 @@ void rmt_tx_int()
     config.tx_config.carrier_level = 1;
     // set the maximum clock divider to be able to output
     // RMT pulses in range of about one hundred milliseconds
+    config.clk_div = 255;
 	config.clk_div = 80;
 
     ESP_ERROR_CHECK(rmt_config(&config));
