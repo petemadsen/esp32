@@ -63,7 +63,8 @@ rmt_item32_t items[] = {
 #define A5 FREQ_TO_TICKS(880.0) // 568
 #define A6 FREQ_TO_TICKS(1760.0)
 
-//Convert uint8_t type of data to rmt format data.
+
+// Convert uint8_t type of data to rmt format data.
 static void IRAM_ATTR u8_to_rmt(const void* src, rmt_item32_t* dest, size_t src_size, 
                          size_t wanted_num, size_t* translated_size, size_t* item_num)
 {
@@ -169,6 +170,7 @@ static void tone_task(void *ignore)
 
 	for (;;)
 	{
+		ESP_LOGI(MY_TAG, "Play bell.");
 		int pos = 0;
 		do {
 			ESP_LOGI(MY_TAG, "=> %u / %u", notes[pos+0], notes[pos+1]);
@@ -181,6 +183,12 @@ static void tone_task(void *ignore)
 
 			pos += 2;
 		} while (notes[pos]);
+		ESP_LOGI(MY_TAG, "Play done.");
+
+	items[0].duration0 = 0;
+	items[0].duration1 = 0;
+	rmt_write_items(RMT_TX_CHANNEL, items, 1, true);
+
 #if 0
         ESP_ERROR_CHECK(rmt_write_items(RMT_TX_CHANNEL, items, number_of_items, true));
 		ESP_LOGI(MY_TAG, "Transmission complete");
