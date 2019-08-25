@@ -28,6 +28,7 @@ static const char* MY_TAG = "knusperhaeuschen/wifi";
 
 EventGroupHandle_t wifi_event_group;
 const EventBits_t WIFI_CONNECTED = BIT0;
+const EventBits_t WIFI_DISCONNECTED = BIT1;
 static bool reconnect = true;
 
 static httpd_handle_t server = NULL;
@@ -46,8 +47,11 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
 
     case SYSTEM_EVENT_STA_GOT_IP:
 		ESP_LOGI(MY_TAG, "SYSTEM_EVENT_STA_GOT_IP");
-		gpio_set_level(CONFIG_LED_PIN, 1);
         xEventGroupSetBits(wifi_event_group, WIFI_CONNECTED);
+		xEventGroupClearBits(wifi_event_group, WIFI_DISCONNECTED);
+
+		gpio_set_level(CONFIG_LED_PIN, 1);
+
 		if (*http == NULL)
 		{
 			*http = http_start();
@@ -69,11 +73,13 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
 
     case SYSTEM_EVENT_STA_DISCONNECTED:
 		ESP_LOGI(MY_TAG, "SYSTEM_EVENT_STA_DISCONNECTED");
+		xEventGroupClearBits(wifi_event_group, WIFI_CONNECTED);
+		xEventGroupSetBits(wifi_event_group, WIFI_DISCONNECTED);
+
 		gpio_set_level(CONFIG_LED_PIN, 0);
 
 		if (reconnect)
 			esp_wifi_connect();
-        xEventGroupClearBits(wifi_event_group, WIFI_CONNECTED);
 
 		if (*http)
 		{

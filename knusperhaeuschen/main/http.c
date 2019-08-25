@@ -8,7 +8,7 @@
 
 #include <lwip/apps/sntp.h>
 
-#define VERSION "0.0.8"
+#define VERSION "0.0.9"
 
 extern uint32_t g_boot_count;
 
@@ -111,7 +111,7 @@ esp_err_t status_handler(httpd_req_t* req)
 	time(&now);
 	localtime_r(&now, &timeinfo);
 
-	int64_t uptime = xTaskGetTickCount() / 1000 / 1000;
+	int64_t uptime = esp_timer_get_time() / 1000 / 1000;
 
 	const size_t bufsize = 320;
 	char* buf = malloc(bufsize);

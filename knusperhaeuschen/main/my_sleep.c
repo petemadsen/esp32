@@ -42,6 +42,8 @@ void my_sleep_task(void* arg)
 	settings_get(SETTING_HOUR_TO, &hour_to);
 
 	uint32_t mins = 0;
+	uint32_t nowifi_mins = 0;
+
 	for (;;)
 	{
 //		xEventGroupWaitBits(wifi_event_group, WIFI_CONNECTED, false, true,
@@ -64,17 +66,25 @@ void my_sleep_task(void* arg)
 				esp_deep_sleep(3600LL * 1000000LL);
 			}
 		}
+
 		// reboot/sleep if no wifi
-		if (mins > 10)
+		EventBits_t bits = xEventGroupGetBits(wifi_event_group);
+		if ((bits & WIFI_CONNECTED) == 0)
 		{
-			EventBits_t bits = xEventGroupGetBits(wifi_event_group);
-			if ((bits & WIFI_CONNECTED) == 0)
+			ESP_LOGW(MY_TAG, "NoWiFi %d", nowifi_mins);
+			if (++nowifi_mins > 10)
 			{
 				ESP_LOGW(MY_TAG, "Entering SECURITY MODE");
 				wifi_stop();
 				uart_tx_wait_idle(CONFIG_CONSOLE_UART_NUM); // wait for line output
-				esp_deep_sleep(600LL * 1000000LL);
+//				esp_deep_sleep(600LL * 1000000LL);
+				esp_restart();
 			}
+			esp_wifi_connect();
+		}
+		else
+		{
+			nowifi_mins = 0;
 		}
 
 		// -- wait 60 secs
