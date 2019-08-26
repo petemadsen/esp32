@@ -118,9 +118,10 @@ static void rmt_play()
 
 static void i2s_init()
 {
+	// GPIO_NUM_25 (right) + GPIO_NUM_26 (left)
 	int i2s_num = EXAMPLE_I2S_NUM;
 	i2s_config_t i2s_config = {
-	   .mode = I2S_MODE_MASTER | I2S_MODE_RX | I2S_MODE_TX | I2S_MODE_DAC_BUILT_IN | I2S_MODE_ADC_BUILT_IN,
+	   .mode = I2S_MODE_MASTER | I2S_MODE_TX | I2S_MODE_ADC_BUILT_IN,
 	   .sample_rate =  EXAMPLE_I2S_SAMPLE_RATE,
 	   .bits_per_sample = EXAMPLE_I2S_SAMPLE_BITS,
 	   .communication_format = I2S_COMM_FORMAT_I2S_MSB,
@@ -129,20 +130,27 @@ static void i2s_init()
 	   .dma_buf_count = 2,
 	   .dma_buf_len = 1024
 	};
-	//install and start i2s driver
-	i2s_driver_install(i2s_num, &i2s_config, 0, NULL);
-	//init DAC pad
-	i2s_set_dac_mode(I2S_DAC_CHANNEL_BOTH_EN);
-	//init ADC pad
-	i2s_set_adc_mode(I2S_ADC_UNIT, I2S_ADC_CHANNEL);
+//	const i2s_pin_config_t pin_config = {
+//		.bck_io_num = -1, // I2S_PIN_NO_CHANGE,// 26,
+//		.ws_io_num = GPIO_NUM_13,// I2S_PIN_NO_CHANGE,// 25,
+//		.data_out_num = -1, // I2S_PIN_NO_CHANGE,// 22,
+//		.data_in_num = -1, // I2S_PIN_NO_CHANGE
+//	};
 
+	gpio_set_direction(GPIO_NUM_13, GPIO_MODE_OUTPUT);
+
+	i2s_driver_install(i2s_num, &i2s_config, 0, NULL);
+
+//	i2s_set_pin(i2s_num, &pin_config);
+
+	i2s_set_dac_mode(I2S_DAC_CHANNEL_LEFT_EN);
 }
 
 
 /**
  * @brief Scale data to 16bit/32bit for I2S DMA output.
  *        DAC can only output 8bit data value.
- *        I2S DMA will still send 16 bit or 32bit data, the highest 8bit contain>>>s DAC data.
+ *        I2S DMA will still send 16 bit or 32bit data, the highest 8bit contains DAC data.
  */
 int example_i2s_dac_data_scale(uint8_t* d_buff, uint8_t* s_buff, uint32_t len)
 {
@@ -173,7 +181,7 @@ static void i2s_play()
 	i2s_set_clk(EXAMPLE_I2S_NUM, 16000, EXAMPLE_I2S_SAMPLE_BITS, 1);
 
 	int i2s_read_len = EXAMPLE_I2S_READ_LEN;
-	size_t bytes_read, bytes_written;
+	size_t bytes_written;
 
 	uint8_t* i2s_write_buff = (uint8_t*) calloc(i2s_read_len, sizeof(char));
 
@@ -192,9 +200,6 @@ static void i2s_play()
 
 	free(i2s_write_buff);
 }
-
-
-
 #endif
 
 
