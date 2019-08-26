@@ -9,7 +9,6 @@
 * HTTP support
 * save settings
 * show blue led if has wifi
-* **TODO** speaker makes noises when not operating
 
 
 ## HTTP
@@ -26,15 +25,13 @@
 
 * `/volume?NUM`
 
-* `ota` initiates the OTA process
+* `/ota` initiates the OTA process
 
 
 ## Save Power
 
 * Reducing speed from 160 to 80 MHz provides around 6mA less power consumption.
 * Sleep at night
-* **TODO** Use PIR to wake up
-* **TODO** turn off dfplayer
 
 
 ### Sleep at Night
