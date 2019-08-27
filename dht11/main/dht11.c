@@ -71,38 +71,49 @@ static void rx_task()
         //try to receive data from ringbuffer.
         //RMT driver will push all the data it receives to its ringbuffer.
         //We just need to parse the value and return the spaces of ringbuffer.
-        rmt_item32_t* items = (rmt_item32_t*) xRingbufferReceive(rb, &rx_size, 1000);
-        if (items)
-        {
-			int nr_of_bits = rx_size / sizeof(rmt_item32_t);
-			ESP_LOGI(M_TAG, "RCV: %d - @0x%x", nr_of_bits, (unsigned int)items);
+        rmt_item32_t* items = (rmt_item32_t*)xRingbufferReceive(rb, &rx_size, 1000);
+        if (!items)
+		{
+			vTaskDelay(10);
+			continue;
+        }
 
-			if (nr_of_bits == 43)
+		int nr_of_bits = rx_size / sizeof(rmt_item32_t);
+		ESP_LOGI(M_TAG, "RCV: %d - @0x%x", nr_of_bits, (unsigned int)items);
+
+		if (nr_of_bits != 43)
+		{
+			vRingbufferReturnItem(rb, (void*)items);
+			ESP_LOGW(M_TAG, "wrong number of bits: %d", nr_of_bits);
+			continue;
+		}
+
+		// ignore the first pulse: that's us
+		// ignore the second pulse: that's ACK
+		rmt_item32_t* item = &items[2];
+		for (int i=0; i<5; ++i)
+		{
+			int b = 0;
+			for (int k=0; k<8; ++k)
 			{
-				// ignore the first pulse: that's us
-				// ignore the second pulse: that's ACK
-				rmt_item32_t* item = &items[2];
-				for (int i=0; i<5; ++i)
-				{
-					int b = 0;
-					for (int k=0; k<8; ++k)
-					{
-						b |= (TICKS2US(item->duration1) > 40 ? 1 : 0);
-						b <<= 1;
-						++item;
-					}
-					b >>= 1;
-					rcv_bytes[i] = b;
-				}
+				b |= (TICKS2US(item->duration1) > 40 ? 1 : 0);
+				b <<= 1;
+				++item;
+			}
+			b >>= 1;
+			rcv_bytes[i] = b;
+		}
 
-				if ((rcv_bytes[0] + rcv_bytes[2]) == rcv_bytes[4])
-				{
-					ESP_LOGI(M_TAG, "T: %d C H: %d %%", rcv_bytes[2], rcv_bytes[0]);
-				}
-				else
-				{
-					ESP_LOGW(M_TAG, "CRC error");
-				}
+		if ((rcv_bytes[0] + rcv_bytes[2]) == rcv_bytes[4])
+		{
+			ESP_LOGI(M_TAG, "T: %d C H: %d %%", rcv_bytes[2], rcv_bytes[0]);
+		}
+		else
+		{
+			ESP_LOGW(M_TAG, "CRC error");
+		}
+
+		vRingbufferReturnItem(rb, (void*)items);
 
 #if 0
 				for (int i=0; i<rx_size / sizeof(rmt_item32_t); ++i)
@@ -111,19 +122,7 @@ static void rx_task()
 							items[i].level1, TICKS2US(items[i].duration1),
 							items[i].duration1 > 40 ? 1 : 0);
 #endif
-			}
-			else
-			{
-				ESP_LOGW(M_TAG, "wrong number of bits: %d", nr_of_bits);
-			}
-
-            //after parsing the data, return spaces to ringbuffer.
-            vRingbufferReturnItem(rb, (void*) items);
-        } else {
-			vTaskDelay(10);
-//            break;
-        }
-    }
+	}
 
     vTaskDelete(NULL);
 }
