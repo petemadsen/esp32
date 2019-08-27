@@ -10,6 +10,14 @@
 * save settings
 * show blue led if has wifi
 
+## Pinout
+
+* 19 - bell
+* 18 - light
+* 21 - sda
+* 22 - scl
+* 26 - speaker
+
 
 ## HTTP
 
