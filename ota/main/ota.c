@@ -13,20 +13,20 @@
 #include <sys/socket.h>
 #include <netdb.h>
 
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "freertos/event_groups.h"
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+#include <freertos/event_groups.h>
 
-#include "esp_system.h"
-#include "esp_wifi.h"
-#include "esp_event_loop.h"
-#include "esp_log.h"
-#include "esp_ota_ops.h"
-#include "esp_http_client.h"
-#include "esp_flash_partitions.h"
-#include "esp_partition.h"
+#include <esp_system.h>
+#include <esp_wifi.h>
+#include <esp_event_loop.h>
+#include <esp_log.h>
+#include <esp_ota_ops.h>
+#include <esp_http_client.h>
+#include <esp_flash_partitions.h>
+#include <esp_partition.h>
 
-#include "esp_image_format.h"
+#include <esp_image_format.h>
 
 #include <nvs.h>
 #include <nvs_flash.h>
@@ -52,7 +52,10 @@ static char download_url[DOWNLOAD_URL_MAXLEN];
 static char ota_filename[CFG_OTA_FILENAME_LENGTH];
 
 
-static const char* TAG = "ota";
+#define CONFIG_LED_PIN		GPIO_NUM_2
+
+
+static const char* MY_TAG = "ota";
 /*an ota data write buffer ready to write to the flash*/
 static char ota_write_data[BUFFSIZE + 1] = { 0 };
 
@@ -99,7 +102,7 @@ static void initialise_wifi(void)
             .password = EXAMPLE_WIFI_PASS,
         },
     };
-    ESP_LOGI(TAG, "Setting WiFi configuration SSID %s...", wifi_config.sta.ssid);
+	ESP_LOGI(MY_TAG, "Setting WiFi configuration SSID %s...", wifi_config.sta.ssid);
 	ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
 	ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config));
 	ESP_ERROR_CHECK(esp_wifi_start());
@@ -115,7 +118,7 @@ static void http_cleanup(esp_http_client_handle_t client)
 
 static void __attribute__((noreturn)) task_fatal_error()
 {
-    ESP_LOGE(TAG, "Exiting task due to fatal error...");
+	ESP_LOGE(MY_TAG, "Exiting task due to fatal error...");
     (void)vTaskDelete(NULL);
 
     while (1) {
@@ -138,14 +141,14 @@ static bool download_and_install()
 	esp_http_client_handle_t client = esp_http_client_init(&config);
 	if (client == NULL)
 	{
-		ESP_LOGE(TAG, "Failed to initialise HTTP connection");
+		ESP_LOGE(MY_TAG, "Failed to initialise HTTP connection");
 		return false;
 //		task_fatal_error();
 	}
 	err = esp_http_client_open(client, 0);
 	if (err != ESP_OK)
 	{
-		ESP_LOGE(TAG, "Failed to open HTTP connection: %s", esp_err_to_name(err));
+		ESP_LOGE(MY_TAG, "Failed to open HTTP connection: %s", esp_err_to_name(err));
 		esp_http_client_cleanup(client);
 		return false;
 //		task_fatal_error();
@@ -154,7 +157,7 @@ static bool download_and_install()
 	int datalen = esp_http_client_fetch_headers(client);
 	if (datalen <= 0)
 	{
-		ESP_LOGE(TAG, "Failed to read headers: %d", datalen);
+		ESP_LOGE(MY_TAG, "Failed to read headers: %d", datalen);
 		esp_http_client_cleanup(client);
 		return false;
 	}
@@ -162,24 +165,24 @@ static bool download_and_install()
 	int statuscode = esp_http_client_get_status_code(client);
 	if (statuscode != 200)
 	{
-		ESP_LOGE(TAG, "Image not found: %d", statuscode);
+		ESP_LOGE(MY_TAG, "Image not found: %d", statuscode);
 		esp_http_client_cleanup(client);
 		return false;
 	}
 
 	update_partition = esp_ota_get_next_update_partition(NULL);
-	ESP_LOGI(TAG, "Writing to partition subtype %d at offset 0x%x",
+	ESP_LOGI(MY_TAG, "Writing to partition subtype %d at offset 0x%x",
 			 update_partition->subtype, update_partition->address);
 	assert(update_partition != NULL);
 
 	err = esp_ota_begin(update_partition, OTA_SIZE_UNKNOWN, &update_handle);
 	if (err != ESP_OK)
 	{
-		ESP_LOGE(TAG, "esp_ota_begin failed (%s)", esp_err_to_name(err));
+		ESP_LOGE(MY_TAG, "esp_ota_begin failed (%s)", esp_err_to_name(err));
 		http_cleanup(client);
 		task_fatal_error();
 	}
-	ESP_LOGI(TAG, "esp_ota_begin succeeded");
+	ESP_LOGI(MY_TAG, "esp_ota_begin succeeded");
 
 	int binary_file_length = 0;
 	/* deal with all receive packet */
@@ -188,7 +191,7 @@ static bool download_and_install()
 		int data_read = esp_http_client_read(client, ota_write_data, BUFFSIZE);
 		if (data_read < 0)
 		{
-			ESP_LOGE(TAG, "Error: SSL data read error");
+			ESP_LOGE(MY_TAG, "Error: SSL data read error");
 			http_cleanup(client);
 			task_fatal_error();
 		}
@@ -201,39 +204,41 @@ static bool download_and_install()
 				task_fatal_error();
 			}
 			binary_file_length += data_read;
-			ESP_LOGD(TAG, "Written image length %d", binary_file_length);
+			ESP_LOGD(MY_TAG, "Written image length %d", binary_file_length);
 		}
 		else if (data_read == 0)
 		{
-			ESP_LOGI(TAG, "Connection closed,all data received");
+			ESP_LOGI(MY_TAG, "Connection closed,all data received");
 			break;
 		}
 	}
-	ESP_LOGI(TAG, "Total Write binary data length : %d", binary_file_length);
+	ESP_LOGI(MY_TAG, "Total Write binary data length : %d", binary_file_length);
 
 	if (esp_ota_end(update_handle) != ESP_OK)
 	{
-		ESP_LOGE(TAG, "esp_ota_end failed!");
+		ESP_LOGE(MY_TAG, "esp_ota_end failed!");
 		http_cleanup(client);
 		task_fatal_error();
 	}
 
+#if 0
 	if (esp_partition_check_identity(esp_ota_get_running_partition(), update_partition) == true)
 	{
-		ESP_LOGI(TAG, "The current running firmware is same as the firmware just downloaded");
+		ESP_LOGI(MY_TAG, "The current running firmware is same as the firmware just downloaded");
 		int i = 0;
-		ESP_LOGI(TAG, "When a new firmware is available on the server, press the reset button to download it");
+		ESP_LOGI(MY_TAG, "When a new firmware is available on the server, press the reset button to download it");
 		while(1)
 		{
-			ESP_LOGI(TAG, "Waiting for a new firmware ... %d", ++i);
+			ESP_LOGI(MY_TAG, "Waiting for a new firmware ... %d", ++i);
 			vTaskDelay(2000 / portTICK_PERIOD_MS);
 		}
 	}
+#endif
 
 	err = esp_ota_set_boot_partition(update_partition);
 	if (err != ESP_OK)
 	{
-		ESP_LOGE(TAG, "esp_ota_set_boot_partition failed (%s)!", esp_err_to_name(err));
+		ESP_LOGE(MY_TAG, "esp_ota_set_boot_partition failed (%s)!", esp_err_to_name(err));
 		http_cleanup(client);
 		task_fatal_error();
 	}
@@ -249,7 +254,7 @@ static bool find_and_activate()
 	while (ota)
 	{
 		const esp_partition_t* part = esp_partition_get(ota);
-		ESP_LOGI(TAG, "Check partition: %s", part->label);
+		ESP_LOGI(MY_TAG, "Check partition: %s", part->label);
 
 		if (part->subtype != ESP_PARTITION_SUBTYPE_APP_FACTORY)
 		{
@@ -260,7 +265,7 @@ static bool find_and_activate()
 			};
 			if (esp_image_verify(ESP_IMAGE_VERIFY, &part_pos, &data) == ESP_OK)
 			{
-				ESP_LOGE(TAG, "Found one: %s", part->label);
+				ESP_LOGE(MY_TAG, "Found one: %s", part->label);
 				esp_ota_set_boot_partition(part);
 				return true;
 			}
@@ -275,33 +280,37 @@ static bool find_and_activate()
 
 static void ota_example_task(void *pvParameter)
 {
-    ESP_LOGI(TAG, "Starting OTA...");
+	ESP_LOGI(MY_TAG, "Starting OTA...");
 
 	const esp_partition_t* configured = esp_ota_get_boot_partition();
 	const esp_partition_t* running = esp_ota_get_running_partition();
 
 	if (configured != running)
 	{
-        ESP_LOGW(TAG, "Configured OTA boot partition at offset 0x%08x, but running from offset 0x%08x",
+		ESP_LOGW(MY_TAG, "Configured OTA boot partition at offset 0x%08x, but running from offset 0x%08x",
                  configured->address, running->address);
-        ESP_LOGW(TAG, "(This can happen if either the OTA boot data or preferred boot image become corrupted somehow.)");
+		ESP_LOGW(MY_TAG, "(This can happen if either the OTA boot data or preferred boot image become corrupted somehow.)");
     }
-    ESP_LOGI(TAG, "Running partition type %d subtype %d (offset 0x%08x)",
+	ESP_LOGI(MY_TAG, "Running partition type %d subtype %d (offset 0x%08x)",
              running->type, running->subtype, running->address);
 
 	// -- wait for wifi
     xEventGroupWaitBits(wifi_event_group, CONNECTED_BIT,
                         false, true, portMAX_DELAY);
-	ESP_LOGI(TAG, "Connected to Wifi! Start to connect to server....");
+	ESP_LOGI(MY_TAG, "Connected to Wifi! Start to connect to server....");
     
 	// -- start
 	bool found = false;
 	for (int i=0; i<5; ++i)
 	{
-		ESP_LOGI(TAG, "Attempt #%d", (i+1));
+		ESP_LOGI(MY_TAG, "Attempt #%d", (i+1));
+		gpio_set_level(CONFIG_LED_PIN, 1);
+
 		found = download_and_install();
 		if (found)
 			break;
+
+		gpio_set_level(CONFIG_LED_PIN, 0);
 		vTaskDelay(5000 / portTICK_PERIOD_MS);
 	}
 
@@ -315,7 +324,7 @@ static void ota_example_task(void *pvParameter)
 	// Oops, will reboot into OTA but after a deep sleep.
 	if (!found)
 	{
-		ESP_LOGE(TAG, "Update failed. Rebooting into OTA. Deep sleep.");
+		ESP_LOGE(MY_TAG, "Update failed. Rebooting into OTA. Deep sleep.");
 		vTaskDelay(10000 / portTICK_PERIOD_MS);
 
 		esp_wifi_stop();
@@ -323,7 +332,7 @@ static void ota_example_task(void *pvParameter)
 		esp_deep_sleep(300LL * 1000000LL);
 	}
 
-	ESP_LOGI(TAG, "Ready to restart system!");
+	ESP_LOGI(MY_TAG, "Ready to restart system!");
 	vTaskDelay(1000 / portTICK_PERIOD_MS);
 	esp_restart();
 
@@ -339,7 +348,7 @@ esp_err_t read_ota()
     err = nvs_open(CFG_OTA_STORAGE, NVS_READWRITE, &my_handle);
 	if (err != ESP_OK)
 	{
-		ESP_LOGE(TAG, "Could not open storage: %s", CFG_OTA_STORAGE);
+		ESP_LOGE(MY_TAG, "Could not open storage: %s", CFG_OTA_STORAGE);
 		return err;
 	}
 
@@ -347,19 +356,54 @@ esp_err_t read_ota()
 	err = nvs_get_str(my_handle, CFG_OTA_FILENAME, NULL, &keylen);
 	if (err != ESP_OK)
 	{
-		ESP_LOGE(TAG, "Key not found: %s", CFG_OTA_FILENAME);
+		ESP_LOGE(MY_TAG, "Key not found: %s", CFG_OTA_FILENAME);
 		return err;
 	}
 	if (keylen > CFG_OTA_FILENAME_LENGTH)
 	{
-		ESP_LOGE(TAG, "Filename too long: %u", keylen);
+		ESP_LOGE(MY_TAG, "Filename too long: %u", keylen);
 		return ESP_FAIL;
 	}
 
 	err = nvs_get_str(my_handle, CFG_OTA_FILENAME, ota_filename, &keylen);
-	ESP_LOGI(TAG, "Filename to load: %s", ota_filename);
+	ESP_LOGI(MY_TAG, "Filename to load: %s", ota_filename);
 
 	return ESP_OK;
+}
+
+
+static void nowifi_watch_task(void *pvParameter)
+{
+	const int64_t max_seconds = 2 * 60;
+	int64_t last_ok = esp_timer_get_time() / 1000 / 1000;
+	for (;;)
+	{
+		EventBits_t bits = xEventGroupGetBits(wifi_event_group);
+		if (bits & CONNECTED_BIT)
+		{
+			last_ok = esp_timer_get_time() / 1000 / 1000;
+			vTaskDelay(1000 / portTICK_PERIOD_MS);
+			continue;
+		}
+
+		gpio_set_level(CONFIG_LED_PIN, 1);
+		vTaskDelay(1000 / portTICK_PERIOD_MS);
+		gpio_set_level(CONFIG_LED_PIN, 0);
+		vTaskDelay(1000 / portTICK_PERIOD_MS);
+
+		int64_t now = esp_timer_get_time() / 1000 / 1000;
+		int64_t diff = now - last_ok;
+		ESP_LOGE(MY_TAG, "NoWiFi watch - NO WIFI - %lld", diff);
+
+		if ( diff > max_seconds)
+		{
+			ESP_LOGI(MY_TAG, "NoWiFi deep sleep.");
+
+			esp_wifi_stop();
+			uart_tx_wait_idle(CONFIG_CONSOLE_UART_NUM);
+			esp_deep_sleep(300LL * 1000000LL);
+		}
+	}
 }
 
 
@@ -375,7 +419,7 @@ void app_main()
 		// If this happens, we erase NVS partition and initialize NVS again.
         ESP_ERROR_CHECK(nvs_flash_erase());
         err = nvs_flash_init();
-		ESP_LOGW(TAG, "Initializing VNS.");
+		ESP_LOGW(MY_TAG, "Initializing VNS.");
     }
     ESP_ERROR_CHECK(err);
 
@@ -383,19 +427,25 @@ void app_main()
 	if (read_ota() != ESP_OK)
 	{
 		strcpy(ota_filename, DEFAULT_FILENAME);
-		ESP_LOGE(TAG, "Using default filename: %s", DEFAULT_FILENAME);
+		ESP_LOGE(MY_TAG, "Using default filename: %s", DEFAULT_FILENAME);
 	}
-	ESP_LOGI(TAG, "Using filename: %s", ota_filename);
+	ESP_LOGI(MY_TAG, "Using filename: %s", ota_filename);
 	int len = snprintf(download_url, DOWNLOAD_URL_MAXLEN, "http://%s:%s/%s",
 			DEFAULT_SERVER_IP, DEFAULT_SERVER_PORT, ota_filename);
 	if (len >= DOWNLOAD_URL_MAXLEN)
 	{
-		ESP_LOGE(TAG, "Download URL too long!");
+		ESP_LOGE(MY_TAG, "Download URL too long!");
         task_fatal_error();
 	}
-	ESP_LOGI(TAG, "Using url: %s", download_url);
+	ESP_LOGI(MY_TAG, "Using url: %s", download_url);
 	vTaskDelay(5000 / portTICK_PERIOD_MS);
+
+	// -- led
+	gpio_pad_select_gpio(CONFIG_LED_PIN);
+	gpio_set_direction(CONFIG_LED_PIN, GPIO_MODE_OUTPUT);
 
     initialise_wifi();
     xTaskCreate(&ota_example_task, "ota_example_task", 8192, NULL, 5, NULL);
+
+	xTaskCreate(&nowifi_watch_task, "nowifi_watch_task", 4096, NULL, 5, NULL);
 }

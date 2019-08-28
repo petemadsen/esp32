@@ -12,11 +12,12 @@
 
 ## Pinout
 
-* 19 - bell
-* 18 - light
+* 19 - bell button
+* 18 - light button
+* 17 - light out
 * 21 - sda
 * 22 - scl
-* 26 - speaker
+* 26 - speaker out
 
 
 ## HTTP
