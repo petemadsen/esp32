@@ -19,7 +19,7 @@
 #include "light.h"
 
 
-#define CONFIG_RELAY_PIN		GPIO_NUM_18
+#define CONFIG_RELAY_PIN		GPIO_NUM_23
 
 
 static const char* MY_TAG = "knusperhaeuschen/light";

@@ -3,21 +3,24 @@
 * dfplayer
 * buttons
 * load transistor switch
-* **TODO** ina219
+* **TODO** INA219 (i2c)
   * will monitor system voltage and send warning notifications to awShutters
     and turn off wifi and more
+* **TODO** DHT12 (i2c)
+* **TODO** BMP280 (i2c)
 * HTTP support
-* save settings
-* show blue led if has wifi
+* Save settings
+* Show blue led if has wifi
+
 
 ## Pinout
 
-* 19 - bell button
-* 18 - light button
-* 17 - light out
-* 21 - sda
-* 22 - scl
-* 26 - speaker out
+* 18 - bell button
+* 19 - light button
+* 23 - light transistor
+* 21 - i2c sda (defined by hardware)
+* 22 - i2c scl (defined by hardware)
+* 25 - speaker transistor
 
 
 ## HTTP
