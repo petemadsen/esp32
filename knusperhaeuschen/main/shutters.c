@@ -11,12 +11,15 @@
 #include <esp_http_client.h>
 
 #include "wifi.h"
+#include "bmp280.h"
 
 
 static const char* MY_TAG = "knusperhaeuschen/shutters";
 
 
-static const char* base_url = "http://192.168.1.51:8080/knusperhaeuschen/touch";
+//static const char* TOUCH_URL = "http://192.168.1.51:8080/knusperhaeuschen/touch";
+static const char* TOUCH_URL = "http://192.168.1.86:8080/knusperhaeuschen/touch";
+static const char* SAVE_URL = "http://192.168.1.86:8080/knusperhaeuschen/save";
 
 
 esp_err_t _http_event_handle(esp_http_client_event_t *evt)
@@ -55,28 +58,53 @@ esp_err_t _http_event_handle(esp_http_client_event_t *evt)
 
 void shutters_task(void* pvParameters)
 {
+	esp_err_t err;
 	for (;;)
 	{
 		xEventGroupWaitBits(wifi_event_group, WIFI_CONNECTED, false, true,
 				portMAX_DELAY);
 		ESP_LOGI(MY_TAG, "Run.");
 
+		// -- touch
 		esp_http_client_config_t config = {
-			.url = base_url,
+			.url = TOUCH_URL,
 			.event_handler = _http_event_handle,
 		};
 		esp_http_client_handle_t client = esp_http_client_init(&config);
-		esp_err_t err = esp_http_client_perform(client);
-
+		err = esp_http_client_perform(client);
 		if (err == ESP_OK)
 		{
-			ESP_LOGI(MY_TAG, "Status = %d, content_length = %d",
+			ESP_LOGI(MY_TAG, "Touch/Status = %d, content_length = %d",
 					esp_http_client_get_status_code(client),
 					esp_http_client_get_content_length(client));
 		}
+
+		// -- save
+		const size_t POST_MAXLEN = 200;
+		char* save_data = malloc(POST_MAXLEN);
+		int save_data_len = snprintf(save_data, POST_MAXLEN,
+									 "in-temp=%.2f&voltage=9V",
+									 bmp280_get_temp());
+
+		esp_http_client_set_url(client, SAVE_URL);
+		esp_http_client_set_method(client, HTTP_METHOD_POST);
+		esp_http_client_set_post_field(client, save_data, save_data_len);
+		err = esp_http_client_perform(client);
+		if (err == ESP_OK)
+		{
+			ESP_LOGI(MY_TAG, "Save/Status = %d, content_length = %d",
+					esp_http_client_get_status_code(client),
+					esp_http_client_get_content_length(client));
+		}
+
+		free(save_data);
+
+		// -- cleanup
 		esp_http_client_cleanup(client);
 
 		// -- wait 3600 secs = 1h
+		vTaskDelay(60 * 1000 / portTICK_PERIOD_MS);
+		continue;
 		vTaskDelay(3600 * 1000 / portTICK_PERIOD_MS);
 	}
 }

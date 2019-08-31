@@ -5,6 +5,7 @@
 #include "light.h"
 #include "tone.h"
 #include "ota.h"
+#include "bmp280.h"
 
 #include <lwip/apps/sntp.h>
 
@@ -116,13 +117,20 @@ esp_err_t status_handler(httpd_req_t* req)
 	const size_t bufsize = 320;
 	char* buf = malloc(bufsize);
 	int buflen = snprintf(buf, bufsize,
-						  "version %s light %d free-ram %u boots %u uptime %lld time %02d:%02d",
+						  "version %s"
+						  " light %d"
+						  " free-ram %u"
+						  " boots %u"
+						  " uptime %lld"
+						  " time %02d:%02d"
+						  " in-temp %.2f",
 						  VERSION,
 						  light_status(),
 						  esp_get_free_heap_size(),
 						  g_boot_count,
 						  uptime,
-						  timeinfo.tm_hour, timeinfo.tm_min);
+						  timeinfo.tm_hour, timeinfo.tm_min,
+						  bmp280_get_temp());
 	httpd_resp_send(req, buf, buflen);
 
 	free(buf);

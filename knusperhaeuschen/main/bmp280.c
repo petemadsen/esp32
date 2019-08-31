@@ -19,6 +19,9 @@ uint16_t m_i2c_read16(uint8_t addr, uint8_t reg);
 uint32_t m_i2c_read24(uint8_t addr, uint8_t reg);
 
 
+static float m_last_value = 666.666f;
+
+
 typedef struct {
 	  uint16_t dig_T1;
 	  int16_t dig_T2;
@@ -118,7 +121,9 @@ static void bmp280_task()
 			ESP_LOGI(MY_TAG, "Temp: %.2f", T);
 //			return T / 100;
 
-			vTaskDelay(5000 / portTICK_PERIOD_MS);
+			m_last_value = T;
+
+			vTaskDelay(60000 / portTICK_PERIOD_MS);
 		}
 	}
 }
@@ -168,4 +173,10 @@ uint32_t m_i2c_read24(uint8_t addr, uint8_t reg)
 
 	// FIXME order is wrong ???
 	return (uint32_t)(bytes[0] << 16) | (uint32_t)(bytes[1] << 8) | (uint32_t)(bytes[2] << 0);
+}
+
+
+float bmp280_get_temp()
+{
+	return m_last_value;
 }
