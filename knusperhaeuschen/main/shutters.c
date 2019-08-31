@@ -103,8 +103,6 @@ void shutters_task(void* pvParameters)
 		esp_http_client_cleanup(client);
 
 		// -- wait 3600 secs = 1h
-		vTaskDelay(60 * 1000 / portTICK_PERIOD_MS);
-		continue;
 		vTaskDelay(3600 * 1000 / portTICK_PERIOD_MS);
 	}
 }
