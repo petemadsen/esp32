@@ -8,7 +8,7 @@
 
 #include <lwip/apps/sntp.h>
 
-#define VERSION "0.0.9"
+#define VERSION "2019-08-30"
 
 extern uint32_t g_boot_count;
 
