@@ -83,9 +83,10 @@ void shutters_task(void* pvParameters)
 		const size_t POST_MAXLEN = 200;
 		char* save_data = malloc(POST_MAXLEN);
 		int save_data_len = snprintf(save_data, POST_MAXLEN,
-									 "board-temp=%.2f&voltage=%.2f",
+									 "board_temp=%.2f&voltage=%.2f&out_temp=%.2f",
 									 bmp280_get_temp(),
-									 12.35);
+									 12.35,
+									 -1.0);
 
 		esp_http_client_set_url(client, SAVE_URL);
 		esp_http_client_set_method(client, HTTP_METHOD_POST);

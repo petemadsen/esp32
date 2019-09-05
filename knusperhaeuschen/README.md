@@ -1,4 +1,4 @@
-# Project: knusperhauschen
+# Project: knusperhaeuschen
 
 * dfplayer
 * buttons
@@ -18,12 +18,12 @@
 * 18 - bell button
 * 19 - light button
 * 23 - light transistor
-* 21 - i2c sda (defined by hardware)
-* 22 - i2c scl (defined by hardware)
-* 25 - speaker transistor
+* 21 - i2c sda
+* 22 - i2c scl
+* 25 - PAM8304 audio amplifier
 
 
-## HTTP
+## HTTP Server
 
 * `/status` returns various system parameters
 
@@ -38,6 +38,16 @@
 * `/volume?NUM`
 
 * `/ota` initiates the OTA process
+
+
+## HTTP Client
+
+Client tries to connect to awShutters:
+* `GET /knusperhaeuschen/touch`
+* `POST /knusperhaeuschen/save` - sends a couple of key-value pairs
+  * `board_temp`
+  * `voltage`
+  * `out_temp`
 
 
 ## Save Power
