@@ -20,6 +20,7 @@ set(COMPONENT_SRCS
 	tone.c
 	my_i2c.c
 	bmp280.c
+	voltage.c
 )
 
 register_component()

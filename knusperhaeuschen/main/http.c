@@ -6,6 +6,7 @@
 #include "tone.h"
 #include "ota.h"
 #include "bmp280.h"
+#include "voltage.h"
 
 #include <lwip/apps/sntp.h>
 
@@ -123,14 +124,16 @@ esp_err_t status_handler(httpd_req_t* req)
 						  " boots %u"
 						  " uptime %lld"
 						  " time %02d:%02d"
-						  " in-temp %.2f",
+						  " board_temp %.2f"
+						  " voltage %.2f",
 						  VERSION,
 						  light_status(),
 						  esp_get_free_heap_size(),
 						  g_boot_count,
 						  uptime,
 						  timeinfo.tm_hour, timeinfo.tm_min,
-						  bmp280_get_temp());
+						  bmp280_get_temp(),
+						  voltage_get());
 	httpd_resp_send(req, buf, buflen);
 
 	free(buf);

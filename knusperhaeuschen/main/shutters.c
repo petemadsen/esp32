@@ -12,9 +12,10 @@
 
 #include "wifi.h"
 #include "bmp280.h"
+#include "voltage.h"
 
 
-static const char* MY_TAG = "knusperhaeuschen/shutters";
+static const char* MY_TAG = "khaus/shutters";
 
 
 //static const char* TOUCH_URL = "http://192.168.1.51:8080/knusperhaeuschen/touch";
@@ -85,7 +86,7 @@ void shutters_task(void* pvParameters)
 		int save_data_len = snprintf(save_data, POST_MAXLEN,
 									 "board_temp=%.2f&voltage=%.2f&out_temp=%.2f",
 									 bmp280_get_temp(),
-									 12.35,
+									 voltage_get(),
 									 -1.0);
 
 		esp_http_client_set_url(client, SAVE_URL);
