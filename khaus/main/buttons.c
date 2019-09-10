@@ -18,7 +18,7 @@
 #define CONFIG_LIGHT_BTN_PIN	GPIO_NUM_19
 
 
-static const char* MY_TAG = "knusperhaeuschen/buttons";
+static const char* MY_TAG = "khaus/buttons";
 
 
 #define BTN_DEBOUNCE_DIFF	50

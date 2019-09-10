@@ -19,10 +19,10 @@
 static const char* ERR_NOFACTORY = "NOFACTORY";
 static const char* ERR_NOBOOT = "NOBOOT";
 
-#define BIN_NAME "knusperhaeuschen.bin"
+#define BIN_NAME "khaus.bin"
 
 
-static const char* MY_TAG = "knusperhaeuschen/ota";
+static const char* MY_TAG = "khaus/ota";
 
 
 esp_err_t ota_init()

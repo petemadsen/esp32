@@ -22,7 +22,7 @@
 #define CONFIG_RELAY_PIN		GPIO_NUM_23
 
 
-static const char* MY_TAG = "knusperhaeuschen/light";
+static const char* MY_TAG = "khaus/light";
 
 
 static bool relay_on = false;

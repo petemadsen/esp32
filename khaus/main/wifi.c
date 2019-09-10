@@ -21,7 +21,7 @@
 #include "config.h"
 
 
-static const char* MY_TAG = "knusperhaeuschen/wifi";
+static const char* MY_TAG = "khaus/wifi";
 
 #define CONFIG_LED_PIN		GPIO_NUM_2
 

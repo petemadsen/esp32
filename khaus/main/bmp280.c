@@ -11,7 +11,7 @@
 #include "my_i2c.h"
 
 
-static const char* MY_TAG = "knusperhaeuschen/bmp280";
+static const char* MY_TAG = "khaus/bmp280";
 
 
 uint8_t m_i2c_read8(uint8_t addr, uint8_t reg);

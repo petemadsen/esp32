@@ -12,7 +12,7 @@
 #include "my_settings.h"
 
 
-static const char* MY_TAG = "knusperhaeuschen/sleep";
+static const char* MY_TAG = "khaus/sleep";
 
 
 static struct tm timeinfo = { 0 };

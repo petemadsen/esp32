@@ -10,7 +10,7 @@
 #include <driver/rmt.h>
 #include <driver/i2s.h>
 
-static const char* MY_TAG = "knusperhaeuschen/note";
+static const char* MY_TAG = "khaus/note";
 
 static EventGroupHandle_t x_events;
 #define EVENT_BELL		BIT0

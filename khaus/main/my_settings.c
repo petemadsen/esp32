@@ -16,7 +16,7 @@ esp_err_t settings_set(const char* key, int val);
 esp_err_t settings_get(const char* key, int* val);
 
 
-static const char* MY_TAG = "knusperhaeuschen/settings";
+static const char* MY_TAG = "khaus/settings";
 
 
 esp_err_t settings_init()
