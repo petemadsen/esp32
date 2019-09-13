@@ -18,9 +18,14 @@
 static const char* MY_TAG = "khaus/shutters";
 
 
-//static const char* TOUCH_URL = "http://192.168.1.51:8080/khaus/touch";
-static const char* TOUCH_URL = "http://192.168.1.86:8080/khaus/touch";
-static const char* SAVE_URL = "http://192.168.1.86:8080/khaus/save";
+#define IP_ADDRESS "192.168.1.86:8080"
+#define IP_ADDRESS "192.168.1.51:8080"
+
+#define RUN_INTERVAL_MINS 10
+
+
+static const char* TOUCH_URL = "http://" IP_ADDRESS "/khaus/touch";
+static const char* SAVE_URL = "http://" IP_ADDRESS "/khaus/save";
 
 
 esp_err_t _http_event_handle(esp_http_client_event_t *evt)
@@ -84,7 +89,7 @@ void shutters_task(void* pvParameters)
 		const size_t POST_MAXLEN = 200;
 		char* save_data = malloc(POST_MAXLEN);
 		int save_data_len = snprintf(save_data, POST_MAXLEN,
-									 "board_temp=%.2f&board_voltage=%.2f&out_temp=%.2f",
+									 "board_temp=%.2f&voltage=%.2f&out_temp=%.2f",
 									 bmp280_get_temp(),
 									 voltage_get(),
 									 -1.0);

@@ -16,8 +16,8 @@ static EventGroupHandle_t x_events;
 #define EVENT_BELL		BIT0
 
 
-#undef USE_RMT
 #define USE_RMT
+#undef USE_RMT
 
 
 #ifdef USE_RMT
