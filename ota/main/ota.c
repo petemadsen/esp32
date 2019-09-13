@@ -393,7 +393,8 @@ static void nowifi_watch_task(void *pvParameter)
 
 		int64_t now = esp_timer_get_time() / 1000 / 1000;
 		int64_t diff = now - last_ok;
-		ESP_LOGE(MY_TAG, "NoWiFi watch - NO WIFI - %lld", diff);
+		if ((diff % 10) == 0)
+			ESP_LOGE(MY_TAG, "NoWiFi watch - NO WIFI - %lld", diff);
 
 		if ( diff > max_seconds)
 		{
