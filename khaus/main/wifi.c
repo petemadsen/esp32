@@ -19,11 +19,11 @@
 #include "wifi.h"
 
 #include "config.h"
+#include "common.h"
 
 
 static const char* MY_TAG = "khaus/wifi";
 
-#define CONFIG_LED_PIN		GPIO_NUM_2
 
 
 EventGroupHandle_t wifi_event_group;
@@ -41,7 +41,7 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
     switch (event->event_id) {
     case SYSTEM_EVENT_STA_START:
 		ESP_LOGI(MY_TAG, "SYSTEM_EVENT_STA_START");
-		gpio_set_level(CONFIG_LED_PIN, 0);
+		gpio_set_level(PROJECT_LED_PIN, 0);
         esp_wifi_connect();
         break;
 
@@ -50,7 +50,7 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
         xEventGroupSetBits(wifi_event_group, WIFI_CONNECTED);
 		xEventGroupClearBits(wifi_event_group, WIFI_DISCONNECTED);
 
-		gpio_set_level(CONFIG_LED_PIN, 1);
+		gpio_set_level(PROJECT_LED_PIN, 1);
 
 		if (*http == NULL)
 		{
@@ -76,7 +76,7 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
 		xEventGroupClearBits(wifi_event_group, WIFI_CONNECTED);
 		xEventGroupSetBits(wifi_event_group, WIFI_DISCONNECTED);
 
-		gpio_set_level(CONFIG_LED_PIN, 0);
+		gpio_set_level(PROJECT_LED_PIN, 0);
 
 		if (reconnect)
 			esp_wifi_connect();
@@ -100,8 +100,8 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
 void wifi_init(bool b)
 {
 	// -- status led
-	gpio_pad_select_gpio(CONFIG_LED_PIN);
-	gpio_set_direction(CONFIG_LED_PIN, GPIO_MODE_OUTPUT);
+	gpio_pad_select_gpio(PROJECT_LED_PIN);
+	gpio_set_direction(PROJECT_LED_PIN, GPIO_MODE_OUTPUT);
 
 	// -- wifi
     tcpip_adapter_init();
