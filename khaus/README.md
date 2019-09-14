@@ -11,6 +11,7 @@
 * HTTP support
 * Save settings
 * Show blue led if has wifi
+* **TODO** switch off the lights after x minutes
 
 
 ## Pinout
