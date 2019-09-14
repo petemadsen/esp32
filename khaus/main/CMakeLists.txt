@@ -8,8 +8,9 @@ file(GLOB HEADERS "*.h")
 
 set(COMPONENT_SRCS
 	${HEADERS}
-	light.c
 	main.c
+	light.c
+	common.h
 	my_sleep.c
 	wifi.c
 	buttons.c

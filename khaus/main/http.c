@@ -7,10 +7,10 @@
 #include "ota.h"
 #include "bmp280.h"
 #include "voltage.h"
+#include "common.h"
 
 #include <lwip/apps/sntp.h>
 
-#define VERSION "2019-09-13"
 
 extern uint32_t g_boot_count;
 
@@ -118,15 +118,15 @@ esp_err_t status_handler(httpd_req_t* req)
 	const size_t bufsize = 320;
 	char* buf = malloc(bufsize);
 	int buflen = snprintf(buf, bufsize,
-						  "version %s"
-						  " light %d"
-						  " free-ram %u"
-						  " boots %u"
-						  " uptime %lld"
-						  " time %02d:%02d"
-						  " board_temp %.2f"
+						  "version %s\n"
+						  " light %d\n"
+						  " free-ram %u\n"
+						  " boots %u\n"
+						  " uptime %lld\n"
+						  " time %02d:%02d\n"
+						  " board_temp %.2f\n"
 						  " voltage %.2f",
-						  VERSION,
+						  PROJECT_VERSION,
 						  light_status(),
 						  esp_get_free_heap_size(),
 						  g_boot_count,

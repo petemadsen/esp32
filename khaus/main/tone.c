@@ -10,6 +10,8 @@
 #include <driver/rmt.h>
 #include <driver/i2s.h>
 
+#include "common.h"
+
 static const char* MY_TAG = "khaus/note";
 
 static EventGroupHandle_t x_events;
@@ -224,16 +226,25 @@ static void tone_task(void* ignore)
 	i2s_init();
 #endif
 
+	// -- on/off pin
+	gpio_pad_select_gpio(PROJECT_TONE_ONOFF_PIN);
+	gpio_set_direction(PROJECT_TONE_ONOFF_PIN, GPIO_MODE_OUTPUT);
+	gpio_set_level(PROJECT_TONE_ONOFF_PIN, 0);
+
 	for (;;)
 	{
 		EventBits_t bits = xEventGroupWaitBits(x_events,
 											   EVENT_BELL,
 											   true, false, portMAX_DELAY);
+
+		gpio_set_level(PROJECT_TONE_ONOFF_PIN, 1);
 #ifdef USE_RMT
 		rmt_play();
 #else
 		i2s_play();
 #endif
+		gpio_set_level(PROJECT_TONE_ONOFF_PIN, 0);
+
 		ESP_LOGI(MY_TAG, "--done");
 	}
 

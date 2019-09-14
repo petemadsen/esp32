@@ -1,0 +1,19 @@
+/**
+ * This code is public domain.
+ */
+#ifndef PROJECT_COMMON_H
+#define PROJECT_COMMON_H
+
+
+#define PROJECT_VERSION "2019-09-14 (v2)"
+
+
+#define PROJECT_TONE_ONOFF_PIN		GPIO_NUM_32
+#define PROJECT_BELL_BTN_PIN		GPIO_NUM_18
+#define PROJECT_LIGHT_BTN_PIN		GPIO_NUM_19
+#define PROJECT_LIGHT_RELAY_PIN		GPIO_NUM_23
+
+
+
+
+#endif

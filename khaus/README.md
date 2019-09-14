@@ -22,6 +22,7 @@
 * 22 - i2c scl
 * 25 - PAM8304 audio amplifier
 * 34 - voltage sense pin
+* 32 - audio amplifier enable pin
 
 
 ## HTTP Server

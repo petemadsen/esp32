@@ -17,9 +17,8 @@
 #include "sdkconfig.h"
 
 #include "light.h"
+#include "common.h"
 
-
-#define CONFIG_RELAY_PIN		GPIO_NUM_23
 
 
 static const char* MY_TAG = "khaus/light";
@@ -40,8 +39,8 @@ void light_btn_task(void* arg)
 {
 	xLightEvents = xEventGroupCreate();
 
-	gpio_pad_select_gpio(CONFIG_RELAY_PIN);
-	gpio_set_direction(CONFIG_RELAY_PIN, GPIO_MODE_OUTPUT);
+	gpio_pad_select_gpio(PROJECT_LIGHT_RELAY_PIN);
+	gpio_set_direction(PROJECT_LIGHT_RELAY_PIN, GPIO_MODE_OUTPUT);
 
 	TickType_t last_run = xTaskGetTickCount();
 	light_off();
@@ -62,13 +61,13 @@ void light_btn_task(void* arg)
 		{
 			ESP_LOGI(MY_TAG, "light-on");
 			relay_on = true;
-			gpio_set_level(CONFIG_RELAY_PIN, relay_on);
+			gpio_set_level(PROJECT_LIGHT_RELAY_PIN, relay_on);
 		}
 		else if (bits & LIGHT_OFF)
 		{
 			ESP_LOGI(MY_TAG, "light-off");
 			relay_on = false;
-			gpio_set_level(CONFIG_RELAY_PIN, relay_on);
+			gpio_set_level(PROJECT_LIGHT_RELAY_PIN, relay_on);
 		}
 		else if (bits & LIGHT_TOGGLE)
 		{
@@ -77,7 +76,7 @@ void light_btn_task(void* arg)
 				last_run = xTaskGetTickCount();
 				ESP_LOGI(MY_TAG, "light-toggle");
 				relay_on = !relay_on;
-				gpio_set_level(CONFIG_RELAY_PIN, relay_on);
+				gpio_set_level(PROJECT_LIGHT_RELAY_PIN, relay_on);
 			}
 		}
 	}

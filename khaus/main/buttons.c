@@ -12,10 +12,7 @@
 
 #include "light.h"
 #include "tone.h"
-
-
-#define CONFIG_BELL_BTN_PIN		GPIO_NUM_18
-#define CONFIG_LIGHT_BTN_PIN	GPIO_NUM_19
+#include "common.h"
 
 
 static const char* MY_TAG = "khaus/buttons";
@@ -49,10 +46,10 @@ static void gpio_task(void* arg)
 
 				switch (iopin)
 				{
-				case CONFIG_BELL_BTN_PIN:
+				case PROJECT_BELL_BTN_PIN:
 					tone_bell();
 					break;
-				case CONFIG_LIGHT_BTN_PIN:
+				case PROJECT_LIGHT_BTN_PIN:
 					light_toggle();
 					break;
 				}
@@ -66,19 +63,19 @@ void buttons_init()
 {
 	gpio_evt_queue = xQueueCreate(10, sizeof(uint32_t));
 
-	gpio_pad_select_gpio(CONFIG_BELL_BTN_PIN);
-	gpio_set_direction(CONFIG_BELL_BTN_PIN, GPIO_MODE_INPUT);
-//	gpio_set_pull_mode(CONFIG_BELL_BTN_PIN, GPIO_PULLUP_ONLY);
-	gpio_set_intr_type(CONFIG_BELL_BTN_PIN, GPIO_INTR_NEGEDGE);
+	gpio_pad_select_gpio(PROJECT_BELL_BTN_PIN);
+	gpio_set_direction(PROJECT_BELL_BTN_PIN, GPIO_MODE_INPUT);
+//	gpio_set_pull_mode(PROJECT_BELL_BTN_PIN, GPIO_PULLUP_ONLY);
+	gpio_set_intr_type(PROJECT_BELL_BTN_PIN, GPIO_INTR_NEGEDGE);
 
-	gpio_pad_select_gpio(CONFIG_LIGHT_BTN_PIN);
-	gpio_set_direction(CONFIG_LIGHT_BTN_PIN, GPIO_MODE_INPUT);
-//	gpio_set_pull_mode(CONFIG_LIGHT_BTN_PIN, GPIO_PULLUP_ONLY);
-	gpio_set_intr_type(CONFIG_LIGHT_BTN_PIN, GPIO_INTR_ANYEDGE);
+	gpio_pad_select_gpio(PROJECT_LIGHT_BTN_PIN);
+	gpio_set_direction(PROJECT_LIGHT_BTN_PIN, GPIO_MODE_INPUT);
+//	gpio_set_pull_mode(PROJECT_LIGHT_BTN_PIN, GPIO_PULLUP_ONLY);
+	gpio_set_intr_type(PROJECT_LIGHT_BTN_PIN, GPIO_INTR_ANYEDGE);
 
 	gpio_install_isr_service(0); //ESP_INTR_FLAG_DEFAULT
-	gpio_isr_handler_add(CONFIG_BELL_BTN_PIN, gpio_isr_handler, (void*)CONFIG_BELL_BTN_PIN);
-	gpio_isr_handler_add(CONFIG_LIGHT_BTN_PIN, gpio_isr_handler, (void*)CONFIG_LIGHT_BTN_PIN);
+	gpio_isr_handler_add(PROJECT_BELL_BTN_PIN, gpio_isr_handler, (void*)PROJECT_BELL_BTN_PIN);
+	gpio_isr_handler_add(PROJECT_LIGHT_BTN_PIN, gpio_isr_handler, (void*)PROJECT_LIGHT_BTN_PIN);
 
 	xTaskCreate(gpio_task, "gpio_task", 2048, NULL, 10, NULL);
 }
