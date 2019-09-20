@@ -5,6 +5,9 @@
 #define PROJECT_LIGHT_H
 
 
+#include <freertos/FreeRTOS.h>
+
+
 void light_btn_task(void* arg);
 
 
@@ -18,5 +21,9 @@ void light_on();
 
 
 int light_status();
+
+
+int64_t light_on_secs();
+
 
 #endif

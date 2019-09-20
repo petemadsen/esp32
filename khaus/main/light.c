@@ -25,6 +25,10 @@ static const char* MY_TAG = "khaus/light";
 
 
 static bool relay_on = false;
+static int64_t relay_on_at = 0; // time in secs from boot when relay was turned on
+
+
+static void set_relay(bool on);
 
 static EventGroupHandle_t xLightEvents;
 #define LIGHT_OFF		(1 << 0)
@@ -60,14 +64,12 @@ void light_btn_task(void* arg)
 		if (bits & LIGHT_ON)
 		{
 			ESP_LOGI(MY_TAG, "light-on");
-			relay_on = true;
-			gpio_set_level(PROJECT_LIGHT_RELAY_PIN, relay_on);
+			set_relay(true);
 		}
 		else if (bits & LIGHT_OFF)
 		{
 			ESP_LOGI(MY_TAG, "light-off");
-			relay_on = false;
-			gpio_set_level(PROJECT_LIGHT_RELAY_PIN, relay_on);
+			set_relay(false);
 		}
 		else if (bits & LIGHT_TOGGLE)
 		{
@@ -75,8 +77,7 @@ void light_btn_task(void* arg)
 			{
 				last_run = xTaskGetTickCount();
 				ESP_LOGI(MY_TAG, "light-toggle");
-				relay_on = !relay_on;
-				gpio_set_level(PROJECT_LIGHT_RELAY_PIN, relay_on);
+				set_relay(!relay_on);
 			}
 		}
 	}
@@ -85,9 +86,32 @@ void light_btn_task(void* arg)
 }
 
 
+void set_relay(bool on)
+{
+	relay_on = on;
+
+	if (relay_on)
+		relay_on_at = esp_timer_get_time() / 1000 / 1000;
+	else
+		relay_on_at = 0;
+
+	gpio_set_level(PROJECT_LIGHT_RELAY_PIN, relay_on);
+}
+
+
 void light_on()
 {
 	xEventGroupSetBits(xLightEvents, LIGHT_ON);
+}
+
+
+int64_t light_on_secs()
+{
+	if (relay_on_at == 0)
+		return 0;
+
+	int64_t now = esp_timer_get_time() / 1000 / 1000;
+	return now - relay_on_at;
 }
 
 

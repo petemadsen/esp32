@@ -10,6 +10,7 @@
 
 #include "wifi.h"
 #include "my_settings.h"
+#include "light.h"
 
 
 static const char* MY_TAG = "khaus/sleep";
@@ -23,14 +24,12 @@ static void update_time(void);
 
 #define SETTING_HOUR_FROM	"sleep.night_from"
 #define SETTING_HOUR_TO		"sleep.night_to"
+#define SETTING_LIGHTS_OFF	"sleep.lights_on_mins"
 
 
 void my_sleep_task(void* arg)
 {
-//	xEventGroupWaitBits(wifi_event_group, WIFI_CONNECTED, false, true,
-//			portMAX_DELAY);
-
-	// -- init
+	// -- init time
 	sntp_setoperatingmode(SNTP_OPMODE_POLL);
 	sntp_setservername(0, "pool.ntp.org");
 	setenv("TZ", "CET-1CEST-2,M3.5.0/02:00:00,M10.5.0/03:00:00", 1);
@@ -38,18 +37,21 @@ void my_sleep_task(void* arg)
 
 	int hour_from = 21;
 	int hour_to = 7;
-	settings_get(SETTING_HOUR_FROM, &hour_from);
-	settings_get(SETTING_HOUR_TO, &hour_to);
+	int lights_off_mins = 3;
 
 	uint32_t mins = 0;
 	uint32_t nowifi_mins = 0;
 
 	for (;;)
 	{
-//		xEventGroupWaitBits(wifi_event_group, WIFI_CONNECTED, false, true,
-//				portMAX_DELAY);
 		ESP_LOGI(MY_TAG, "Run.");
 
+		// read settings
+		settings_get(SETTING_HOUR_FROM, &hour_from);
+		settings_get(SETTING_HOUR_TO, &hour_to);
+		settings_get(SETTING_LIGHTS_OFF, &lights_off_mins);
+
+		//
 		update_time();
 
 		// enter night mode?
@@ -85,6 +87,12 @@ void my_sleep_task(void* arg)
 		else
 		{
 			nowifi_mins = 0;
+		}
+
+		// turn off the lights
+		if (light_on_secs() > lights_off_mins * 60)
+		{
+			light_off();
 		}
 
 		// -- wait 60 secs
