@@ -120,6 +120,7 @@ esp_err_t status_handler(httpd_req_t* req)
 	int buflen = snprintf(buf, bufsize,
 						  "version %s\n"
 						  " light %d\n"
+						  " light_on_secs %lld\n"
 						  " free-ram %u\n"
 						  " boots %u\n"
 						  " uptime %lld\n"
@@ -128,6 +129,7 @@ esp_err_t status_handler(httpd_req_t* req)
 						  " voltage %.2f",
 						  PROJECT_VERSION,
 						  light_status(),
+						  light_on_secs(),
 						  esp_get_free_heap_size(),
 						  g_boot_count,
 						  uptime,

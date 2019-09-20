@@ -233,9 +233,7 @@ static void tone_task(void* ignore)
 
 	for (;;)
 	{
-		EventBits_t bits = xEventGroupWaitBits(x_events,
-											   EVENT_BELL,
-											   true, false, portMAX_DELAY);
+		xEventGroupWaitBits(x_events, EVENT_BELL, true, false, portMAX_DELAY);
 
 		gpio_set_level(PROJECT_TONE_ONOFF_PIN, 1);
 #ifdef USE_RMT

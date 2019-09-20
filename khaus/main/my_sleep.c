@@ -37,7 +37,7 @@ void my_sleep_task(void* arg)
 
 	int hour_from = 21;
 	int hour_to = 7;
-	int lights_off_mins = 3;
+	int lights_off_mins = 10;
 
 	uint32_t mins = 0;
 	uint32_t nowifi_mins = 0;
