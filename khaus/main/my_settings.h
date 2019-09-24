@@ -11,7 +11,7 @@ esp_err_t settings_init();
 
 esp_err_t settings_set(const char* key, int32_t val);
 
-esp_err_t settings_get(const char* key, int32_t* val);
+esp_err_t settings_get(const char* key, int32_t* val, bool save_if_missing);
 
 
 #endif

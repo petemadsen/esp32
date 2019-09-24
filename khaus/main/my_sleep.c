@@ -47,9 +47,9 @@ void my_sleep_task(void* arg)
 		ESP_LOGI(MY_TAG, "Run.");
 
 		// read settings
-		settings_get(SETTING_HOUR_FROM, &hour_from);
-		settings_get(SETTING_HOUR_TO, &hour_to);
-		settings_get(SETTING_LIGHTS_OFF, &lights_off_mins);
+		settings_get(SETTING_HOUR_FROM, &hour_from, true);
+		settings_get(SETTING_HOUR_TO, &hour_to, true);
+		settings_get(SETTING_LIGHTS_OFF, &lights_off_mins, true);
 
 		//
 		update_time();

@@ -12,10 +12,6 @@
 #define STORAGE	"app"
 
 
-esp_err_t settings_set(const char* key, int val);
-esp_err_t settings_get(const char* key, int* val);
-
-
 static const char* MY_TAG = "khaus/settings";
 
 
@@ -70,7 +66,7 @@ esp_err_t settings_set(const char* key, int val)
 }
 
 
-esp_err_t settings_get(const char* key, int32_t* val)
+esp_err_t settings_get(const char* key, int32_t* val, bool save_if_missing)
 {
 	esp_err_t err;
 
@@ -85,12 +81,14 @@ esp_err_t settings_get(const char* key, int32_t* val)
 	err = nvs_get_i32(my_handle, key, val);
 	if (err != ESP_OK)
 	{
-		nvs_close(my_handle);
 		ESP_LOGE(MY_TAG, "Could not get: %s", key);
-		return err;
+		if (save_if_missing)
+		{
+			ESP_LOGI(MY_TAG, "Saving value: %s => %d", key, *val);
+			err = nvs_set_i32(my_handle, key, *val);
+		}
 	}
 
-	err = nvs_commit(my_handle);
 	nvs_close(my_handle);
 	return err;
 }

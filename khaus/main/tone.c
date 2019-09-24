@@ -11,11 +11,15 @@
 #include <driver/i2s.h>
 
 #include "common.h"
+#include "my_settings.h"
 
 static const char* MY_TAG = "khaus/note";
 
 static EventGroupHandle_t x_events;
 #define EVENT_BELL		BIT0
+
+
+#define SETTING_BELL "tone.bell"
 
 
 #define USE_RMT
@@ -231,8 +235,12 @@ static void tone_task(void* ignore)
 	gpio_set_direction(PROJECT_TONE_ONOFF_PIN, GPIO_MODE_OUTPUT);
 	gpio_set_level(PROJECT_TONE_ONOFF_PIN, 0);
 
+	int bell_num = 0;
+
 	for (;;)
 	{
+		settings_get(SETTING_BELL, &bell_num, true);
+
 		xEventGroupWaitBits(x_events, EVENT_BELL, true, false, portMAX_DELAY);
 
 		gpio_set_level(PROJECT_TONE_ONOFF_PIN, 1);

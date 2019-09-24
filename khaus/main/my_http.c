@@ -1,13 +1,14 @@
 /**
  * This code is public domain.
  */
-#include "http.h"
+#include "my_http.h"
 #include "light.h"
 #include "tone.h"
 #include "ota.h"
 #include "bmp280.h"
 #include "voltage.h"
 #include "common.h"
+#include "my_settings.h"
 
 #include <lwip/apps/sntp.h>
 
@@ -24,6 +25,8 @@ static esp_err_t bell_handler(httpd_req_t* req);
 static esp_err_t play_handler(httpd_req_t* req);
 static esp_err_t volume_handler(httpd_req_t* req);
 static esp_err_t ota_handler(httpd_req_t* req);
+static esp_err_t settings_get_handler(httpd_req_t* req);
+static esp_err_t settings_set_handler(httpd_req_t* req);
 
 
 static const char* RET_OK = "OK";
@@ -60,6 +63,16 @@ static httpd_uri_t basic_handlers[] = {
 		.uri	= "/ota",
 		.method	= HTTP_GET,
 		.handler= ota_handler,
+	},
+	{
+		.uri	= "/sget",
+		.method	= HTTP_GET,
+		.handler= settings_get_handler,
+	},
+	{
+		.uri	= "/sset",
+		.method	= HTTP_GET,
+		.handler= settings_set_handler,
 	}
 };
 
@@ -126,7 +139,7 @@ esp_err_t status_handler(httpd_req_t* req)
 						  " uptime %lld\n"
 						  " time %02d:%02d\n"
 						  " board_temp %.2f\n"
-						  " voltage %.2f",
+						  " board_voltage %.2f",
 						  PROJECT_VERSION,
 						  light_status(),
 						  light_on_secs(),
@@ -155,6 +168,65 @@ esp_err_t ota_handler(httpd_req_t* req)
 
 	httpd_resp_send(req, err, strlen(err));
 	return ESP_OK;
+}
+
+
+esp_err_t settings_get_handler(httpd_req_t* req)
+{
+	esp_err_t ret = ESP_OK;
+	const size_t reply_max_len = 20;
+	char reply[reply_max_len];
+	int reply_len = 0;
+
+	size_t buf_len = httpd_req_get_url_query_len(req) + 1;
+	if (buf_len > 1)
+	{
+		char* buf = malloc(buf_len);
+		if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK)
+		{
+			int32_t val;
+			ret = settings_get(buf, &val, false);
+
+			reply_len = snprintf(reply, reply_max_len, "%d", val);
+		}
+		free(buf);
+	}
+
+	httpd_resp_send(req, reply, reply_len);
+	return ret;
+}
+
+
+esp_err_t settings_set_handler(httpd_req_t* req)
+{
+	esp_err_t ret = ESP_OK;
+	const char* reply = RET_ERR;
+
+	size_t buf_len = httpd_req_get_url_query_len(req) + 1;
+	if (buf_len > 1)
+	{
+		char* buf = malloc(buf_len);
+		if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK)
+		{
+			int32_t val;
+			char* name = malloc(buf_len);
+
+			if (sscanf(buf, "%s=%d", name, &val) == 2)
+				reply = settings_set(name, val) == ESP_OK ? RET_OK : RET_ERR;
+
+			free(name);
+#if 0
+			int32_t val;
+			ret = settings_get(buf, &val, false);
+
+			reply_len = snprintf(reply, reply_max_len, "%d", val);
+#endif
+		}
+		free(buf);
+	}
+
+	httpd_resp_send(req, reply, strlen(reply));
+	return ret;
 }
 
 

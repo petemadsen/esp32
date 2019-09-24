@@ -14,7 +14,7 @@ set(COMPONENT_SRCS
 	my_sleep.c
 	wifi.c
 	buttons.c
-	http.c
+	my_http.c
 	shutters.c
 	ota.c
 	my_settings.c

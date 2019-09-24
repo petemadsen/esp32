@@ -15,7 +15,7 @@
 
 #include <esp_image_format.h>
 
-#include "http.h"
+#include "my_http.h"
 #include "wifi.h"
 
 #include "config.h"
