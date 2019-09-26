@@ -14,6 +14,9 @@
 #define PROJECT_LIGHT_RELAY_PIN		GPIO_NUM_23
 #define PROJECT_LED_PIN		GPIO_NUM_2
 
+//
+#define MIN(a, b) \
+	({ __typeof__(a) _a = (a); __typeof__(b) _b = (b); (_a < _b) ? _a : _b; })
 
 
 

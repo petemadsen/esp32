@@ -22,6 +22,7 @@ static void reboot_task(void* arg);
 static esp_err_t status_handler(httpd_req_t* req);
 static esp_err_t light_handler(httpd_req_t* req);
 static esp_err_t bell_handler(httpd_req_t* req);
+static esp_err_t bell_upload_handler(httpd_req_t* req);
 static esp_err_t play_handler(httpd_req_t* req);
 static esp_err_t volume_handler(httpd_req_t* req);
 static esp_err_t ota_handler(httpd_req_t* req);
@@ -48,6 +49,11 @@ static httpd_uri_t basic_handlers[] = {
 		.uri	= "/bell",
 		.method	= HTTP_GET,
 		.handler= bell_handler,
+	},
+	{
+		.uri	= "/bell",
+		.method	= HTTP_POST,
+		.handler= bell_upload_handler,
 	},
 	{
 		.uri	= "/play",
@@ -279,6 +285,29 @@ esp_err_t bell_handler(httpd_req_t* req)
 #endif
 
 	httpd_resp_send(req, ret, strlen(ret));
+	return ESP_OK;
+}
+
+
+esp_err_t bell_upload_handler(httpd_req_t* req)
+{
+	size_t len = req->content_len;
+	char buf[100];
+
+	while (len > 0)
+	{
+		int ret = httpd_req_recv(req, buf, MIN(len, sizeof(buf)));
+		if (ret <= 0)
+		{
+			if (ret == HTTPD_SOCK_ERR_TIMEOUT)
+				continue;
+			return ESP_FAIL;
+		}
+
+		len -= ret;
+	}
+
+	httpd_resp_send(req, RET_OK, strlen(RET_OK));
 	return ESP_OK;
 }
 
