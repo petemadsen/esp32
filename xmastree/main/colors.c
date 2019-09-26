@@ -15,6 +15,7 @@
 
 
 static void run_mode(int m, struct leds_t* leds, bool single_run);
+static const char* MY_TAG = "xmastree/colors";
 
 
 #define min(a,b) ((a)<(b)?(a):(b))
@@ -203,7 +204,7 @@ static void run_snake(struct leds_t* leds, COLOR color, int delay_ms)
 
 void colors_set_mode(int mode)
 {
-	ESP_LOGI(M_TAG, "new mode: %d", mode);
+	ESP_LOGI(MY_TAG, "new mode: %d", mode);
 
 	xSemaphoreTake(leds.sem, portMAX_DELAY);
 	m_mode = mode;

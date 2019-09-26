@@ -32,7 +32,7 @@
 #include "msgeq7.h"
 
 
-const char* M_TAG = "[awXmasTree]";
+static const char* MY_TAG = "xmastree/main";
 
 static const char* M_HOSTNAME = "xmastree";
 static const char* M_MDNS_INST = "awXmasTree";
@@ -46,7 +46,7 @@ static void start_mdns_service()
 	//initialize mDNS service
 	esp_err_t err = mdns_init();
 	if (err) {
-		ESP_LOGE(M_TAG, "mDNS failed: %d", err);
+		ESP_LOGE(MY_TAG, "mDNS failed: %d", err);
 		return;
 	}
 
@@ -73,7 +73,7 @@ esp_err_t event_handler(void *ctx, system_event_t *event)
 {
 	switch(event->event_id) {
 	case SYSTEM_EVENT_STA_START:
-		ESP_LOGI(M_TAG, "Connecting...");
+		ESP_LOGI(MY_TAG, "Connecting...");
 		esp_wifi_connect();
 		break;
 	case SYSTEM_EVENT_STA_CONNECTED:
@@ -81,19 +81,19 @@ esp_err_t event_handler(void *ctx, system_event_t *event)
 		tcpip_adapter_create_ip6_linklocal(TCPIP_ADAPTER_IF_STA);
 		break;
 	case SYSTEM_EVENT_STA_GOT_IP:
-		ESP_LOGI(M_TAG, "Got ip %s", ip4addr_ntoa(&event->event_info.got_ip.ip_info.ip));
+		ESP_LOGI(MY_TAG, "Got ip %s", ip4addr_ntoa(&event->event_info.got_ip.ip_info.ip));
 		xEventGroupSetBits(s_wifi_event_group, WIFI_IP4_CONNECTED_BIT);
 //		start_mdns_service();
 		break;
 	case SYSTEM_EVENT_AP_STA_GOT_IP6:
-		ESP_LOGI(M_TAG, "Got ip6");
+		ESP_LOGI(MY_TAG, "Got ip6");
 		xEventGroupSetBits(s_wifi_event_group, WIFI_IP6_CONNECTED_BIT);
 	break;
 	case SYSTEM_EVENT_STA_DISCONNECTED:
 		g_wifi_reconnects++;
 		esp_wifi_connect();
 		xEventGroupClearBits(s_wifi_event_group, WIFI_IP4_CONNECTED_BIT | WIFI_IP6_CONNECTED_BIT);
-		ESP_LOGI(M_TAG,"Reconnecting to the AP (try: %u)", g_wifi_reconnects);
+		ESP_LOGI(MY_TAG,"Reconnecting to the AP (try: %u)", g_wifi_reconnects);
 		break;
 	default:
 		break;
@@ -133,7 +133,7 @@ static void wifi_init()
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &sta_config));
     ESP_ERROR_CHECK(esp_wifi_start());
 
-	ESP_LOGI(M_TAG, "Wifi ready.");
+	ESP_LOGI(MY_TAG, "Wifi ready.");
 }
 
 
@@ -157,12 +157,12 @@ static void button_task(void* arg)
 	gpio_install_isr_service(0); //ESP_INTR_FLAG_DEFAULT
 	gpio_isr_handler_add(CONFIG_BUTTON_PIN, button_isr_handler, NULL);
 
-	ESP_LOGE(M_TAG, "button-task.");
+	ESP_LOGE(MY_TAG, "button-task.");
 	for (;;)
 	{
 		if (xSemaphoreTake(xButtonSem, portMAX_DELAY) == true)
 		{
-			ESP_LOGI(M_TAG, "button pressed");
+			ESP_LOGI(MY_TAG, "button pressed");
 			colors_next_mode();
 		}
 	}

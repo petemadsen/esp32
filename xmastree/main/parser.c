@@ -20,6 +20,7 @@
 #include "config.h"
 #include "colors.h"
 #include "config.h"
+#include "common.h"
 
 
 static const char* HELP = "HELP: status ota exit quit reboot mode NUM modedesc NUM ident\n";
@@ -31,6 +32,9 @@ static const char* NOBOOT = "NOBOOT\n";
 
 static const char* run_ota();
 static void reboot_me(void* pvParameters);
+
+
+static const char* MY_TAG = "xmastree/parser";
 
 
 static char buffer[160];
@@ -69,7 +73,7 @@ const char* parse_input(char* data, int data_len)
 	else if (strstr(line, "status") == line)
 	{
 		sprintf(buffer, "version: %s free-ram: %d wifi-reconnects: %u modes: %d\n",
-				M_VERSION,
+				PROJECT_VERSION,
 				esp_get_free_heap_size(),
 				g_wifi_reconnects,
 				COLORS_NUM_MODES);
@@ -81,7 +85,7 @@ const char* parse_input(char* data, int data_len)
 	}
 	else if (strstr(line, "ident") == line)
 	{
-		return M_TAG;
+		return MY_TAG;
 	}
 	else
 	{
