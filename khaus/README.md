@@ -7,23 +7,23 @@
   * will monitor system voltage and send warning notifications to awShutters
     and turn off wifi and more
 * **TODO** DHT12 (i2c)
-* **TODO** BMP280 (i2c)
+* BMP280 (i2c)
 * HTTP support
 * Save settings
 * Show blue led if has wifi
-* **TODO** switch off the lights after x minutes
+* Switch off the lights after x minutes
 
 
 ## Pinout
 
-* 18 - bell button
-* 19 - light button
+* 18 - bell button (external pull-up)
+* 19 - light button (external pull-up)
 * 23 - light transistor
 * 21 - i2c sda
 * 22 - i2c scl
 * 25 - PAM8304 audio amplifier
-* 34 - voltage sense pin
 * 32 - audio amplifier enable pin
+* 34 - voltage sense pin
 
 
 ## HTTP Server

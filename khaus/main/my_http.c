@@ -138,6 +138,7 @@ esp_err_t status_handler(httpd_req_t* req)
 	char* buf = malloc(bufsize);
 	int buflen = snprintf(buf, bufsize,
 						  "version %s\n"
+						  " ident %s\n"
 						  " light %d\n"
 						  " light_on_secs %lld\n"
 						  " free-ram %u\n"
@@ -147,6 +148,7 @@ esp_err_t status_handler(httpd_req_t* req)
 						  " board_temp %.2f\n"
 						  " board_voltage %.2f",
 						  PROJECT_VERSION,
+						  PROJECT_NAME,
 						  light_status(),
 						  light_on_secs(),
 						  esp_get_free_heap_size(),

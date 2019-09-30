@@ -9,6 +9,7 @@
 #include <esp_log.h>
 
 #include "my_i2c.h"
+#include "common.h"
 
 
 static const char* MY_TAG = "khaus/bmp280";
@@ -41,7 +42,7 @@ typedef struct {
 
 static void bmp280_task()
 {
-	const uint8_t addr = 0x76;
+	const uint8_t addr = PROJECT_I2C_BOARD_TEMP;
 	uint8_t bytes[24];
 
 	bmp280_calib_data cdata;
@@ -102,7 +103,8 @@ static void bmp280_task()
 				ESP_LOGI(MY_TAG, " [ 0x%x | 0x%x | 0x%x | 0x%x ] ", b1, b2, b3, d);
 			}
 
-			// get temp
+			// https://cdn-shop.adafruit.com/datasheets/BST-BMP280-DS001-11.pdf
+			// Compensation formula in 32 bit fixed point
 			int32_t adc_T = (int32_t)m_i2c_read24(addr, 0xfa);
 			ESP_LOGI(MY_TAG, "=>raw=>0x%x", adc_T);
 			adc_T >>= 4;
