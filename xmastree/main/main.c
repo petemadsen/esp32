@@ -30,6 +30,7 @@
 #include "parser.h"
 #include "colors.h"
 #include "msgeq7.h"
+#include "wifi.h"
 
 
 static const char* MY_TAG = "xmastree/main";
@@ -69,74 +70,6 @@ static const int WIFI_IP6_CONNECTED_BIT = BIT1;
 unsigned int g_wifi_reconnects = 0;
 
 
-esp_err_t event_handler(void *ctx, system_event_t *event)
-{
-	switch(event->event_id) {
-	case SYSTEM_EVENT_STA_START:
-		ESP_LOGI(MY_TAG, "Connecting...");
-		esp_wifi_connect();
-		break;
-	case SYSTEM_EVENT_STA_CONNECTED:
-		/* enable ipv6 */
-		tcpip_adapter_create_ip6_linklocal(TCPIP_ADAPTER_IF_STA);
-		break;
-	case SYSTEM_EVENT_STA_GOT_IP:
-		ESP_LOGI(MY_TAG, "Got ip %s", ip4addr_ntoa(&event->event_info.got_ip.ip_info.ip));
-		xEventGroupSetBits(s_wifi_event_group, WIFI_IP4_CONNECTED_BIT);
-//		start_mdns_service();
-		break;
-	case SYSTEM_EVENT_AP_STA_GOT_IP6:
-		ESP_LOGI(MY_TAG, "Got ip6");
-		xEventGroupSetBits(s_wifi_event_group, WIFI_IP6_CONNECTED_BIT);
-	break;
-	case SYSTEM_EVENT_STA_DISCONNECTED:
-		g_wifi_reconnects++;
-		esp_wifi_connect();
-		xEventGroupClearBits(s_wifi_event_group, WIFI_IP4_CONNECTED_BIT | WIFI_IP6_CONNECTED_BIT);
-		ESP_LOGI(MY_TAG,"Reconnecting to the AP (try: %u)", g_wifi_reconnects);
-		break;
-	default:
-		break;
-	}
-
-//	mdns_handle_system_event(ctx, event);
-
-    return ESP_OK;
-}
-
-
-static void wifi_init()
-{
-	s_wifi_event_group = xEventGroupCreate();
-
-    tcpip_adapter_init();
-
-	tcpip_adapter_dhcpc_stop(TCPIP_ADAPTER_IF_STA); // no DHCP
-
-	tcpip_adapter_ip_info_t ipInfo;
-	inet_pton(AF_INET, CONFIG_ADDRESS, &ipInfo.ip);
-	inet_pton(AF_INET, CONFIG_GATEWAY, &ipInfo.gw);
-	inet_pton(AF_INET, CONFIG_NETMASK, &ipInfo.netmask);
-	tcpip_adapter_set_ip_info(TCPIP_ADAPTER_IF_STA, &ipInfo);
-
-    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
-    ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
-    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
-    wifi_config_t sta_config = {
-        .sta = {
-            .ssid = CONFIG_SSID,
-            .password = CONFIG_PASSWORD,
-            .bssid_set = false
-        }
-    };
-    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &sta_config));
-    ESP_ERROR_CHECK(esp_wifi_start());
-
-	ESP_LOGI(MY_TAG, "Wifi ready.");
-}
-
-
 /****************************************************************************
  *
  */
@@ -173,13 +106,13 @@ static void button_task(void* arg)
 void app_main(void)
 {
 	ESP_ERROR_CHECK(nvs_flash_init());
-    ESP_ERROR_CHECK(esp_event_loop_init(event_handler, NULL));
 
 	colors_init();
 
 	parser_init();
 
-	wifi_init();
+	wifi_init(true);
+
 	xTaskCreate(&telnet_task, "telnet_task", 4096, &parse_input, 5, NULL);
 
 	msgeq7_init();

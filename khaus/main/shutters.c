@@ -14,20 +14,18 @@
 #include "bmp280.h"
 #include "voltage.h"
 #include "light.h"
+#include "common.h"
+#include "ota.h"
 
 
 static const char* MY_TAG = "khaus/shutters";
 
 
-#define IP_ADDRESS "192.168.1.86:8080"
-#define IP_ADDRESS "192.168.1.51:8080"
+static const char* TOUCH_URL = PROJECT_SHUTTERS_ADDRESS "/khaus/touch";
+static const char* SAVE_URL = PROJECT_SHUTTERS_ADDRESS "/khaus/save";
 
 
-static const char* TOUCH_URL = "http://" IP_ADDRESS "/khaus/touch";
-static const char* SAVE_URL = "http://" IP_ADDRESS "/khaus/save";
-
-
-esp_err_t _http_event_handle(esp_http_client_event_t *evt)
+static esp_err_t _http_event_handle(esp_http_client_event_t *evt)
 {
     switch(evt->event_id) {
         case HTTP_EVENT_ERROR:
@@ -69,6 +67,18 @@ void shutters_task(void* pvParameters)
 		xEventGroupWaitBits(wifi_event_group, WIFI_CONNECTED, false, true,
 				portMAX_DELAY);
 		ESP_LOGI(MY_TAG, "Run.");
+
+		// -- check for ota update
+		if (ota_need_update())
+		{
+			const char* err_msg = ota_reboot();
+			if (err_msg)
+			{
+				ESP_LOGE(MY_TAG, "ota update failed: %s", err_msg);
+			}
+			// FIXME: what to do?
+			for(;;);
+		}
 
 		// -- touch
 		esp_http_client_config_t config = {

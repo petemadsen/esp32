@@ -17,6 +17,12 @@ set(COMPONENT_SRCS
         main.c
 	colors.c
         colors.h
+        my_http.c
+        my_http.h
+        wifi.c
+        wifi.h
+        ota.h
+        ota.c
 )
 
 register_component()

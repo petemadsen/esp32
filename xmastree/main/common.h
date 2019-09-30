@@ -8,4 +8,7 @@
 extern unsigned int g_wifi_reconnects;
 
 
+#define PROJECT_LED_PIN		GPIO_NUM_2
+
+
 #endif

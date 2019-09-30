@@ -6,7 +6,8 @@
 
 
 #define PROJECT_VERSION "2019-09-30/0"
-#define PROJECT_NAME = "khaus"
+#define PROJECT_NAME "khaus"
+#define PROJECT_SHUTTERS_ADDRESS "http://192.168.51.1:8080"
 
 
 #define PROJECT_TONE_ONOFF_PIN		GPIO_NUM_32

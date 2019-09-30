@@ -16,7 +16,6 @@
 extern uint32_t g_boot_count;
 
 
-static void reboot_task(void* arg);
 
 
 static esp_err_t status_handler(httpd_req_t* req);
@@ -170,7 +169,6 @@ esp_err_t ota_handler(httpd_req_t* req)
 	if (!err)
 	{
 		httpd_resp_send(req, RET_OK, strlen(RET_OK));
-		xTaskCreate(reboot_task, "reboot_task", 2048, NULL, 5, NULL);
 		return ESP_OK;
 	}
 
@@ -360,9 +358,3 @@ esp_err_t volume_handler(httpd_req_t* req)
 	return ESP_OK;
 }
 
-
-static void reboot_task(void* arg)
-{
-	vTaskDelay(3000 / portTICK_PERIOD_MS);
-	esp_restart();
-}

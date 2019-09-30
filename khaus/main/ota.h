@@ -4,7 +4,7 @@
 #ifndef PROJECT_OTA_H
 #define PROJECT_OTA_H
 
-#include <esp_err.h>
+#include <freertos/FreeRTOS.h>
 
 
 esp_err_t ota_init();
@@ -14,6 +14,9 @@ esp_err_t ota_init();
  * @return NULL on sucess. Error string otherwise.
  */
 const char* ota_reboot();
+
+
+bool ota_need_update();
 
 
 #endif

@@ -27,6 +27,9 @@ void colors_init();
 void colors_set_mode(int mode);
 
 
+int colors_mode();
+
+
 void colors_next_mode();
 
 

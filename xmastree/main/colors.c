@@ -204,6 +204,9 @@ static void run_snake(struct leds_t* leds, COLOR color, int delay_ms)
 
 void colors_set_mode(int mode)
 {
+	if (mode >= COLORS_NUM_MODES)
+		return;
+
 	ESP_LOGI(MY_TAG, "new mode: %d", mode);
 
 	xSemaphoreTake(leds.sem, portMAX_DELAY);
@@ -211,6 +214,16 @@ void colors_set_mode(int mode)
 	xSemaphoreGive(leds.sem);
 
 	m_do_stop = true;
+}
+
+
+int colors_mode()
+{
+	xSemaphoreTake(leds.sem, portMAX_DELAY);
+	int m = m_mode;
+	xSemaphoreGive(leds.sem);
+
+	return m;
 }
 
 
