@@ -10,6 +10,8 @@
 #include <driver/rmt.h>
 #include <driver/i2s.h>
 
+#include <esp_spiffs.h>
+
 #include "common.h"
 #include "my_settings.h"
 
@@ -17,6 +19,12 @@ static const char* MY_TAG = "khaus/note";
 
 static EventGroupHandle_t x_events;
 #define EVENT_BELL		BIT0
+
+static uint8_t* m_bell = NULL;
+static size_t m_bell_len = 0;
+
+
+static bool read_file();
 
 
 #define SETTING_BELL "tone.bell"
@@ -187,7 +195,7 @@ uint32_t example_i2s_dac_data_scale(uint8_t* d_buff, uint8_t* s_buff, uint32_t l
 
 
 #include "audio_example_file.h"
-static void i2s_play()
+static void i2s_play(uint8_t* data, size_t data_len)
 {
 	size_t i2s_read_len = EXAMPLE_I2S_READ_LEN;
 	size_t bytes_written;
@@ -199,7 +207,7 @@ static void i2s_play()
 	//4. Play an example audio file(file format: 8bit/16khz/single channel)
 	printf("Playing file example: \n");
 	uint32_t offset = 0;
-	uint32_t tot_size = sizeof(audio_table);
+	uint32_t tot_size = data_len;
 
 	// set file play mode
 	i2s_set_clk(EXAMPLE_I2S_NUM, 16000, EXAMPLE_I2S_SAMPLE_BITS, 1);
@@ -207,7 +215,7 @@ static void i2s_play()
 
 	while (offset < tot_size) {
 		uint32_t play_len = ((tot_size - offset) > (4 * 1024)) ? (4 * 1024) : (tot_size - offset);
-		uint32_t i2s_wr_len = example_i2s_dac_data_scale(i2s_write_buff, (uint8_t*)(audio_table + offset), play_len);
+		uint32_t i2s_wr_len = example_i2s_dac_data_scale(i2s_write_buff, (uint8_t*)(data + offset), play_len);
 		i2s_write(EXAMPLE_I2S_NUM, i2s_write_buff, i2s_wr_len, &bytes_written, portMAX_DELAY);
 		offset += play_len;
 //		example_disp_buf((uint8_t*) i2s_write_buff, 32);
@@ -237,6 +245,13 @@ static void tone_task(void* ignore)
 
 	int bell_num = 0;
 
+	if (!read_file())
+	{
+		if (m_bell)
+			free(m_bell);
+		m_bell = NULL;
+	}
+
 	for (;;)
 	{
 		settings_get(SETTING_BELL, &bell_num, true);
@@ -247,7 +262,10 @@ static void tone_task(void* ignore)
 #ifdef USE_RMT
 		rmt_play();
 #else
-		i2s_play();
+		if (m_bell)
+			i2s_play(m_bell, m_bell_len);
+		else
+			i2s_play(audio_table, sizeof(audio_table));
 #endif
 		gpio_set_level(PROJECT_TONE_ONOFF_PIN, 0);
 
@@ -255,6 +273,68 @@ static void tone_task(void* ignore)
 	}
 
     vTaskDelete(NULL);
+}
+
+
+static bool read_file()
+{
+	// -- open
+	esp_vfs_spiffs_conf_t conf = {
+			.base_path = "/spiffs",
+			.partition_label = NULL,
+			.max_files = 5,
+			.format_if_mount_failed = false
+	};
+	esp_err_t ret = esp_vfs_spiffs_register(&conf);
+	if (ret != ESP_OK)
+	{
+		if (ret == ESP_FAIL)
+			ESP_LOGE(MY_TAG, "Failed to mount or format filesystem");
+		else if (ret == ESP_ERR_NOT_FOUND)
+			ESP_LOGE(MY_TAG, "Failed to find SPIFFS partition");
+		else
+			ESP_LOGE(MY_TAG, "Failed to initialize SPIFFS (%s)", esp_err_to_name(ret));
+
+		return false;
+	}
+
+	FILE* file = fopen("/spiffs/bell0.wav", "r");
+
+	// get file len
+	fseek(file, 0L, SEEK_END);
+	long len = ftell(file);
+	rewind(file);
+	ESP_LOGI(MY_TAG, "Loading file with size: %ld", len);
+
+	//
+	if (m_bell)
+		free(m_bell);
+	m_bell = malloc(m_bell_len);
+	m_bell_len = (size_t)len;
+
+	// read
+	void* p = (void*)m_bell;
+	while (len)
+	{
+		long read = fread(p, sizeof(char), len, file);
+		if (read < 0)
+		{
+			ESP_LOGE(MY_TAG, "Could not read file: %ld", read);
+			esp_vfs_spiffs_unregister(NULL);
+			free(m_bell);
+			m_bell = NULL;
+			return false;
+		}
+
+		len -= read;
+		p += read;
+	}
+
+	// done
+	fclose(file);
+
+	esp_vfs_spiffs_unregister(NULL);
+	return true;
 }
 
 

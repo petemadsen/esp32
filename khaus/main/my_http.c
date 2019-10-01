@@ -12,8 +12,13 @@
 
 #include <lwip/apps/sntp.h>
 
+#include "esp_spiffs.h"
+#include "esp_log.h"
+
 
 extern uint32_t g_boot_count;
+
+static const char* MY_TAG = "khaus/http";
 
 
 
@@ -294,6 +299,37 @@ esp_err_t bell_upload_handler(httpd_req_t* req)
 	size_t len = req->content_len;
 	char buf[100];
 
+	// -- open
+	esp_vfs_spiffs_conf_t conf = {
+			.base_path = "/spiffs",
+			.partition_label = NULL,
+			.max_files = 5,
+			.format_if_mount_failed = false
+	};
+	esp_err_t ret = esp_vfs_spiffs_register(&conf);
+	if (ret != ESP_OK)
+	{
+		if (ret == ESP_FAIL)
+			ESP_LOGE(MY_TAG, "Failed to mount or format filesystem");
+		else if (ret == ESP_ERR_NOT_FOUND)
+			ESP_LOGE(MY_TAG, "Failed to find SPIFFS partition");
+		else
+			ESP_LOGE(MY_TAG, "Failed to initialize SPIFFS (%s)", esp_err_to_name(ret));
+
+		httpd_resp_send(req, RET_ERR, strlen(RET_ERR));
+		return ESP_OK;
+	}
+
+	// -- info
+	size_t total = 0, used = 0;
+	ret = esp_spiffs_info(NULL, &total, &used);
+	if (ret != ESP_OK)
+		ESP_LOGE(MY_TAG, "Failed to get SPIFFS partition information (%s)", esp_err_to_name(ret));
+	else
+		ESP_LOGI(MY_TAG, "Partition size: total: %d, used: %d", total, used);
+
+	// -- open/receive
+	FILE* file = fopen("/spiffs/bell0.wav", "w");
 	while (len > 0)
 	{
 		int ret = httpd_req_recv(req, buf, MIN(len, sizeof(buf)));
@@ -301,11 +337,18 @@ esp_err_t bell_upload_handler(httpd_req_t* req)
 		{
 			if (ret == HTTPD_SOCK_ERR_TIMEOUT)
 				continue;
+
+			esp_vfs_spiffs_unregister(NULL);
+			httpd_resp_send(req, RET_ERR, strlen(RET_ERR));
 			return ESP_FAIL;
 		}
 
+		fwrite(buf, sizeof(char), ret, file);
 		len -= ret;
 	}
+	fclose(file);
+
+	esp_vfs_spiffs_unregister(NULL);
 
 	httpd_resp_send(req, RET_OK, strlen(RET_OK));
 	return ESP_OK;
