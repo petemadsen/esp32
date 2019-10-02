@@ -20,6 +20,7 @@ static const char* MY_TAG = "khaus/note";
 static EventGroupHandle_t x_events;
 #define EVENT_BELL		BIT0
 
+static int m_bell_num = 0;
 static uint8_t* m_bell = NULL;
 static size_t m_bell_len = 0;
 
@@ -298,7 +299,9 @@ static bool read_file()
 		return false;
 	}
 
-	FILE* file = fopen("/spiffs/bell0.wav", "r");
+	char filename[40];
+	sprintf(filename, "/spiffs/bell%d.wav", m_bell_num);
+	FILE* file = fopen(filename, "r");
 	if (!file)
 	{
 		ESP_LOGE(MY_TAG, "Could not open file");
@@ -382,4 +385,13 @@ void tone_init()
 void tone_bell()
 {
 	xEventGroupSetBits(x_events, EVENT_BELL);
+}
+
+
+bool tone_set(int num)
+{
+	m_bell_num = num;
+	bool ok = read_file();
+	ESP_LOGI(MY_TAG, "Tone set: %d", ok);
+	return ok;
 }

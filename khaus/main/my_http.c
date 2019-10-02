@@ -272,13 +272,13 @@ esp_err_t bell_handler(httpd_req_t* req)
 {
 	const char* ret = RET_ERR;
 
-#if 0
-	int track;
-	if (get_int(req, &track) && track >= 1)
+	int num;
+	if (get_int(req, &num) && num >= 0)
 	{
-		dfplayer_set_track(track);
-		ret = RET_OK;
+		if (tone_set(num))
+			ret = RET_OK;
 	}
+#if 0
 	else
 	{
 		char* buf = malloc(20);
@@ -298,6 +298,14 @@ esp_err_t bell_upload_handler(httpd_req_t* req)
 {
 	size_t len = req->content_len;
 	char buf[100];
+
+	int name = -1;
+	if (!get_int(req, &name))
+	{
+		httpd_resp_send(req, RET_ERR, strlen(RET_ERR));
+		return ESP_OK;
+	}
+	ESP_LOGE(MY_TAG, "Name: %d", name);
 
 	ESP_LOGE(MY_TAG, "bell-upload-handler: %d", (int)len);
 	// -- open
@@ -330,7 +338,9 @@ esp_err_t bell_upload_handler(httpd_req_t* req)
 		ESP_LOGI(MY_TAG, "Partition size: total: %d, used: %d", total, used);
 
 	// -- open/receive
-	FILE* file = fopen("/spiffs/bell0.wav", "w");
+	char filename[40];
+	sprintf(filename, "/spiffs/bell%d.wav", name);
+	FILE* file = fopen(filename, "w");
 	while (len > 0)
 	{
 		int ret = httpd_req_recv(req, buf, MIN(len, sizeof(buf)));

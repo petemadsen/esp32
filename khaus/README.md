@@ -28,23 +28,27 @@
 
 ## HTTP Server
 
-* `/status` returns various system parameters
+### /status
 
-* `/play?NUM`
+Returns various system parameters
+
+### /play?NUM
 
 ### /bell
 
 Command to upload binary files:
 
-```curl --data-binary @uploadfile IP/bell```
+```curl --data-binary @uploadfile "IP/bell?NUM"```
 
-* `/bell?NUM`
+### /bell?NUM
 
-* `/volume`
+### /volume
 
-* `/volume?NUM`
+### /volume?NUM
 
-* `/ota` initiates the OTA process
+### /ota
+
+Initiates the OTA process.
 
 
 ## HTTP Client
