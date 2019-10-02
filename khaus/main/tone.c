@@ -282,8 +282,8 @@ static bool read_file()
 	esp_vfs_spiffs_conf_t conf = {
 			.base_path = "/spiffs",
 			.partition_label = NULL,
-			.max_files = 5,
-			.format_if_mount_failed = false
+			.max_files = 2,
+			.format_if_mount_failed = true
 	};
 	esp_err_t ret = esp_vfs_spiffs_register(&conf);
 	if (ret != ESP_OK)
@@ -299,6 +299,12 @@ static bool read_file()
 	}
 
 	FILE* file = fopen("/spiffs/bell0.wav", "r");
+	if (!file)
+	{
+		ESP_LOGE(MY_TAG, "Could not open file");
+		esp_vfs_spiffs_unregister(NULL);
+		return false;
+	}
 
 	// get file len
 	fseek(file, 0L, SEEK_END);
@@ -309,14 +315,23 @@ static bool read_file()
 	//
 	if (m_bell)
 		free(m_bell);
-	m_bell = malloc(m_bell_len);
+	m_bell = malloc(len);
+	if (!m_bell)
+	{
+		ESP_LOGE(MY_TAG, "Could not allocate memory: %ld", len);
+		fclose(file);
+		return false;
+	}
 	m_bell_len = (size_t)len;
+	ESP_LOGI(MY_TAG, "m_bell is loaded: %d", (m_bell == NULL));
 
 	// read
-	void* p = (void*)m_bell;
+	char* p = (char*)m_bell;
 	while (len)
 	{
+		ESP_LOGI(MY_TAG, "Remaining: %ld", len);
 		long read = fread(p, sizeof(char), len, file);
+		ESP_LOGI(MY_TAG, "read: %ld", read);
 		if (read < 0)
 		{
 			ESP_LOGE(MY_TAG, "Could not read file: %ld", read);
@@ -329,6 +344,25 @@ static bool read_file()
 		len -= read;
 		p += read;
 	}
+
+	printf("==\n");
+	bool show_ascii = true;
+	for (size_t i = 0; i < m_bell_len; ++i)
+	{
+		if (show_ascii)
+		{
+			char ch = m_bell[i];
+//			char ch = (m_bell[i] >= 0 && m_bell[i] <= 'z' ? m_bell[i] : '.');
+			printf("%c", ch);
+		}
+		else
+		{
+			printf(" 0x%02x", m_bell[i]);
+			if (i!=0 && (i%8)==0)
+				printf("\n");
+		}
+	}
+	printf("--\n");
 
 	// done
 	fclose(file);

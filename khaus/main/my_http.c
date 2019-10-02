@@ -299,6 +299,7 @@ esp_err_t bell_upload_handler(httpd_req_t* req)
 	size_t len = req->content_len;
 	char buf[100];
 
+	ESP_LOGE(MY_TAG, "bell-upload-handler: %d", (int)len);
 	// -- open
 	esp_vfs_spiffs_conf_t conf = {
 			.base_path = "/spiffs",

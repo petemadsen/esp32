@@ -32,7 +32,11 @@
 
 * `/play?NUM`
 
-* `/bell`
+### /bell
+
+Command to upload binary files:
+
+```curl --data-binary @uploadfile IP/bell```
 
 * `/bell?NUM`
 

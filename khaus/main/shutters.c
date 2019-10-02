@@ -77,10 +77,12 @@ void shutters_task(void* pvParameters)
 				ESP_LOGE(MY_TAG, "ota update failed: %s", err_msg);
 			}
 			// FIXME: what to do?
-			for(;;);
+			ESP_LOGE(MY_TAG, "for(;;);");
+//			for(;;);
 		}
 
 		// -- touch
+#if 0
 		esp_http_client_config_t config = {
 			.url = TOUCH_URL,
 			.event_handler = _http_event_handle,
@@ -93,8 +95,10 @@ void shutters_task(void* pvParameters)
 					esp_http_client_get_status_code(client),
 					esp_http_client_get_content_length(client));
 		}
+#endif
 
 		// -- save
+#if 0
 		const size_t POST_MAXLEN = 200;
 		char* save_data = malloc(POST_MAXLEN);
 		int save_data_len = snprintf(save_data, POST_MAXLEN,
@@ -117,11 +121,13 @@ void shutters_task(void* pvParameters)
 					esp_http_client_get_status_code(client),
 					esp_http_client_get_content_length(client));
 		}
-
 		free(save_data);
+#endif
 
 		// -- cleanup
+#if 0
 		esp_http_client_cleanup(client);
+#endif
 
 		// -- wait 3600 secs = 1h
 		vTaskDelay(3600 * 1000 / portTICK_PERIOD_MS);

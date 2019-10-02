@@ -132,6 +132,8 @@ bool ota_need_update()
 	bool need_update = false;
 	m_rcv_buffer[0] = 0;
 
+	ESP_LOGI(MY_TAG, "test update.");
+
 	esp_http_client_config_t request = {
 		.url = OTA_URL,
 		.event_handler = _http_event_handle,
@@ -147,6 +149,8 @@ bool ota_need_update()
 		need_update = strcmp(m_rcv_buffer, PROJECT_VERSION);
 		ESP_LOGD(MY_TAG, "cmp(%s, %s) == %d", m_rcv_buffer, PROJECT_VERSION, need_update);
 	}
+	else
+		ESP_LOGI(MY_TAG, "could not connect.");
 
 	esp_http_client_cleanup(client);
 	return need_update;
