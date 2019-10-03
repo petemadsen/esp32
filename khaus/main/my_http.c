@@ -215,7 +215,10 @@ esp_err_t settings_get_handler(httpd_req_t* req)
 		free(key);
 	}
 
-	httpd_resp_send(req, reply, reply_len);
+	if (ret != ESP_OK)
+		httpd_resp_send_404(req);
+	else
+		httpd_resp_send(req, reply, reply_len);
 
 	if (reply)
 		free(reply);
@@ -236,18 +239,16 @@ esp_err_t settings_set_handler(httpd_req_t* req)
 		if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK)
 		{
 			int32_t val;
-			char* name = malloc(buf_len);
+			char* key = malloc(buf_len);
+			char* value = malloc(buf_len);
 
-			if (sscanf(buf, "%s=%d", name, &val) == 2)
-				reply = settings_set_int32(name, val) == ESP_OK ? RET_OK : RET_ERR;
+			if (sscanf(buf, "%s=%d", key, &val) == 2)
+				reply = settings_set_int32(key, val) == ESP_OK ? RET_OK : RET_ERR;
+			else if (sscanf(buf, "%[^=]=%s", key, value) == 2)
+				reply = settings_set_str(key, value) == ESP_OK ? RET_OK : RET_ERR;
 
-			free(name);
-#if 0
-			int32_t val;
-			ret = settings_get(buf, &val, false);
-
-			reply_len = snprintf(reply, reply_max_len, "%d", val);
-#endif
+			free(key);
+			free(value);
 		}
 		free(buf);
 	}
