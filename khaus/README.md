@@ -28,27 +28,55 @@
 
 ## HTTP Server
 
-### /status
+### GET /status
 
 Returns various system parameters
 
-### /play?NUM
+### GET /light
 
-### /bell
+Returns current light state.
+
+### GET /light?ONOFF
+
+Use 0 to switch the light off and 1 to turn the light on.
+
+### GET /play?NUM
+
+**TODO**
+
+### POST /bell?NUM
 
 Command to upload binary files:
 
 ```curl --data-binary @uploadfile "IP/bell?NUM"```
 
-### /bell?NUM
+### GET /bell?NUM
 
-### /volume
+Sets the bell to play.
 
-### /volume?NUM
+### GET /volume
 
-### /ota
+Returns volume.
 
-Initiates the OTA process.
+### GET /volume?NUM
+
+Sets volume to NUM. NUM range is 0 to 100.
+
+### GET /ota
+
+Reboots the device into factory partition which should include an OTA updater.
+
+### GET /sget?NAME
+
+Gets setting NAME.
+
+Returns 404 when NAME could not be read.
+
+### GET /sset?NAME=VALUE
+
+Sets setting NAME to VALUE
+
+`/sset?ERASE` will erase the NVS partition.
 
 
 ## HTTP Client
@@ -56,9 +84,10 @@ Initiates the OTA process.
 Client tries to connect to awShutters:
 * `GET /knusperhaeuschen/touch`
 * `POST /knusperhaeuschen/save` - sends a couple of key-value pairs
-  * `board_temp`
-  * `voltage`
-  * `out_temp`
+  * `board_temp=VALUE`
+  * `board_voltage=VALUE`
+  * `out_temp=VALUE`
+  * `light=VALUE`
 
 
 ## Save Power

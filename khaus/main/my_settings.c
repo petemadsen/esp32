@@ -42,9 +42,9 @@ esp_err_t settings_init()
 }
 
 
-esp_err_t settings_set_int32(const char* key, int32_t val)
+esp_err_t settings_set_int32(const char* key, int32_t val, bool must_exist)
 {
-	esp_err_t err;
+	esp_err_t err = ESP_OK;
 
 	nvs_handle my_handle;
 	err = nvs_open(STORAGE, NVS_READWRITE, &my_handle);
@@ -54,15 +54,24 @@ esp_err_t settings_set_int32(const char* key, int32_t val)
 		return err;
 	}
 
-	err = nvs_set_i32(my_handle, key, val);
-	if (err != ESP_OK)
+	if (must_exist)
 	{
-		nvs_close(my_handle);
-		ESP_LOGE(MY_TAG, "Could not set: %s", key);
-		return err;
+		int32_t ignored;
+		err = nvs_get_i32(my_handle, key, &ignored);
 	}
 
-	err = nvs_commit(my_handle);
+	if (err == ESP_OK)
+	{
+		err = nvs_set_i32(my_handle, key, val);
+		if (err != ESP_OK)
+		{
+			nvs_close(my_handle);
+			ESP_LOGE(MY_TAG, "Could not set: %s", key);
+			return err;
+		}
+		err = nvs_commit(my_handle);
+	}
+
 	nvs_close(my_handle);
 	return err;
 }
@@ -96,7 +105,7 @@ esp_err_t settings_get_int32(const char* key, int32_t* val, bool save_if_missing
 }
 
 
-esp_err_t settings_get_str(const char* key, char** buffer, const char* default_val, bool save_if_missing)
+esp_err_t settings_get_str(const char* key, char** buffer, bool save_if_missing)
 {
 	esp_err_t err = ESP_OK;
 	char* newval = NULL;
@@ -123,13 +132,10 @@ esp_err_t settings_get_str(const char* key, char** buffer, const char* default_v
 
 	if (!newval)
 	{
-		printf("------------------- could not read value.\n");
-		newval = default_val;
+		ESP_LOGW(MY_TAG, "Could not read '%s' (%d).", key, save_if_missing);
 		if (save_if_missing)
-		{
-			err = settings_set_str(key, newval);
-			printf("ERR: %s\n", esp_err_to_name(err));
-		}
+			err = settings_set_str(key, *buffer, false);
+		return err;
 	}
 
 	printf("-------%s\n", newval);
@@ -145,7 +151,7 @@ esp_err_t settings_get_str(const char* key, char** buffer, const char* default_v
 }
 
 
-esp_err_t settings_set_str(const char* key, const char* val)
+esp_err_t settings_set_str(const char* key, const char* val, bool must_exist)
 {
 	esp_err_t err;
 
@@ -157,15 +163,30 @@ esp_err_t settings_set_str(const char* key, const char* val)
 		return err;
 	}
 
-	err = nvs_set_str(my_handle, key, val);
-	if (err != ESP_OK)
+	if (must_exist)
 	{
-		nvs_close(my_handle);
-		ESP_LOGE(MY_TAG, "Could not set: %s", key);
-		return err;
+		size_t len = 0;
+		err = nvs_get_str(my_handle, key, NULL, &len);
 	}
 
-	err = nvs_commit(my_handle);
+	if (err == ESP_OK)
+	{
+		err = nvs_set_str(my_handle, key, val);
+		if (err != ESP_OK)
+		{
+			nvs_close(my_handle);
+			ESP_LOGE(MY_TAG, "Could not set: %s", key);
+			return err;
+		}
+		err = nvs_commit(my_handle);
+	}
+
 	nvs_close(my_handle);
 	return err;
+}
+
+
+esp_err_t settings_erase()
+{
+	return nvs_flash_erase();
 }

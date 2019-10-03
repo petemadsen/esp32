@@ -253,7 +253,7 @@ static void tone_task(void* ignore)
 
 	for (;;)
 	{
-//stack overflow		settings_get_int32(SETTING_BELL, &m_bell_num, true);
+		settings_get_int32(SETTING_BELL, &m_bell_num, true);
 
 		xEventGroupWaitBits(x_events, EVENT_BELL, true, false, portMAX_DELAY);
 
@@ -391,7 +391,7 @@ bool tone_set(int num)
 	m_bell_num = num;
 	bool ok = read_file();
 	if (ok)
-		settings_set_int32(SETTING_BELL, m_bell_num);
+		settings_set_int32(SETTING_BELL, m_bell_num, false);
 	ESP_LOGI(MY_TAG, "Tone set: %d", ok);
 	return ok;
 }

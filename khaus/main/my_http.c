@@ -208,7 +208,7 @@ esp_err_t settings_get_handler(httpd_req_t* req)
 			if (!reply)
 			{
 				reply = strdup(RET_ERR);
-				ret = settings_get_str(key, &reply, RET_ERR, false);
+				ret = settings_get_str(key, &reply, false);
 				reply_len = strlen(reply);
 			}
 		}
@@ -223,14 +223,13 @@ esp_err_t settings_get_handler(httpd_req_t* req)
 	if (reply)
 		free(reply);
 
-	return ret;
+	return ESP_OK;
 }
 
 
 esp_err_t settings_set_handler(httpd_req_t* req)
 {
-	esp_err_t ret = ESP_OK;
-	const char* reply = RET_ERR;
+	esp_err_t ret = ESP_FAIL;
 
 	size_t buf_len = httpd_req_get_url_query_len(req) + 1;
 	if (buf_len > 1)
@@ -243,9 +242,17 @@ esp_err_t settings_set_handler(httpd_req_t* req)
 			char* value = malloc(buf_len);
 
 			if (sscanf(buf, "%s=%d", key, &val) == 2)
-				reply = settings_set_int32(key, val) == ESP_OK ? RET_OK : RET_ERR;
+			{
+				ret = settings_set_int32(key, val, true);
+			}
 			else if (sscanf(buf, "%[^=]=%s", key, value) == 2)
-				reply = settings_set_str(key, value) == ESP_OK ? RET_OK : RET_ERR;
+			{
+				ret = settings_set_str(key, value, true);
+			}
+			else if (strcmp(buf, "ERASE") == 0)
+			{
+				ret = settings_erase();
+			}
 
 			free(key);
 			free(value);
@@ -253,7 +260,11 @@ esp_err_t settings_set_handler(httpd_req_t* req)
 		free(buf);
 	}
 
-	httpd_resp_send(req, reply, strlen(reply));
+	if (ret != ESP_OK)
+		httpd_resp_send_404(req);
+	else
+		httpd_resp_send(req, RET_OK, strlen(RET_OK));
+
 	return ret;
 }
 
