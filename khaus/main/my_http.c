@@ -185,26 +185,41 @@ esp_err_t ota_handler(httpd_req_t* req)
 
 esp_err_t settings_get_handler(httpd_req_t* req)
 {
-	esp_err_t ret = ESP_OK;
-	const size_t reply_max_len = 20;
-	char reply[reply_max_len];
+	esp_err_t ret = ESP_FAIL;
+	char* reply = NULL;
 	int reply_len = 0;
 
 	size_t buf_len = httpd_req_get_url_query_len(req) + 1;
 	if (buf_len > 1)
 	{
-		char* buf = malloc(buf_len);
-		if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK)
+		char* key = malloc(buf_len);
+		if (httpd_req_get_url_query_str(req, key, buf_len) == ESP_OK)
 		{
 			int32_t val;
-			ret = settings_get(buf, &val, false);
+			ret = settings_get_int32(key, &val, false);
+			if (ret == ESP_OK)
+			{
+				reply_len = 20;
+				reply = malloc(reply_len);
+				reply_len = snprintf(reply, reply_len, "%d", val);
+				ret = ESP_OK;
+			}
 
-			reply_len = snprintf(reply, reply_max_len, "%d", val);
+			if (!reply)
+			{
+				reply = strdup(RET_ERR);
+				ret = settings_get_str(key, &reply, RET_ERR, false);
+				reply_len = strlen(reply);
+			}
 		}
-		free(buf);
+		free(key);
 	}
 
 	httpd_resp_send(req, reply, reply_len);
+
+	if (reply)
+		free(reply);
+
 	return ret;
 }
 
@@ -224,7 +239,7 @@ esp_err_t settings_set_handler(httpd_req_t* req)
 			char* name = malloc(buf_len);
 
 			if (sscanf(buf, "%s=%d", name, &val) == 2)
-				reply = settings_set(name, val) == ESP_OK ? RET_OK : RET_ERR;
+				reply = settings_set_int32(name, val) == ESP_OK ? RET_OK : RET_ERR;
 
 			free(name);
 #if 0

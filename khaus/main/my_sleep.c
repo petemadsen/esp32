@@ -22,6 +22,7 @@ static struct tm timeinfo = { 0 };
 static void update_time(void);
 
 
+// FIXME keys could be toooooo long
 #define SETTING_HOUR_FROM	"sleep.night_from"
 #define SETTING_HOUR_TO		"sleep.night_to"
 #define SETTING_LIGHTS_OFF	"sleep.lights_on_mins"
@@ -47,9 +48,9 @@ void my_sleep_task(void* arg)
 		ESP_LOGI(MY_TAG, "Run.");
 
 		// read settings
-		settings_get(SETTING_HOUR_FROM, &hour_from, true);
-		settings_get(SETTING_HOUR_TO, &hour_to, true);
-		settings_get(SETTING_LIGHTS_OFF, &lights_off_mins, true);
+		settings_get_int32(SETTING_HOUR_FROM, &hour_from, true);
+		settings_get_int32(SETTING_HOUR_TO, &hour_to, true);
+		settings_get_int32(SETTING_LIGHTS_OFF, &lights_off_mins, true);
 
 		//
 		update_time();

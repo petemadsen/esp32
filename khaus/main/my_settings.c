@@ -8,6 +8,8 @@
 #include <nvs.h>
 #include <nvs_flash.h>
 
+#include <string.h>
+
 
 #define STORAGE	"app"
 
@@ -40,7 +42,7 @@ esp_err_t settings_init()
 }
 
 
-esp_err_t settings_set(const char* key, int val)
+esp_err_t settings_set_int32(const char* key, int32_t val)
 {
 	esp_err_t err;
 
@@ -66,7 +68,7 @@ esp_err_t settings_set(const char* key, int val)
 }
 
 
-esp_err_t settings_get(const char* key, int32_t* val, bool save_if_missing)
+esp_err_t settings_get_int32(const char* key, int32_t* val, bool save_if_missing)
 {
 	esp_err_t err;
 
@@ -89,6 +91,81 @@ esp_err_t settings_get(const char* key, int32_t* val, bool save_if_missing)
 		}
 	}
 
+	nvs_close(my_handle);
+	return err;
+}
+
+
+esp_err_t settings_get_str(const char* key, char** buffer, const char* default_val, bool save_if_missing)
+{
+	esp_err_t err = ESP_OK;
+	char* newval = NULL;
+
+	nvs_handle my_handle;
+	err = nvs_open(STORAGE, NVS_READWRITE, &my_handle);
+	if (err == ESP_OK)
+	{
+		size_t len = 0;
+		err = nvs_get_str(my_handle, key, NULL, &len);
+		if (err == ESP_OK)
+		{
+			newval = malloc(len);
+			err = nvs_get_str(my_handle, key, newval, &len);
+			if (err != ESP_OK)
+			{
+				free(newval);
+				newval = NULL;
+			}
+		}
+
+		nvs_close(my_handle);
+	}
+
+	if (!newval)
+	{
+		printf("------------------- could not read value.\n");
+		newval = default_val;
+		if (save_if_missing)
+		{
+			err = settings_set_str(key, newval);
+			printf("ERR: %s\n", esp_err_to_name(err));
+		}
+	}
+
+	printf("-------%s\n", newval);
+	printf("--+----%s\n", *buffer);
+	if (strcmp(newval, *buffer) != 0)
+	{
+		printf("----------------- changed from: %s -> %s\n", *buffer, newval);
+		free(*buffer);
+		*buffer = newval;
+	}
+
+	return err;
+}
+
+
+esp_err_t settings_set_str(const char* key, const char* val)
+{
+	esp_err_t err;
+
+	nvs_handle my_handle;
+	err = nvs_open(STORAGE, NVS_READWRITE, &my_handle);
+	if (err != ESP_OK)
+	{
+		ESP_LOGE(MY_TAG, "Could not open storage: %s", STORAGE);
+		return err;
+	}
+
+	err = nvs_set_str(my_handle, key, val);
+	if (err != ESP_OK)
+	{
+		nvs_close(my_handle);
+		ESP_LOGE(MY_TAG, "Could not set: %s", key);
+		return err;
+	}
+
+	err = nvs_commit(my_handle);
 	nvs_close(my_handle);
 	return err;
 }

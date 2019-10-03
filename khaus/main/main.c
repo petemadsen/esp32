@@ -10,7 +10,7 @@
 #include "wifi.h"
 #include "tone.h"
 #include "light.h"
-#include "shutters.h"
+#include "my_shutters.h"
 #include "ota.h"
 #include "my_sleep.h"
 #include "my_settings.h"

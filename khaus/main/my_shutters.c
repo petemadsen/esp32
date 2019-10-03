@@ -10,19 +10,26 @@
 
 #include <esp_http_client.h>
 
+#include <string.h>
+
 #include "wifi.h"
 #include "bmp280.h"
 #include "voltage.h"
 #include "light.h"
 #include "common.h"
 #include "ota.h"
+#include "my_settings.h"
 
 
 static const char* MY_TAG = "khaus/shutters";
 
 
-static const char* TOUCH_URL = PROJECT_SHUTTERS_ADDRESS "/khaus/touch";
-static const char* SAVE_URL = PROJECT_SHUTTERS_ADDRESS "/khaus/save";
+#define DEFAULT_TOUCH_URL	PROJECT_SHUTTERS_ADDRESS "/khaus/touch"
+#define DEFAULT_SAVE_URL	PROJECT_SHUTTERS_ADDRESS "/khaus/save"
+
+
+#define SETTING_TOUCH_URL	"shutters.touch"
+#define SETTING_SAVE_URL	"shutters.save"
 
 
 static esp_err_t _http_event_handle(esp_http_client_event_t *evt)
@@ -61,12 +68,21 @@ static esp_err_t _http_event_handle(esp_http_client_event_t *evt)
 
 void shutters_task(void* pvParameters)
 {
+	char* touch_url = strdup(DEFAULT_TOUCH_URL);
+	settings_get_str(SETTING_TOUCH_URL, &touch_url, DEFAULT_TOUCH_URL, true);
+
+	char* save_url = strdup(DEFAULT_SAVE_URL);
+	settings_get_str(SETTING_SAVE_URL, &save_url, DEFAULT_SAVE_URL, true);
+
 	esp_err_t err;
 	for (;;)
 	{
 		xEventGroupWaitBits(wifi_event_group, WIFI_CONNECTED, false, true,
 				portMAX_DELAY);
 		ESP_LOGI(MY_TAG, "Run.");
+
+		settings_get_str(SETTING_TOUCH_URL, &touch_url, DEFAULT_TOUCH_URL, true);
+		settings_get_str(SETTING_SAVE_URL, &save_url, DEFAULT_TOUCH_URL, true);
 
 		// -- check for ota update
 		ESP_LOGI(MY_TAG, "Checking for OTA updates.");
@@ -86,7 +102,7 @@ void shutters_task(void* pvParameters)
 
 		// -- touch
 		esp_http_client_config_t config = {
-			.url = TOUCH_URL,
+			.url = touch_url,
 			.event_handler = _http_event_handle,
 		};
 		esp_http_client_handle_t client = esp_http_client_init(&config);
@@ -111,7 +127,7 @@ void shutters_task(void* pvParameters)
 									 -1.0,
 									 light_status());
 
-		esp_http_client_set_url(client, SAVE_URL);
+		esp_http_client_set_url(client, save_url);
 		esp_http_client_set_method(client, HTTP_METHOD_POST);
 		esp_http_client_set_post_field(client, save_data, save_data_len);
 		err = esp_http_client_perform(client);

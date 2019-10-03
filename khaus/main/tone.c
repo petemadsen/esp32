@@ -244,8 +244,6 @@ static void tone_task(void* ignore)
 	gpio_set_direction(PROJECT_TONE_ONOFF_PIN, GPIO_MODE_OUTPUT);
 	gpio_set_level(PROJECT_TONE_ONOFF_PIN, 0);
 
-	int bell_num = 0;
-
 	if (!read_file())
 	{
 		if (m_bell)
@@ -255,7 +253,7 @@ static void tone_task(void* ignore)
 
 	for (;;)
 	{
-		settings_get(SETTING_BELL, &bell_num, true);
+//stack overflow		settings_get_int32(SETTING_BELL, &m_bell_num, true);
 
 		xEventGroupWaitBits(x_events, EVENT_BELL, true, false, portMAX_DELAY);
 
@@ -283,7 +281,7 @@ static bool read_file()
 	esp_vfs_spiffs_conf_t conf = {
 			.base_path = "/spiffs",
 			.partition_label = NULL,
-			.max_files = 2,
+			.max_files = 1,
 			.format_if_mount_failed = true
 	};
 	esp_err_t ret = esp_vfs_spiffs_register(&conf);
@@ -392,6 +390,8 @@ bool tone_set(int num)
 {
 	m_bell_num = num;
 	bool ok = read_file();
+	if (ok)
+		settings_set_int32(SETTING_BELL, m_bell_num);
 	ESP_LOGI(MY_TAG, "Tone set: %d", ok);
 	return ok;
 }

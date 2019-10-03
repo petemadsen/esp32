@@ -15,7 +15,7 @@ set(COMPONENT_SRCS
 	wifi.c
 	buttons.c
 	my_http.c
-	shutters.c
+	my_shutters.c
 	ota.c
 	my_settings.c
 	tone.c
