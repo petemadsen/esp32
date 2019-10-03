@@ -105,15 +105,13 @@ static esp_err_t _http_event_handle(esp_http_client_event_t *evt)
 			printf("%.*s", evt->data_len, (char*)evt->data);
 			break;
 		case HTTP_EVENT_ON_DATA:
-			ESP_LOGD(MY_TAG, "HTTP_EVENT_ON_DATA, len=%d", evt->data_len);
-			if (!esp_http_client_is_chunked_response(evt->client))
+			ESP_LOGI(MY_TAG, "HTTP_EVENT_ON_DATA, len=%d is_chunked=%d",
+					 evt->data_len,
+					 esp_http_client_is_chunked_response(evt->client));
+			if (evt->data_len < RCV_BUFLEN)
 			{
-				printf("%.*s", evt->data_len, (char*)evt->data);
-
-				if (evt->data_len < RCV_BUFLEN)
-				{
-					strncpy(m_rcv_buffer, (char*)evt->data, RCV_BUFLEN);
-				}
+				strncpy(m_rcv_buffer, (char*)evt->data, evt->data_len);
+				ESP_LOGI(MY_TAG, "ooook(%s)", m_rcv_buffer);
 			}
 			break;
 		case HTTP_EVENT_ON_FINISH:
@@ -132,8 +130,6 @@ bool ota_need_update()
 	bool need_update = false;
 	m_rcv_buffer[0] = 0;
 
-	ESP_LOGI(MY_TAG, "test update.");
-
 	esp_http_client_config_t request = {
 		.url = OTA_URL,
 		.event_handler = _http_event_handle,
@@ -144,13 +140,18 @@ bool ota_need_update()
 	{
 		int status = esp_http_client_get_status_code(client);
 		int size = esp_http_client_get_content_length(client);
-		ESP_LOGD(MY_TAG, "received[%d,%d]: %s", status, size, m_rcv_buffer);
+		ESP_LOGI(MY_TAG, "received[%d,%d]: %s", status, size, m_rcv_buffer);
 
-		need_update = strcmp(m_rcv_buffer, PROJECT_VERSION);
-		ESP_LOGD(MY_TAG, "cmp(%s, %s) == %d", m_rcv_buffer, PROJECT_VERSION, need_update);
+		need_update = status == 200 && strlen(m_rcv_buffer) != 0 && strcmp(m_rcv_buffer, PROJECT_VERSION);
+		if (status == 200 && strlen(m_rcv_buffer) != 0)
+		{
+			need_update = strcmp(m_rcv_buffer, PROJECT_VERSION);
+			ESP_LOGI(MY_TAG, "Version compare '%s' == '%s' ==> %d",
+					 m_rcv_buffer, PROJECT_VERSION, need_update);
+		}
 	}
 	else
-		ESP_LOGI(MY_TAG, "could not connect.");
+		ESP_LOGI(MY_TAG, "Could not download info.");
 
 	esp_http_client_cleanup(client);
 	return need_update;

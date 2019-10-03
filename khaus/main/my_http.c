@@ -91,6 +91,7 @@ httpd_handle_t http_start()
 {
 	httpd_handle_t server = NULL;
 	httpd_config_t config = HTTPD_DEFAULT_CONFIG();
+	config.max_uri_handlers = 10;
 
 	if (httpd_start(&server, &config) == ESP_OK)
 	{

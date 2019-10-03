@@ -49,13 +49,12 @@ static void bmp280_task()
 
 	for (;;)
 	{
-		vTaskDelay(5000 / portTICK_PERIOD_MS);
-
 		ESP_LOGI(MY_TAG, "Scanning...");
 		esp_err_t ret = i2c_master_scan(addr);
 		if (ret != ESP_OK)
 		{
 			ESP_LOGE(MY_TAG, "NOT FOUND: 0x%x", addr);
+			vTaskDelay(60 * 1000 / portTICK_PERIOD_MS);
 			continue;
 		}
 
@@ -65,6 +64,7 @@ static void bmp280_task()
 		if (id != 0x58)
 		{
 			ESP_LOGE(MY_TAG, "WRONG DEVICE ID: 0x%x", addr);
+			vTaskDelay(60 * 1000 / portTICK_PERIOD_MS);
 			continue;
 		}
 
