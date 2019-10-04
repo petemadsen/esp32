@@ -4,22 +4,18 @@ set(COMPONENT_ADD_INCLUDEDIRS include)
 set(COMPONENT_REQUIRES)
 set(COMPONENT_PRIV_REQUIRES)
 
+file(GLOB HEADERS "*.h")
+
 set(COMPONENT_SRCS
+	${HEADERS}
 	main.c
-	common.h
-	wifi.h
 	wifi.c
-	my_http.h
 	my_http.c
 	ota.h
 	ota.c
-	my_sleep.h
 	my_sleep.c
-	shutters.h
-	shutters.c
-	voltage.h
+	my_shutters.c
 	voltage.c
-	scaremole.h
 	scaremole.c
 )
 

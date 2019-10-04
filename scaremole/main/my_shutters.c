@@ -13,20 +13,16 @@
 #include "wifi.h"
 #include "my_sleep.h"
 #include "ota.h"
+#include "common.h"
 
 
 static const char* MY_TAG = "scaremole/shutters";
 
 
-#define IP_ADDRESS "192.168.1.86:8080"
-#define IP_ADDRESS "192.168.1.51:8080"
+static const char* SAVE_URL = PROJECT_SHUTTERS_ADDRESS "/scaremole/save";
 
 
-static const char* UPDATE_URL = "http://" IP_ADDRESS "/scaremole/touch";
-static const char* SAVE_URL = "http://" IP_ADDRESS "/scaremole/save";
-
-
-esp_err_t _http_event_handle(esp_http_client_event_t *evt)
+static esp_err_t _http_event_handle(esp_http_client_event_t *evt)
 {
     switch(evt->event_id) {
         case HTTP_EVENT_ERROR:
@@ -69,36 +65,20 @@ void shutters_task(void* pvParameters)
 				portMAX_DELAY);
 		ESP_LOGI(MY_TAG, "Run.");
 
-		// -- check for update
+		// -- save
+		ESP_LOGI(MY_TAG, "Sending data: %s", SAVE_URL);
 		esp_http_client_config_t config = {
-			.url = UPDATE_URL,
+			.url = SAVE_URL,
 			.event_handler = _http_event_handle,
 		};
 		esp_http_client_handle_t client = esp_http_client_init(&config);
-		err = esp_http_client_perform(client);
-		if (err == ESP_OK)
-		{
-			int code = esp_http_client_get_status_code(client);
-			ESP_LOGI(MY_TAG, "Touch/Status = %d, content_length = %d",
-					 code,
-					 esp_http_client_get_content_length(client));
 
-			// need update
-			if (code == 200)
-			{
-				ota_reboot();
-				vTaskDelay(1000 / portTICK_PERIOD_MS);
-			}
-
-			my_sleep_now("could touch");
-		}
-
-#if 0
-		// -- save
 		const size_t POST_MAXLEN = 200;
 		char* save_data = malloc(POST_MAXLEN);
 		int save_data_len = snprintf(save_data, POST_MAXLEN,
-									 "board_temp=%.2f",
+									 "version=%s"
+									 " board_temp=%.2f",
+									 PROJECT_VERSION,
 									 -1.0);
 
 		esp_http_client_set_url(client, SAVE_URL);
@@ -111,12 +91,27 @@ void shutters_task(void* pvParameters)
 					esp_http_client_get_status_code(client),
 					esp_http_client_get_content_length(client));
 		}
-
 		free(save_data);
-#endif
-
-		// -- cleanup
 		esp_http_client_cleanup(client);
+
+		// -- check for ota update
+		ESP_LOGI(MY_TAG, "Checking for OTA updates.");
+		if (ota_need_update())
+		{
+			ESP_LOGW(MY_TAG, "OTA updated required. Trying to reboot.");
+			const char* err_msg = ota_reboot();
+			if (!err_msg)
+			{
+				for (;;)
+					vTaskDelay(1000 * 1000 / portTICK_PERIOD_MS);
+			}
+			ESP_LOGE(MY_TAG, "OTA reboot failed: %s", err_msg);
+		}
+		else
+			ESP_LOGI(MY_TAG, "No OTA update needed.");
+
+
+		my_sleep_now("after shutters connection");
 
 		// -- wait 3600 secs = 1h
 		vTaskDelay(3600 * 1000 / portTICK_PERIOD_MS);

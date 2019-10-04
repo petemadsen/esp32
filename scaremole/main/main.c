@@ -18,7 +18,7 @@
 
 #include "config.h"
 #include "wifi.h"
-#include "shutters.h"
+#include "my_shutters.h"
 #include "my_sleep.h"
 #include "ota.h"
 #include "voltage.h"
