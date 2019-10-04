@@ -1,27 +1,42 @@
-/* based on "RMT transmit example"
-
-   This example code is in the Public Domain (or CC0 licensed, at your option.)
-
-   Unless required by applicable law or agreed to in writing, this
-   software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
-   CONDITIONS OF ANY KIND, either express or implied.
-*/
+/**
+ * This code is public domain.
+ */
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <freertos/event_groups.h>
 
 #include <esp_log.h>
-#include <driver/rmt.h>
 
-static const char* MY_TAG = "knusperhaeuschen/note";
+#include <driver/rmt.h>
+#include <driver/i2s.h>
+
+#include <esp_spiffs.h>
+
+#include "common.h"
+
+static const char* MY_TAG = "khaus/note";
 
 static EventGroupHandle_t x_events;
 #define EVENT_BELL		BIT0
 
+static int m_bell_num = 0;
+static uint8_t* m_bell = NULL;
+static size_t m_bell_len = 0;
 
+
+static bool read_file();
+
+
+#define SETTING_BELL "tone.bell"
+
+
+#define USE_RMT
+#undef USE_RMT
+
+
+#ifdef USE_RMT
 #define RMT_TX_CHANNEL RMT_CHANNEL_0
-#define RMT_TX_GPIO	GPIO_NUM_13 // 13
-#define SAMPLE_CNT  (10)
+#define RMT_TX_GPIO	GPIO_NUM_25 // 13
 
 /*
  * Prepare a raw table with a message in the Morse code
@@ -32,7 +47,7 @@ static EventGroupHandle_t x_events;
  * {duration, level, duration, level}
  *
  */
-rmt_item32_t items[] = {
+static rmt_item32_t items_esp[] = {
     // E : dot
     {{{ 32767, 1, 32767, 0 }}}, // dot
     //
@@ -55,57 +70,23 @@ rmt_item32_t items[] = {
     {{{ 0, 1, 0, 0 }}}
 };
 
-#define FREQ_TO_TICKS(f) (uint16_t)(1./f * 1000.0 * 1000.0 / 2.0)
-#define A2 FREQ_TO_TICKS(110.0) // 4544
-#define A3 FREQ_TO_TICKS(220.0) // 2272
-#define A4 FREQ_TO_TICKS(440.0) // 1136
-#define C4 FREQ_TO_TICKS(262.0)
-#define A5 FREQ_TO_TICKS(880.0) // 568
-#define A6 FREQ_TO_TICKS(1760.0)
+static rmt_item32_t items_bell[] = {
+	{{{ 32767, 1, 32767, 0 }}}, // dot
+	{{{ 32767, 0, 32767, 0 }}}, // SPACE
+	{{{ 16000, 1, 16000, 0 }}}, // dot
+	{{{ 32767, 0, 32767, 0 }}}, // SPACE
+	{{{ 32767, 1, 32767, 0 }}}, // dot
+	{{{ 32767, 0, 32767, 0 }}}, // SPACE
 
+	// RMT end marker
+	{{{ 0, 1, 0, 0 }}}
+};
 
-// Convert uint8_t type of data to rmt format data.
-static void IRAM_ATTR u8_to_rmt(const void* src, rmt_item32_t* dest, size_t src_size, 
-                         size_t wanted_num, size_t* translated_size, size_t* item_num)
-{
-	if(src == NULL || dest == NULL)
-	{
-        *translated_size = 0;
-        *item_num = 0;
-        return;
-    }
-	const rmt_item32_t bit0 = {{{ 32767, 1, 15000, 0 }}}; // Logical 0
-	const rmt_item32_t bit1 = {{{ 32767, 1, 32767, 0 }}}; // Logical 1
-    size_t size = 0;
-    size_t num = 0;
-    uint8_t *psrc = (uint8_t *)src;
-    rmt_item32_t* pdest = dest;
-	while (size < src_size && num < wanted_num)
-	{
-		for(int i = 0; i < 8; i++)
-		{
-			if(*psrc & (0x1 << i))
-			{
-                pdest->val =  bit1.val; 
-			}
-			else
-			{
-                pdest->val =  bit0.val;
-            }
-            num++;
-            pdest++;
-        }
-        size++;
-        psrc++;
-    }
-    *translated_size = size;
-    *item_num = num;
-}
 
 /*
  * Initialize the RMT Tx channel
  */
-void rmt_tx_int()
+static void rmt_tx_init()
 {
     rmt_config_t config;
     config.rmt_mode = RMT_MODE_TX;
@@ -113,94 +94,281 @@ void rmt_tx_int()
     config.gpio_num = RMT_TX_GPIO;
     config.mem_block_num = 1;
     config.tx_config.loop_en = 0;
-	config.tx_config.loop_en = 1;
-	// enable the carrier to be able to hear the Morse sound
+    // enable the carrier to be able to hear the Morse sound
     // if the RMT_TX_GPIO is connected to a speaker
     config.tx_config.carrier_en = 1;
-    config.tx_config.carrier_en = 0;
     config.tx_config.idle_output_en = 1;
     config.tx_config.idle_level = 0;
     config.tx_config.carrier_duty_percent = 50;
     // set audible career frequency of 611 Hz
     // actually 611 Hz is the minimum, that can be set
     // with current implementation of the RMT API
-	config.tx_config.carrier_freq_hz = 880;
+    config.tx_config.carrier_freq_hz = 611;
     config.tx_config.carrier_level = 1;
     // set the maximum clock divider to be able to output
     // RMT pulses in range of about one hundred milliseconds
     config.clk_div = 255;
-	config.clk_div = 80;
 
     ESP_ERROR_CHECK(rmt_config(&config));
     ESP_ERROR_CHECK(rmt_driver_install(config.channel, 0, 0));
-    ESP_ERROR_CHECK(rmt_translator_init(config.channel, u8_to_rmt));
 }
 
-static void tone_task(void *ignore)
+
+static void rmt_play()
+{
+	int number_of_items = sizeof(items_bell) / sizeof(items_bell[0]);
+
+		ESP_LOGI(MY_TAG, "Play bell.");
+		ESP_ERROR_CHECK(rmt_write_items(RMT_TX_CHANNEL, items_bell, number_of_items, true));
+		ESP_LOGI(MY_TAG, "Transmission complete");
+}
+#else
+
+
+#define EXAMPLE_I2S_NUM 0
+#define EXAMPLE_I2S_SAMPLE_RATE 16000
+#define EXAMPLE_I2S_SAMPLE_BITS 16
+#define EXAMPLE_I2S_FORMAT        (I2S_CHANNEL_FMT_RIGHT_LEFT)
+#define EXAMPLE_I2S_READ_LEN      (16 * 1024)
+#define I2S_ADC_UNIT              ADC_UNIT_1
+#define I2S_ADC_CHANNEL           ADC1_CHANNEL_0
+//I2S channel number
+#define EXAMPLE_I2S_CHANNEL_NUM   ((EXAMPLE_I2S_FORMAT < I2S_CHANNEL_FMT_ONLY_RIGHT) ? (2) : (1))
+
+
+
+static void i2s_init()
+{
+	// GPIO_NUM_25 (right) + GPIO_NUM_26 (left)
+	i2s_config_t i2s_config = {
+	   .mode = I2S_MODE_MASTER | I2S_MODE_TX | I2S_MODE_ADC_BUILT_IN,
+	   .sample_rate =  EXAMPLE_I2S_SAMPLE_RATE,
+	   .bits_per_sample = EXAMPLE_I2S_SAMPLE_BITS,
+	   .communication_format = I2S_COMM_FORMAT_I2S_MSB,
+	   .channel_format = EXAMPLE_I2S_FORMAT,
+	   .intr_alloc_flags = 0,
+	   .dma_buf_count = 2,
+	   .dma_buf_len = 1024
+	};
+//	const i2s_pin_config_t pin_config = {
+//		.bck_io_num = -1, // I2S_PIN_NO_CHANGE,// 26,
+//		.ws_io_num = GPIO_NUM_13,// I2S_PIN_NO_CHANGE,// 25,
+//		.data_out_num = -1, // I2S_PIN_NO_CHANGE,// 22,
+//		.data_in_num = -1, // I2S_PIN_NO_CHANGE
+//	};
+
+	gpio_set_direction(GPIO_NUM_13, GPIO_MODE_OUTPUT);
+
+	i2s_driver_install(EXAMPLE_I2S_NUM, &i2s_config, 0, NULL);
+
+//	i2s_set_pin(i2s_num, &pin_config);
+
+	i2s_set_dac_mode(I2S_DAC_CHANNEL_RIGHT_EN);
+}
+
+
+/**
+ * @brief Scale data to 16bit/32bit for I2S DMA output.
+ *        DAC can only output 8bit data value.
+ *        I2S DMA will still send 16 bit or 32bit data, the highest 8bit contains DAC data.
+ */
+uint32_t example_i2s_dac_data_scale(uint8_t* d_buff, uint8_t* s_buff, uint32_t len)
+{
+	uint32_t j = 0;
+#if (EXAMPLE_I2S_SAMPLE_BITS == 16)
+	for (uint32_t i = 0; i < len; i++) {
+		d_buff[j++] = 0;
+		d_buff[j++] = s_buff[i];
+	}
+	return (len * 2);
+#else
+	for (int i = 0; i < len; i++) {
+		d_buff[j++] = 0;
+		d_buff[j++] = 0;
+		d_buff[j++] = 0;
+		d_buff[j++] = s_buff[i];
+	}
+	return (len * 4);
+#endif
+}
+
+
+
+#include "audio_example_file.h"
+static void i2s_play(uint8_t* data, size_t data_len)
+{
+	size_t i2s_read_len = EXAMPLE_I2S_READ_LEN;
+	size_t bytes_written;
+
+	i2s_start(EXAMPLE_I2S_NUM);
+
+	uint8_t* i2s_write_buff = (uint8_t*) calloc(i2s_read_len, sizeof(char));
+
+	//4. Play an example audio file(file format: 8bit/16khz/single channel)
+	printf("Playing file example: \n");
+	uint32_t offset = 0;
+	uint32_t tot_size = data_len;
+
+	// set file play mode
+	i2s_set_clk(EXAMPLE_I2S_NUM, 16000, EXAMPLE_I2S_SAMPLE_BITS, 1);
+//	example_set_file_play_mode();
+
+	while (offset < tot_size) {
+		uint32_t play_len = ((tot_size - offset) > (4 * 1024)) ? (4 * 1024) : (tot_size - offset);
+		uint32_t i2s_wr_len = example_i2s_dac_data_scale(i2s_write_buff, (uint8_t*)(data + offset), play_len);
+		i2s_write(EXAMPLE_I2S_NUM, i2s_write_buff, i2s_wr_len, &bytes_written, portMAX_DELAY);
+		offset += play_len;
+//		example_disp_buf((uint8_t*) i2s_write_buff, 32);
+	}
+//	i2s_set_clk(EXAMPLE_I2S_NUM, EXAMPLE_I2S_SAMPLE_RATE, EXAMPLE_I2S_SAMPLE_BITS, EXAMPLE_I2S_CHANNEL_NUM);
+
+	i2s_stop(EXAMPLE_I2S_NUM);
+
+	free(i2s_write_buff);
+}
+#endif
+
+
+static void tone_task(void* ignore)
 {
 	ESP_LOGI(MY_TAG, "Configuring transmitter");
-    rmt_tx_int();
-    int number_of_items = sizeof(items) / sizeof(items[0]);
-    const uint8_t sample[SAMPLE_CNT] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+#ifdef USE_RMT
+	rmt_tx_init();
+#else
+	i2s_init();
+#endif
 
-	rmt_item32_t items[1];
-	items[0].duration0 = 3;
-	items[0].level0 = 1;
-	items[0].duration1 = 0;
-	items[0].level1 = 0;
+	// -- on/off pin
+	gpio_pad_select_gpio(PROJECT_TONE_ONOFF_PIN);
+	gpio_set_direction(PROJECT_TONE_ONOFF_PIN, GPIO_MODE_OUTPUT);
+	gpio_set_level(PROJECT_TONE_ONOFF_PIN, 0);
 
-	items[0].duration0 = C4;
-	items[0].duration1 = C4;
-
-	uint16_t notes[] = {
-		A2, 1000,
-		A3, 1000,
-		A4, 1000,
-		A5, 1000,
-		A6, 1000,
-		0, 0,
-	};
-
-	ESP_LOGI(MY_TAG, "A2 = %d (4544)", FREQ_TO_TICKS(110.0));
-	ESP_LOGI(MY_TAG, "A3 = %d (2272)", FREQ_TO_TICKS(220.0));
-	ESP_LOGI(MY_TAG, "A4 = %d (1136)", FREQ_TO_TICKS(440.0));
-	ESP_LOGI(MY_TAG, "A5 = %d (568)", FREQ_TO_TICKS(880.0));
-	ESP_LOGI(MY_TAG, "A6 = %d (284)", FREQ_TO_TICKS(1760.0));
-//	vTaskDelay(5000 / portTICK_PERIOD_MS);
+	if (!read_file())
+	{
+		if (m_bell)
+			free(m_bell);
+		m_bell = NULL;
+	}
 
 	for (;;)
 	{
-		ESP_LOGI(MY_TAG, "Play bell.");
-		int pos = 0;
-		do {
-			ESP_LOGI(MY_TAG, "=> %u / %u", notes[pos+0], notes[pos+1]);
-			items[0].duration0 = notes[pos+0];
-			items[0].duration1 = notes[pos+0];
+//		xEventGroupWaitBits(x_events, EVENT_BELL, true, false, portMAX_DELAY);
 
-			ESP_ERROR_CHECK(rmt_write_items(RMT_TX_CHANNEL, items, 1, true));
-			vTaskDelay((TickType_t)notes[pos+1] / portTICK_PERIOD_MS);
-//			vTaskDelay(2000 / portTICK_PERIOD_MS);
-
-			pos += 2;
-		} while (notes[pos]);
-		ESP_LOGI(MY_TAG, "Play done.");
-
-	items[0].duration0 = 0;
-	items[0].duration1 = 0;
-	rmt_write_items(RMT_TX_CHANNEL, items, 1, true);
-
-#if 0
-        ESP_ERROR_CHECK(rmt_write_items(RMT_TX_CHANNEL, items, number_of_items, true));
-		ESP_LOGI(MY_TAG, "Transmission complete");
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
-		continue;
-
-        ESP_ERROR_CHECK(rmt_write_sample(RMT_TX_CHANNEL, sample, SAMPLE_CNT, true));
-		ESP_LOGI(MY_TAG, "Sample transmission complete");
+		gpio_set_level(PROJECT_TONE_ONOFF_PIN, 1);
+#ifdef USE_RMT
+		rmt_play();
+#else
+		if (m_bell)
+			i2s_play(m_bell, m_bell_len);
+		else
+			i2s_play(audio_table, sizeof(audio_table));
 #endif
-        vTaskDelay(2000 / portTICK_PERIOD_MS);
-    }
+		gpio_set_level(PROJECT_TONE_ONOFF_PIN, 0);
+
+		ESP_LOGI(MY_TAG, "--done");
+
+		vTaskDelay(5000 / portTICK_PERIOD_MS);
+	}
+
     vTaskDelete(NULL);
+}
+
+
+static bool read_file()
+{
+	// -- open
+	esp_vfs_spiffs_conf_t conf = {
+			.base_path = "/spiffs",
+			.partition_label = NULL,
+			.max_files = 1,
+			.format_if_mount_failed = true
+	};
+	esp_err_t ret = esp_vfs_spiffs_register(&conf);
+	if (ret != ESP_OK)
+	{
+		if (ret == ESP_FAIL)
+			ESP_LOGE(MY_TAG, "Failed to mount or format filesystem");
+		else if (ret == ESP_ERR_NOT_FOUND)
+			ESP_LOGE(MY_TAG, "Failed to find SPIFFS partition");
+		else
+			ESP_LOGE(MY_TAG, "Failed to initialize SPIFFS (%s)", esp_err_to_name(ret));
+
+		return false;
+	}
+
+	char filename[40];
+	sprintf(filename, "/spiffs/bell%d.wav", m_bell_num);
+	FILE* file = fopen(filename, "r");
+	if (!file)
+	{
+		ESP_LOGE(MY_TAG, "Could not open file");
+		esp_vfs_spiffs_unregister(NULL);
+		return false;
+	}
+
+	// get file len
+	fseek(file, 0L, SEEK_END);
+	long len = ftell(file);
+	rewind(file);
+	ESP_LOGI(MY_TAG, "Loading file with size: %ld", len);
+
+	//
+	if (m_bell)
+		free(m_bell);
+	m_bell = malloc(len);
+	if (!m_bell)
+	{
+		ESP_LOGE(MY_TAG, "Could not allocate memory: %ld", len);
+		fclose(file);
+		return false;
+	}
+	m_bell_len = (size_t)len;
+	ESP_LOGI(MY_TAG, "m_bell is loaded: %d", (m_bell == NULL));
+
+	// read
+	char* p = (char*)m_bell;
+	while (len)
+	{
+		ESP_LOGI(MY_TAG, "Remaining: %ld", len);
+		long read = fread(p, sizeof(char), len, file);
+		ESP_LOGI(MY_TAG, "read: %ld", read);
+		if (read < 0)
+		{
+			ESP_LOGE(MY_TAG, "Could not read file: %ld", read);
+			esp_vfs_spiffs_unregister(NULL);
+			free(m_bell);
+			m_bell = NULL;
+			return false;
+		}
+
+		len -= read;
+		p += read;
+	}
+
+	printf("==\n");
+	bool show_ascii = true;
+	for (size_t i = 0; i < m_bell_len; ++i)
+	{
+		if (show_ascii)
+		{
+			char ch = m_bell[i];
+//			char ch = (m_bell[i] >= 0 && m_bell[i] <= 'z' ? m_bell[i] : '.');
+			printf("%c", ch);
+		}
+		else
+		{
+			printf(" 0x%02x", m_bell[i]);
+			if (i!=0 && (i%8)==0)
+				printf("\n");
+		}
+	}
+	printf("--\n");
+
+	// done
+	fclose(file);
+
+	esp_vfs_spiffs_unregister(NULL);
+	return true;
 }
 
 
@@ -214,4 +382,11 @@ void tone_init()
 void tone_bell()
 {
 	xEventGroupSetBits(x_events, EVENT_BELL);
+}
+
+
+bool tone_set(int num)
+{
+	m_bell_num = num;
+	return true;
 }

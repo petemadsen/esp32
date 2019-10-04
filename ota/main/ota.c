@@ -34,6 +34,7 @@
 #include <rom/uart.h>
 
 #include "config.h"
+#include "common.h"
 
 
 #define BUFFSIZE			1024
@@ -50,9 +51,6 @@ static char download_url[DOWNLOAD_URL_MAXLEN];
 #define CFG_OTA_FILENAME		"filename"
 #define CFG_OTA_FILENAME_LENGTH	30
 static char ota_filename[CFG_OTA_FILENAME_LENGTH];
-
-
-#define CONFIG_LED_PIN		GPIO_NUM_2
 
 
 static const char* MY_TAG = "ota";
@@ -304,13 +302,13 @@ static void ota_example_task(void *pvParameter)
 	for (int i=0; i<5; ++i)
 	{
 		ESP_LOGI(MY_TAG, "Attempt #%d", (i+1));
-		gpio_set_level(CONFIG_LED_PIN, 1);
+		gpio_set_level(PROJECT_LED_PIN, PROJECT_LED_PIN_ON);
 
 		found = download_and_install();
 		if (found)
 			break;
 
-		gpio_set_level(CONFIG_LED_PIN, 0);
+		gpio_set_level(PROJECT_LED_PIN, PROJECT_LED_PIN_OFF);
 		vTaskDelay(5000 / portTICK_PERIOD_MS);
 	}
 
@@ -386,9 +384,9 @@ static void nowifi_watch_task(void *pvParameter)
 			continue;
 		}
 
-		gpio_set_level(CONFIG_LED_PIN, 1);
+		gpio_set_level(PROJECT_LED_PIN, PROJECT_LED_PIN_ON);
 		vTaskDelay(1000 / portTICK_PERIOD_MS);
-		gpio_set_level(CONFIG_LED_PIN, 0);
+		gpio_set_level(PROJECT_LED_PIN, PROJECT_LED_PIN_OFF);
 		vTaskDelay(1000 / portTICK_PERIOD_MS);
 
 		int64_t now = esp_timer_get_time() / 1000 / 1000;
@@ -442,8 +440,8 @@ void app_main()
 	vTaskDelay(5000 / portTICK_PERIOD_MS);
 
 	// -- led
-	gpio_pad_select_gpio(CONFIG_LED_PIN);
-	gpio_set_direction(CONFIG_LED_PIN, GPIO_MODE_OUTPUT);
+	gpio_pad_select_gpio(PROJECT_LED_PIN);
+	gpio_set_direction(PROJECT_LED_PIN, GPIO_MODE_OUTPUT);
 
     initialise_wifi();
     xTaskCreate(&ota_example_task, "ota_example_task", 8192, NULL, 5, NULL);

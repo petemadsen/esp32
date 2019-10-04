@@ -27,7 +27,7 @@
 static const char* ERR_NOFACTORY = "NOFACTORY";
 static const char* ERR_NOBOOT = "NOBOOT";
 
-#define BIN_NAME "scaremole.bin"
+#define BIN_NAME PROJECT_NAME ".bin"
 
 
 static const char* OTA_URL = PROJECT_SHUTTERS_ADDRESS "/ota/" PROJECT_NAME;
@@ -35,7 +35,7 @@ static const char* OTA_URL = PROJECT_SHUTTERS_ADDRESS "/ota/" PROJECT_NAME;
 static char m_rcv_buffer[RCV_BUFLEN];
 
 
-static const char* MY_TAG = "scaremole/ota";
+static const char* MY_TAG = PROJECT_NAME "/ota";
 
 
 esp_err_t ota_init()
