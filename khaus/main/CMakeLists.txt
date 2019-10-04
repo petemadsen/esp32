@@ -10,7 +10,6 @@ set(COMPONENT_SRCS
 	${HEADERS}
 	main.c
 	light.c
-	common.h
 	my_sleep.c
 	wifi.c
 	buttons.c

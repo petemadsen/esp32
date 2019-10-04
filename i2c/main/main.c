@@ -1,9 +1,4 @@
 /**
- *
- * Wifi:
- * https://github.com/cmmakerclub/esp32-webserver/tree/master
- *
- *
  * Bluetooth:
  * https://github.com/espressif/esp-idf/blob/master/examples/bluetooth/ble_adv
  *
@@ -32,17 +27,12 @@ int led_on = 1;
 static const char* M_TAG = "my_i2c";
 
 
-esp_err_t event_handler(void *ctx, system_event_t *event)
-{
-    return ESP_OK;
-}
-
-
 static void task_i2c_scan()
 {
 	for (;;)
 	{
-		for (int addr=0x40; addr<0x46; ++addr)
+		ESP_LOGI(M_TAG, "Scanning...");
+		for (int addr=0x00; addr<0xff; ++addr)
 		{
 			esp_err_t ret = i2c_master_scan(addr);
 			if (ret == ESP_OK)
@@ -55,7 +45,7 @@ static void task_i2c_scan()
 
 void app_main(void)
 {
-	ESP_ERROR_CHECK(i2c_master_init(GPIO_NUM_19, GPIO_NUM_21));
+	ESP_ERROR_CHECK(i2c_master_init(GPIO_NUM_21, GPIO_NUM_22));
 	xTaskCreate(&task_i2c_scan, "task_i2c_scan", 2048, NULL, 5, NULL);
 }
 
