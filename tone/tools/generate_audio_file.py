@@ -13,12 +13,17 @@ def get_wave_array_str(filename, target_bits):
     wave_read = wave.open(filename, "r")
     array_str = ""
     nchannels, sampwidth, framerate, nframes, comptype, compname = wave_read.getparams()
-    print("--nr channels...: {}".format(nchannels))
-    print("--sample width..: {} bit".format(sampwidth * 8))
-    print("--frame rate....: {} Hz".format(framerate))
-    print("--nr frames.....: {}".format(nframes))
-    print("--comp type.....: {}".format(comptype))
-    print("--comp name.....: {}".format(compname))
+    print(" +- nr channels...: {}".format(nchannels))
+    print(" +- sample width..: {} bit".format(sampwidth * 8))
+    print(" +- frame rate....: {} Hz".format(framerate))
+    print(" +- nr frames.....: {}".format(nframes))
+    print(" +- comp type.....: {}".format(comptype))
+    print(" +- comp name.....: {}".format(compname))
+
+    if sampwidth != 2:
+        return array_str;
+    if comptype != "NONE":
+        return array_str
 
     sampwidth *= 8
     scale_val = (1 << target_bits) - 1
@@ -28,8 +33,8 @@ def get_wave_array_str(filename, target_bits):
         #scale current data to 8-bit data
         val       = sample * scale_val / cur_lim
         val       = int(val + ((scale_val + 1) // 2)) & scale_val
-        if i < 25:
-            print("-->", sample, val)
+#        if i < 25:
+#            print("-->", sample, val)
         array_str += "0x%x, "%(val)
         if (i + 1) % 16 == 0:
             array_str += "\n"

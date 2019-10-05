@@ -9,6 +9,8 @@
 #include <esp_event_loop.h>
 #include <esp_log.h>
 
+#include <driver/gpio.h>
+
 #include <lwip/netdb.h>
 #include <lwip/sockets.h>
 #include <lwip/dns.h>

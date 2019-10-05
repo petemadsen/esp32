@@ -6,3 +6,5 @@ build/
 config.h
 CMakeLists.txt.user
 sdkconfig
+a.out
+*.swp

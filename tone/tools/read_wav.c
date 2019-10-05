@@ -1,3 +1,6 @@
+/**
+ * This code is public domain.
+ */
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -34,6 +37,9 @@ struct wav_data
 };
 
 
+static int read_from_file(FILE* file, unsigned char** buf, size_t* len);
+
+
 int main(int argc, char** argv)
 {
 	if (argc != 2)
@@ -43,10 +49,39 @@ int main(int argc, char** argv)
 	if (!file)
 		return 2;
 
+	size_t len;
+	unsigned char* buf;
+	int ret = read_from_file(file, &buf, &len);
+	if (ret != 0)
+	{
+		fprintf(stderr, "Error: %d", ret);
+		if (buf)
+			free(buf);
+		buf = NULL;
+	}
+
+	// volume tests
+	printf("VOLUME\n");
+	int volume = 90;
+	for (int i=0; i<20; ++i)
+	{
+		unsigned char val = buf[i];
+		unsigned char nval = val * volume / 100;
+		printf("%d -> %d\n", val, nval);
+	}
+
+	printf("\n");
+	printf("--done\n");
+	return ret;
+}
+
+
+static int read_from_file(FILE* file, unsigned char** buf, size_t* len)
+{
 	fseek(file, 0, SEEK_END);
 	long file_len = ftell(file);
 	rewind(file);
-	printf("--file size: %d\n", file_len);
+	printf("--file size: %ld\n", file_len);
 
 	// -- header
 	struct wav_header hdr;
@@ -77,7 +112,7 @@ int main(int argc, char** argv)
 	printf("--bytes/sec....: %u\n", fmt.bytes_per_second);
 	printf("--block align..: %u\n", fmt.block_align);
 	printf("--bits/sample..: %u\n", fmt.bits_per_sample);
-	if (fmt.bits_per_sample != 16)
+	if (fmt.bits_per_sample != 16 && fmt.bits_per_sample != 8)
 		return 22;
 
 	// -- data
@@ -94,18 +129,41 @@ int main(int argc, char** argv)
 	const int sampwidth = fmt.bits_per_sample;
 	int scale_val = (1 << target_bits) - 1;
 	int cur_lim   = (1 << sampwidth) - 1;
-	for (size_t i = 0; i < data.len / fmt.bits_per_sample / 8; ++i)
+	size_t num_samples = data.len / (fmt.bits_per_sample / 8);
+
+	*len = num_samples;
+	*buf = malloc(num_samples);
+	unsigned char* p = *buf;
+
+	printf("\n");
+	printf("--malloc %zu -> %d\n", num_samples, (*buf == NULL));
+
+	for (size_t i = 0; i < num_samples; ++i)
 	{
-		uint16_t sample;
-		if (fread(&sample, fmt.bits_per_sample / 8, 1, file) != 1)
-			return 32;
+		unsigned char val;
 
-        // scale current data to 8-bit data
-		unsigned char val = sample * scale_val / cur_lim;
-        val = (unsigned char)(val + ((scale_val + 1) / 2)) & scale_val;
+		if (fmt.bits_per_sample == 16)
+		{
+			uint16_t sample;
+			if (fread(&sample, fmt.bits_per_sample / 8, 1, file) != 1)
+				return 32;
 
-		if (i < 25)
-			printf(">>%d --> %u\n", sample, val);
+			// scale current data to 8-bit data
+			unsigned char val = sample * scale_val / cur_lim;
+			val = (unsigned char)(val + ((scale_val + 1) / 2)) & scale_val;
+
+			if (i < 25)
+				printf(">>%d --> %u\n", sample, val);
+		}
+		else
+		{
+			if (fread(&val, fmt.bits_per_sample / 8, 1, file) != 1)
+				return 33;
+			if (i < 25)
+				printf(">>%d\n", val);
+		}
+
+		*p++ = val;
 	}
 
 	fclose(file);
