@@ -21,17 +21,15 @@ def get_wave_array_str(filename, target_bits):
     print("--comp name.....: {}".format(compname))
 
     sampwidth *= 8
+    scale_val = (1 << target_bits) - 1
+    cur_lim   = (1 << sampwidth) - 1
     for i in range(wave_read.getnframes()):
-        val, = struct.unpack("<H", wave_read.readframes(1))
-        if i < 10:
-            print(val)
-        scale_val = (1 << target_bits) - 1
-        cur_lim   = (1 << sampwidth) - 1
+        sample, = struct.unpack("<H", wave_read.readframes(1))
         #scale current data to 8-bit data
-        val       = val * scale_val / cur_lim
+        val       = sample * scale_val / cur_lim
         val       = int(val + ((scale_val + 1) // 2)) & scale_val
-        if i < 10:
-            print("-->", val)
+        if i < 25:
+            print("-->", sample, val)
         array_str += "0x%x, "%(val)
         if (i + 1) % 16 == 0:
             array_str += "\n"

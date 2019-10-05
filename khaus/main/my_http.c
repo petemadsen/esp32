@@ -306,16 +306,14 @@ esp_err_t bell_handler(httpd_req_t* req)
 		if (tone_set(num))
 			ret = RET_OK;
 	}
-#if 0
 	else
 	{
 		char* buf = malloc(20);
-		int buf_len = sprintf(buf, "%d", dfplayer_get_track());
+		int buf_len = sprintf(buf, "%d", tone_get());
 		httpd_resp_send(req, buf, buf_len);
 		free(buf);
 		return ESP_OK;
 	}
-#endif
 
 	httpd_resp_send(req, ret, strlen(ret));
 	return ESP_OK;

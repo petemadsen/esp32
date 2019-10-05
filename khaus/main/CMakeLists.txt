@@ -1,4 +1,4 @@
-set(COMPONENT_ADD_INCLUDEDIRS include)
+#set(COMPONENT_ADD_INCLUDEDIRS include)
 
 # Edit following two lines to set component requirements (see docs)
 set(COMPONENT_REQUIRES )
@@ -21,6 +21,7 @@ set(COMPONENT_SRCS
 	my_i2c.c
 	bmp280.c
 	voltage.c
+	read_wav.c
 )
 
 register_component()

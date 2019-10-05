@@ -3,6 +3,7 @@
  */
 #include <esp_wifi.h>
 #include <esp_log.h>
+#include <esp_sleep.h>
 
 #include <lwip/apps/sntp.h>
 

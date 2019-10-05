@@ -17,4 +17,7 @@ void tone_bell();
 bool tone_set(int num);
 
 
+int tone_get();
+
+
 #endif

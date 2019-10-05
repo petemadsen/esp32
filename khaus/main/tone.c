@@ -14,6 +14,8 @@
 
 #include "common.h"
 #include "my_settings.h"
+#include "read_wav.h"
+
 
 static const char* MY_TAG = "khaus/note";
 
@@ -129,7 +131,7 @@ static void rmt_play()
 #define EXAMPLE_I2S_NUM 0
 #define EXAMPLE_I2S_SAMPLE_RATE 16000
 #define EXAMPLE_I2S_SAMPLE_BITS 16
-#define EXAMPLE_I2S_FORMAT        (I2S_CHANNEL_FMT_RIGHT_LEFT)
+#define EXAMPLE_I2S_FORMAT        (I2S_CHANNEL_FMT_ONLY_RIGHT)
 #define EXAMPLE_I2S_READ_LEN      (16 * 1024)
 #define I2S_ADC_UNIT              ADC_UNIT_1
 #define I2S_ADC_CHANNEL           ADC1_CHANNEL_0
@@ -142,14 +144,15 @@ static void i2s_init()
 {
 	// GPIO_NUM_25 (right) + GPIO_NUM_26 (left)
 	i2s_config_t i2s_config = {
-	   .mode = I2S_MODE_MASTER | I2S_MODE_TX | I2S_MODE_ADC_BUILT_IN,
-	   .sample_rate =  EXAMPLE_I2S_SAMPLE_RATE,
-	   .bits_per_sample = EXAMPLE_I2S_SAMPLE_BITS,
-	   .communication_format = I2S_COMM_FORMAT_I2S_MSB,
-	   .channel_format = EXAMPLE_I2S_FORMAT,
-	   .intr_alloc_flags = 0,
-	   .dma_buf_count = 2,
-	   .dma_buf_len = 1024
+		.mode = I2S_MODE_MASTER | I2S_MODE_TX | I2S_MODE_ADC_BUILT_IN,
+		.sample_rate =  EXAMPLE_I2S_SAMPLE_RATE,
+		.bits_per_sample = EXAMPLE_I2S_SAMPLE_BITS,
+		.communication_format = I2S_COMM_FORMAT_I2S_MSB,
+		.channel_format = EXAMPLE_I2S_FORMAT,
+		.intr_alloc_flags = 0,
+		.dma_buf_count = 2,
+		.dma_buf_len = 1024,
+		.use_apll = true,
 	};
 //	const i2s_pin_config_t pin_config = {
 //		.bck_io_num = -1, // I2S_PIN_NO_CHANGE,// 26,
@@ -173,11 +176,11 @@ static void i2s_init()
  *        DAC can only output 8bit data value.
  *        I2S DMA will still send 16 bit or 32bit data, the highest 8bit contains DAC data.
  */
-uint32_t example_i2s_dac_data_scale(uint8_t* d_buff, uint8_t* s_buff, uint32_t len)
+size_t example_i2s_dac_data_scale(uint8_t* d_buff, uint8_t* s_buff, size_t len)
 {
 	uint32_t j = 0;
 #if (EXAMPLE_I2S_SAMPLE_BITS == 16)
-	for (uint32_t i = 0; i < len; i++) {
+	for (size_t i = 0; i < len; i++) {
 		d_buff[j++] = 0;
 		d_buff[j++] = s_buff[i];
 	}
@@ -206,22 +209,22 @@ static void i2s_play(uint8_t* data, size_t data_len)
 	uint8_t* i2s_write_buff = (uint8_t*) calloc(i2s_read_len, sizeof(char));
 
 	//4. Play an example audio file(file format: 8bit/16khz/single channel)
-	printf("Playing file example: \n");
-	uint32_t offset = 0;
-	uint32_t tot_size = data_len;
+	printf("Playing file example: len=%zu\n", data_len);
+	size_t offset = 0;
+	size_t tot_size = data_len;
 
 	// set file play mode
 	i2s_set_clk(EXAMPLE_I2S_NUM, 16000, EXAMPLE_I2S_SAMPLE_BITS, 1);
-//	example_set_file_play_mode();
 
-	while (offset < tot_size) {
-		uint32_t play_len = ((tot_size - offset) > (4 * 1024)) ? (4 * 1024) : (tot_size - offset);
-		uint32_t i2s_wr_len = example_i2s_dac_data_scale(i2s_write_buff, (uint8_t*)(data + offset), play_len);
+	while (offset < tot_size)
+	{
+		size_t play_len = ((tot_size - offset) > (4 * 1024)) ? (4 * 1024) : (tot_size - offset);
+		size_t i2s_wr_len = example_i2s_dac_data_scale(i2s_write_buff, (uint8_t*)(data + offset), play_len);
 		i2s_write(EXAMPLE_I2S_NUM, i2s_write_buff, i2s_wr_len, &bytes_written, portMAX_DELAY);
 		offset += play_len;
 //		example_disp_buf((uint8_t*) i2s_write_buff, 32);
 	}
-//	i2s_set_clk(EXAMPLE_I2S_NUM, EXAMPLE_I2S_SAMPLE_RATE, EXAMPLE_I2S_SAMPLE_BITS, EXAMPLE_I2S_CHANNEL_NUM);
+	i2s_set_clk(EXAMPLE_I2S_NUM, EXAMPLE_I2S_SAMPLE_RATE, EXAMPLE_I2S_SAMPLE_BITS, EXAMPLE_I2S_CHANNEL_NUM);
 
 	i2s_stop(EXAMPLE_I2S_NUM);
 
@@ -307,6 +310,9 @@ static bool read_file()
 		return false;
 	}
 
+	m_bell = read_wav(file, &m_bell_len);
+
+#if 0
 	// get file len
 	fseek(file, 0L, SEEK_END);
 	long len = ftell(file);
@@ -367,9 +373,10 @@ static bool read_file()
 
 	// done
 	fclose(file);
+#endif
 
 	esp_vfs_spiffs_unregister(NULL);
-	return true;
+	return (m_bell != NULL);// true;
 }
 
 
@@ -389,9 +396,20 @@ void tone_bell()
 bool tone_set(int num)
 {
 	m_bell_num = num;
+
 	bool ok = read_file();
 	if (ok)
+	{
 		settings_set_int32(SETTING_BELL, m_bell_num, false);
+		tone_bell();
+	}
+
 	ESP_LOGI(MY_TAG, "Tone set: %d", ok);
 	return ok;
+}
+
+
+int tone_get()
+{
+	return m_bell_num;
 }
