@@ -40,9 +40,9 @@ Returns current light state.
 
 Use 0 to switch the light off and 1 to turn the light on.
 
-### GET /play?NUM
+### GET /play
 
-**TODO**
+Plays currently selected bell sound.
 
 ### POST /bell?NUM
 
@@ -50,9 +50,12 @@ Command to upload binary files:
 
 ```curl --data-binary @uploadfile "IP/bell?NUM"```
 
-### GET /bell?NUM
+Example:
+```curl --data-binary @440Hz8bitUnsigned.wav 192.168.1.56/bell?3```
 
-Sets the bell to play.
+### GET /bell[?NUM]
+
+Sets/gets the bell to play.
 
 ### GET /volume
 

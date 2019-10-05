@@ -417,22 +417,20 @@ esp_err_t volume_handler(httpd_req_t* req)
 {
 	const char* ret = RET_ERR;
 
-#if 0
 	int volume;
 	if (get_int(req, &volume) && volume >= 0 && volume <= 100)
 	{
-		dfplayer_set_volume_p(volume);
+		tone_set_volume_p(volume);
 		ret = RET_OK;
 	}
 	else
 	{
 		char* buf = malloc(20);
-		int buf_len = sprintf(buf, "%d", dfplayer_get_volume_p());
+		int buf_len = sprintf(buf, "%d", tone_get_volume_p());
 		httpd_resp_send(req, buf, buf_len);
 		free(buf);
 		return ESP_OK;
 	}
-#endif
 
 	httpd_resp_send(req, ret, strlen(ret));
 	return ESP_OK;

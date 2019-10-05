@@ -20,4 +20,10 @@ bool tone_set(int num);
 int tone_get();
 
 
+void tone_set_volume_p(int level);
+
+
+int tone_get_volume_p();
+
+
 #endif

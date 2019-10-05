@@ -93,7 +93,7 @@ static int read_from_file(FILE* file, unsigned char** buf, size_t* len)
 	printf("--bytes/sec....: %u\n", fmt.bytes_per_second);
 	printf("--block align..: %u\n", fmt.block_align);
 	printf("--bits/sample..: %u\n", fmt.bits_per_sample);
-	if (fmt.bits_per_sample != 16)
+	if (fmt.bits_per_sample != 16 && fmt.bits_per_sample != 8)
 		return 22;
 
 	// -- data
@@ -115,20 +115,34 @@ static int read_from_file(FILE* file, unsigned char** buf, size_t* len)
 	*len = num_samples;
 	*buf = malloc(num_samples);
 	unsigned char* p = *buf;
-	printf("--malloc %zu -> %d", num_samples, (*buf == NULL));
+
+	printf("\n");
+	printf("--malloc %zu -> %d\n", num_samples, (*buf == NULL));
 
 	for (size_t i = 0; i < num_samples; ++i)
 	{
-		uint16_t sample;
-		if (fread(&sample, fmt.bits_per_sample / 8, 1, file) != 1)
-			return 32;
+		unsigned char val;
 
-        // scale current data to 8-bit data
-		unsigned char val = sample * scale_val / cur_lim;
-        val = (unsigned char)(val + ((scale_val + 1) / 2)) & scale_val;
+		if (fmt.bits_per_sample == 16)
+		{
+			uint16_t sample;
+			if (fread(&sample, fmt.bits_per_sample / 8, 1, file) != 1)
+				return 32;
 
-		if (i < 25)
-			printf(">>%d --> %u\n", sample, val);
+			// scale current data to 8-bit data
+			unsigned char val = sample * scale_val / cur_lim;
+			val = (unsigned char)(val + ((scale_val + 1) / 2)) & scale_val;
+
+			if (i < 25)
+				printf(">>%d --> %u\n", sample, val);
+		}
+		else
+		{
+			if (fread(&val, fmt.bits_per_sample / 8, 1, file) != 1)
+				return 33;
+			if (i < 25)
+				printf(">>%d\n", val);
+		}
 
 		*p++ = val;
 	}

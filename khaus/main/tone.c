@@ -25,6 +25,7 @@ static EventGroupHandle_t x_events;
 static int m_bell_num = 0;
 static uint8_t* m_bell = NULL;
 static size_t m_bell_len = 0;
+static int m_bell_volume = 75;
 
 
 static bool read_file();
@@ -181,9 +182,11 @@ size_t example_i2s_dac_data_scale(uint8_t* d_buff, uint8_t* s_buff, size_t len)
 {
 	uint32_t j = 0;
 #if (EXAMPLE_I2S_SAMPLE_BITS == 16)
-	for (size_t i = 0; i < len; i++) {
+	for (size_t i = 0; i < len; i++)
+	{
+		uint8_t val = s_buff[i] * m_bell_volume / 100;
 		d_buff[j++] = 0;
-		d_buff[j++] = s_buff[i];
+		d_buff[j++] = val;
 	}
 	return (len * 2);
 #else
@@ -396,6 +399,9 @@ void tone_bell()
 
 bool tone_set(int num)
 {
+	if (num == m_bell_num)
+		return true;
+
 	m_bell_num = num;
 
 	bool ok = read_file();
@@ -413,4 +419,17 @@ bool tone_set(int num)
 int tone_get()
 {
 	return m_bell_num;
+}
+
+
+void tone_set_volume_p(int level)
+{
+	if (level >= 0 && level <= 100)
+		m_bell_volume = level;
+}
+
+
+int tone_get_volume_p()
+{
+	return m_bell_volume;
 }
