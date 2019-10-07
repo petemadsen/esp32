@@ -14,6 +14,7 @@
 
 #include "esp_spiffs.h"
 #include "esp_log.h"
+#include "read_wav.h"
 
 
 extern uint32_t g_boot_count;
@@ -36,6 +37,7 @@ static esp_err_t settings_set_handler(httpd_req_t* req);
 
 static const char* RET_OK = "OK";
 static const char* RET_ERR = "ERR";
+static const char* RET_ERR_SIZE = "ERR_SIZE";
 
 
 static httpd_uri_t basic_handlers[] = {
@@ -85,6 +87,9 @@ static httpd_uri_t basic_handlers[] = {
 		.handler= settings_set_handler,
 	}
 };
+
+
+static bool save_to_file(const char* filename, const char* buf, size_t buf_len);
 
 
 httpd_handle_t http_start()
@@ -322,8 +327,9 @@ esp_err_t bell_handler(httpd_req_t* req)
 
 esp_err_t bell_upload_handler(httpd_req_t* req)
 {
+	int ret = 0;
 	size_t len = req->content_len;
-	char buf[100];
+	ESP_LOGE(MY_TAG, "bell-upload-handler: %d", (int)len);
 
 	int name = -1;
 	if (!get_int(req, &name))
@@ -333,61 +339,50 @@ esp_err_t bell_upload_handler(httpd_req_t* req)
 	}
 	ESP_LOGE(MY_TAG, "Name: %d", name);
 
-	ESP_LOGE(MY_TAG, "bell-upload-handler: %d", (int)len);
-	// -- open
-	esp_vfs_spiffs_conf_t conf = {
-			.base_path = "/spiffs",
-			.partition_label = NULL,
-			.max_files = 5,
-			.format_if_mount_failed = false
-	};
-	esp_err_t ret = esp_vfs_spiffs_register(&conf);
-	if (ret != ESP_OK)
+	// -- receive file into a string
+	char* buf = malloc(len);
+	if (!buf)
 	{
-		if (ret == ESP_FAIL)
-			ESP_LOGE(MY_TAG, "Failed to mount or format filesystem");
-		else if (ret == ESP_ERR_NOT_FOUND)
-			ESP_LOGE(MY_TAG, "Failed to find SPIFFS partition");
-		else
-			ESP_LOGE(MY_TAG, "Failed to initialize SPIFFS (%s)", esp_err_to_name(ret));
-
-		httpd_resp_send(req, RET_ERR, strlen(RET_ERR));
+		httpd_resp_send(req, RET_ERR_SIZE, strlen(RET_ERR_SIZE));
 		return ESP_OK;
 	}
 
-	// -- info
-	size_t total = 0, used = 0;
-	ret = esp_spiffs_info(NULL, &total, &used);
-	if (ret != ESP_OK)
-		ESP_LOGE(MY_TAG, "Failed to get SPIFFS partition information (%s)", esp_err_to_name(ret));
-	else
-		ESP_LOGI(MY_TAG, "Partition size: total: %d, used: %d", total, used);
-
-	// -- open/receive
-	char filename[40];
-	sprintf(filename, "/spiffs/bell%d.wav", name);
-	FILE* file = fopen(filename, "w");
+	char* p = buf;
 	while (len > 0)
 	{
-		int ret = httpd_req_recv(req, buf, MIN(len, sizeof(buf)));
-		if (ret <= 0)
+		int rcv = httpd_req_recv(req, p, len);
+		if (rcv <= 0)
 		{
-			if (ret == HTTPD_SOCK_ERR_TIMEOUT)
+			if (rcv == HTTPD_SOCK_ERR_TIMEOUT)
 				continue;
 
-			esp_vfs_spiffs_unregister(NULL);
+			free(buf);
 			httpd_resp_send(req, RET_ERR, strlen(RET_ERR));
 			return ESP_FAIL;
 		}
 
-		fwrite(buf, sizeof(char), ret, file);
-		len -= ret;
+//		fwrite(buf, sizeof(char), ret, file);
+		len -= rcv;
+		p += rcv;
 	}
-	fclose(file);
 
-	esp_vfs_spiffs_unregister(NULL);
+	// -- check file
+	ret = read_wav_check(buf, len);
+	if (ret != 0)
+	{
+		char filename[40];
+		sprintf(filename, "/spiffs/bell%d.wav", name);
+		if(!save_to_file(filename, buf, len))
+			ret = RET_ERR;
+	}
 
-	httpd_resp_send(req, RET_OK, strlen(RET_OK));
+	// -- reply
+	ESP_LOGE(MY_TAG, "WAV file: %d", ret);
+
+	int buf_len = sprintf(buf, "%d", ret);
+	httpd_resp_send(req, buf, buf_len);
+
+	free(buf);
 	return ESP_OK;
 }
 
@@ -436,3 +431,54 @@ esp_err_t volume_handler(httpd_req_t* req)
 	return ESP_OK;
 }
 
+
+bool save_to_file(const char* filename, const char* buf, size_t buf_len)
+{
+	bool ret = false;
+
+	// -- write file to disc
+	esp_vfs_spiffs_conf_t conf = {
+			.base_path = "/spiffs",
+			.partition_label = NULL,
+			.max_files = 2,
+			.format_if_mount_failed = false
+	};
+	esp_err_t err = esp_vfs_spiffs_register(&conf);
+	if (err != ESP_OK)
+	{
+		if (err == ESP_FAIL)
+			ESP_LOGE(MY_TAG, "Failed to mount or format filesystem");
+		else if (err == ESP_ERR_NOT_FOUND)
+			ESP_LOGE(MY_TAG, "Failed to find SPIFFS partition");
+		else
+			ESP_LOGE(MY_TAG, "Failed to initialize SPIFFS (%s)", esp_err_to_name(ret));
+
+		return false;
+	}
+
+	// -- info
+	size_t total = 0, used = 0;
+	ret = esp_spiffs_info(NULL, &total, &used);
+	if (ret != ESP_OK)
+		ESP_LOGE(MY_TAG, "Failed to get SPIFFS partition information (%s)", esp_err_to_name(ret));
+	else
+		ESP_LOGI(MY_TAG, "Partition size: total: %d, used: %d", total, used);
+
+	// -- write
+	FILE* file = fopen(filename, "w");
+	if (file)
+	{
+		unsigned long len = fwrite(buf, sizeof(char), buf_len, file);
+		if (len == buf_len)
+			ret = true;
+		fclose(file);
+	}
+	else
+	{
+		ESP_LOGE(MY_TAG, "Could not open file for writing.");
+		ret = false;
+	}
+
+	esp_vfs_spiffs_unregister(NULL);
+	return ret;
+}

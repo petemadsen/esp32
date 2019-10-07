@@ -15,4 +15,7 @@
 unsigned char* read_wav(FILE* file, size_t* len);
 
 
+int read_wav_check(const char* buf, size_t buflen);
+
+
 #endif

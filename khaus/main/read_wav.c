@@ -12,7 +12,8 @@
 #include "common.h"
 
 
-struct wav_header
+// 12 bytes
+struct __attribute__((__packed__)) wav_header
 {
 	char riff[4];
 	uint32_t filelen;
@@ -20,7 +21,8 @@ struct wav_header
 };
 
 
-struct wav_fmt
+// 24 bytes
+struct __attribute__((__packed__)) wav_fmt
 {
 	char fmt[4];
 	uint32_t len;
@@ -32,10 +34,19 @@ struct wav_fmt
 	uint16_t bits_per_sample;
 };
 
-struct wav_data
+// 8 bytes
+struct __attribute__((__packed__)) wav_data
 {
 	char data[4];
 	uint32_t len;
+};
+
+// 44 bytes
+struct __attribute__((__packed__)) wav_all_headers
+{
+	struct wav_header hdr;
+	struct wav_fmt fmt;
+	struct wav_data data;
 };
 
 
@@ -64,6 +75,14 @@ static int read_from_file(FILE* file, unsigned char** buf, size_t* len)
 	rewind(file);
 	printf("--file size: %ld\n", file_len);
 
+	struct wav_all_headers hdr;
+	if (fread(&hdr, sizeof(char), 44, file) != 44)
+		return 10;
+	int wav = read_wav_check(&hdr, file_len);
+	if (wav)
+		return wav;
+
+#if 0
 	// -- header
 	struct wav_header hdr;
 	if (fread(&hdr, sizeof(char), 12, file) != 12)
@@ -105,12 +124,13 @@ static int read_from_file(FILE* file, unsigned char** buf, size_t* len)
 	printf("\n");
 	printf("--%c%c%c%c\n", data.data[0], data.data[1], data.data[2], data.data[3]);
 	printf("--data len.....: %u\n", data.len);
+#endif
 
 	const int target_bits = 8;
-	const int sampwidth = fmt.bits_per_sample;
+	const int sampwidth = hdr.fmt.bits_per_sample;
 	int scale_val = (1 << target_bits) - 1;
 	int cur_lim   = (1 << sampwidth) - 1;
-	size_t num_samples = data.len / (fmt.bits_per_sample / 8);
+	size_t num_samples = hdr.data.len / (hdr.fmt.bits_per_sample / 8);
 
 	*len = num_samples;
 	*buf = malloc(num_samples);
@@ -123,10 +143,10 @@ static int read_from_file(FILE* file, unsigned char** buf, size_t* len)
 	{
 		unsigned char val;
 
-		if (fmt.bits_per_sample == 16)
+		if (hdr.fmt.bits_per_sample == 16)
 		{
 			uint16_t sample;
-			if (fread(&sample, fmt.bits_per_sample / 8, 1, file) != 1)
+			if (fread(&sample, hdr.fmt.bits_per_sample / 8, 1, file) != 1)
 				return 32;
 
 			// scale current data to 8-bit data
@@ -138,7 +158,7 @@ static int read_from_file(FILE* file, unsigned char** buf, size_t* len)
 		}
 		else
 		{
-			if (fread(&val, fmt.bits_per_sample / 8, 1, file) != 1)
+			if (fread(&val, hdr.fmt.bits_per_sample / 8, 1, file) != 1)
 				return 33;
 			if (i < 25)
 				printf(">>%d\n", val);
@@ -149,4 +169,48 @@ static int read_from_file(FILE* file, unsigned char** buf, size_t* len)
 
 	fclose(file);
 	return 0;
+}
+
+
+int read_wav_check(const char* buf, size_t buflen)
+{
+	if (buflen < 44)
+		return false;
+
+	struct wav_all_headers* hdr = (struct wav_all_headers*)buf;
+
+	// -- header
+	if (strncmp(hdr->hdr.riff, "RIFF", 4) != 0)
+		return 11;
+	if (buflen != hdr->hdr.filelen + 8)
+		return 12;
+	if (strncmp(hdr->hdr.wav, "WAVE", 4) != 0)
+		return 13;
+	printf("--%c%c%c%c\n", hdr->hdr.riff[0], hdr->hdr.riff[1], hdr->hdr.riff[2], hdr->hdr.riff[3]);
+	printf("--%u\n", hdr->hdr.filelen);
+	printf("--%c%c%c%c\n", hdr->hdr.wav[0], hdr->hdr.wav[1], hdr->hdr.wav[2], hdr->hdr.wav[3]);
+
+	// -- fmt
+	if (strncmp(hdr->fmt.fmt, "fmt ", 4) != 0)
+		return 21;
+	printf("\n");
+	printf("--%c%c%c%c\n", hdr->fmt.fmt[0], hdr->fmt.fmt[1], hdr->fmt.fmt[2], hdr->fmt.fmt[3]);
+	printf("--fmt len......: %u\n", hdr->fmt.len); // 16 bytes
+	printf("--fmt tag......: 0x%x (pcm: %d)\n", hdr->fmt.fmttag, hdr->fmt.fmttag==1);
+	printf("--nr channels..: %u\n", hdr->fmt.channels);
+	printf("--sample rate..: %u\n", hdr->fmt.samplerate);
+	printf("--bytes/sec....: %u\n", hdr->fmt.bytes_per_second);
+	printf("--block align..: %u\n", hdr->fmt.block_align);
+	printf("--bits/sample..: %u\n", hdr->fmt.bits_per_sample);
+	if (hdr->fmt.bits_per_sample != 16 && hdr->fmt.bits_per_sample != 8)
+		return 22;
+
+	// -- data
+	if (strncmp(hdr->data.data, "data", 4) != 0)
+		return 31;
+	printf("\n");
+	printf("--%c%c%c%c\n", hdr->data.data[0], hdr->data.data[1], hdr->data.data[2], hdr->data.data[3]);
+	printf("--data len.....: %u\n", hdr->data.len);
+
+	return true;
 }
