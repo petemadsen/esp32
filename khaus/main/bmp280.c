@@ -15,9 +15,9 @@
 static const char* MY_TAG = "khaus/bmp280";
 
 
-uint8_t m_i2c_read8(uint8_t addr, uint8_t reg);
-uint16_t m_i2c_read16(uint8_t addr, uint8_t reg);
-uint32_t m_i2c_read24(uint8_t addr, uint8_t reg);
+static uint8_t m_i2c_read8(uint8_t addr, uint8_t reg);
+static uint16_t m_i2c_read16(uint8_t addr, uint8_t reg);
+static uint32_t m_i2c_read24(uint8_t addr, uint8_t reg);
 
 
 static float m_last_value = 666.666f;
@@ -50,7 +50,9 @@ static void bmp280_task()
 	for (;;)
 	{
 		ESP_LOGI(MY_TAG, "Scanning...");
+		i2c_begin();
 		esp_err_t ret = i2c_master_scan(addr);
+		i2c_end();
 		if (ret != ESP_OK)
 		{
 			ESP_LOGE(MY_TAG, "NOT FOUND: 0x%x", addr);
@@ -59,7 +61,9 @@ static void bmp280_task()
 		}
 
 		// get id
+		i2c_begin();
 		uint8_t id = m_i2c_read8(addr, 0xd0);
+		i2c_end();
 		ESP_LOGI(MY_TAG, "Device ID: 0x%x", (int)id);
 		if (id != 0x58)
 		{
@@ -69,6 +73,7 @@ static void bmp280_task()
 		}
 
 		ESP_LOGI(MY_TAG, "Reading calib data...");
+		i2c_begin();
 		cdata.dig_T1 = m_i2c_read16(addr, 0x88);
 		cdata.dig_T2 = (int16_t)m_i2c_read16(addr, 0x8a);
 		cdata.dig_T3 = (int16_t)m_i2c_read16(addr, 0x8c);
@@ -81,6 +86,7 @@ static void bmp280_task()
 		cdata.dig_P7 = (int16_t)m_i2c_read16(addr, 0x9a);
 		cdata.dig_P8 = (int16_t)m_i2c_read16(addr, 0x9c);
 		cdata.dig_P9 = (int16_t)m_i2c_read16(addr, 0x9e);
+		i2c_end();
 
 		ESP_LOGI(MY_TAG, "T1: 0x%x", cdata.dig_T1);
 		ESP_LOGI(MY_TAG, "T2: 0x%x", cdata.dig_T2);
@@ -90,22 +96,28 @@ static void bmp280_task()
 		ESP_LOGI(MY_TAG, "Setting settings...");
 		bytes[0] = 0xf4;
 		bytes[1] = 0x37;
+		i2c_begin();
 		i2c_master_write_slave(addr, bytes, 2);
+		i2c_end();
 
 		for (;;)
 		{
 			if (false) {
 				uint8_t a = 0xfa;
+				i2c_begin();
 				uint8_t b1 = m_i2c_read8(addr, a+0);
 				uint8_t b2 = m_i2c_read8(addr, a+1);
 				uint8_t b3 = m_i2c_read8(addr, a+2);
 				uint32_t d = m_i2c_read24(addr, a);
+				i2c_end();
 				ESP_LOGI(MY_TAG, " [ 0x%x | 0x%x | 0x%x | 0x%x ] ", b1, b2, b3, d);
 			}
 
 			// https://cdn-shop.adafruit.com/datasheets/BST-BMP280-DS001-11.pdf
 			// Compensation formula in 32 bit fixed point
+			i2c_begin();
 			int32_t adc_T = (int32_t)m_i2c_read24(addr, 0xfa);
+			i2c_end();
 			ESP_LOGI(MY_TAG, "=>raw=>0x%x", adc_T);
 			adc_T >>= 4;
 

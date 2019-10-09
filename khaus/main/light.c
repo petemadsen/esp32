@@ -58,9 +58,6 @@ void light_btn_task(void* arg)
 				pdFALSE,	// any single bit will do
 				100 /*portMAX_DELAY*/);
 
-		TickType_t diff = xTaskGetTickCount() - last_run;
-		bool ok_to_run = (diff > BTN_DEBOUNCE_DIFF);
-
 		if (bits & LIGHT_ON)
 		{
 			ESP_LOGI(MY_TAG, "light-on");
@@ -73,7 +70,8 @@ void light_btn_task(void* arg)
 		}
 		else if (bits & LIGHT_TOGGLE)
 		{
-			if (ok_to_run)
+			TickType_t diff = xTaskGetTickCount() - last_run;
+			if (diff > BTN_DEBOUNCE_DIFF)
 			{
 				last_run = xTaskGetTickCount();
 				ESP_LOGI(MY_TAG, "light-toggle");
@@ -81,8 +79,6 @@ void light_btn_task(void* arg)
 			}
 		}
 	}
-
-	vTaskDelete(NULL);
 }
 
 

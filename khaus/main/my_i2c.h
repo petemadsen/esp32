@@ -7,10 +7,17 @@
 #include <driver/i2c.h>
 
 
-void i2c_master_init();
+esp_err_t i2c_master_init();
+
+// use these function to guard your calls
+void i2c_begin();
+void i2c_end();
+
+// use these function in your job
 esp_err_t i2c_master_scan(i2c_port_t addr);
 esp_err_t i2c_master_write_slave(uint8_t addr, uint8_t* data_wr, size_t size);
 esp_err_t i2c_master_read_slave(i2c_port_t addr, uint8_t* data_rd, size_t size);
+
 
 
 #endif

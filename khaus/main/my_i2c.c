@@ -3,6 +3,8 @@
  */
 #include "my_i2c.h"
 
+#include <freertos/semphr.h>
+
 #include <driver/i2c.h>
 
 #define READ_BIT I2C_MASTER_READ /*!< I2C master read */
@@ -16,8 +18,13 @@
 #define I2C_SCL_PIN	GPIO_NUM_22
 
 
-void i2c_master_init()
+static SemaphoreHandle_t mSemaphore;
+
+
+esp_err_t i2c_master_init()
 {
+	mSemaphore = xSemaphoreCreateMutex();
+
     i2c_config_t conf;
     conf.mode = I2C_MODE_MASTER;
 	conf.sda_io_num = I2C_SDA_PIN;
@@ -27,7 +34,7 @@ void i2c_master_init()
     conf.master.clk_speed = I2C_MASTER_FREQ_HZ;
     i2c_param_config(I2C_MASTER_NUM, &conf);
 
-	ESP_ERROR_CHECK(i2c_driver_install(I2C_MASTER_NUM, conf.mode, 0, 0, 0));
+	return i2c_driver_install(I2C_MASTER_NUM, conf.mode, 0, 0, 0);
 }
 
 
@@ -92,4 +99,15 @@ esp_err_t i2c_master_scan(i2c_port_t addr)
 	i2c_cmd_link_delete(cmd);
 
 	return ret;
+}
+
+
+void i2c_begin()
+{
+	xSemaphoreTake(mSemaphore, portMAX_DELAY);
+}
+
+void i2c_end()
+{
+	xSemaphoreGive(mSemaphore);
 }
