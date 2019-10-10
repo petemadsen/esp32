@@ -61,7 +61,9 @@ void my_sensors_task(void* args)
 			bmp280_init(&out_temp);
 		}
 
-		m_out_humidity = dht12_get(PROJECT_I2C_OUT_DHT12);
+		int ret = dht12_get(PROJECT_I2C_OUT_DHT12, NULL, &m_out_humidity);
+		if (ret != 0)
+			ESP_LOGE(MY_TAG, "DHT12: error %d", ret);
 
 		// -- 60 secs
 		vTaskDelay(60 * 1000 / portTICK_PERIOD_MS );

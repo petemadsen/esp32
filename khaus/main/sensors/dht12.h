@@ -7,7 +7,7 @@
 #include <freertos/FreeRTOS.h>
 
 
-double dht12_get(uint8_t addr);
+int dht12_get(uint8_t addr, double* temp, double* humidity);
 
 
 #endif
