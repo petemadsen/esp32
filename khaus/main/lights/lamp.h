@@ -8,22 +8,12 @@
 #include <freertos/FreeRTOS.h>
 
 
-void lamp_btn_task(void* arg);
+void lamp_init(uint8_t relay_pin);
 
+void lamp_set_relay(bool on);
 
-void lamp_toggle();
+int lamp_get_relay(void);
 
-
-void lamp_off();
-
-
-void lamp_on();
-
-
-int lamp_status();
-
-
-int64_t lamp_on_secs();
-
+int64_t lamp_get_on_time();
 
 #endif

@@ -1,129 +1,49 @@
 /**
  * This code is public domain.
  */
-#include <freertos/FreeRTOS.h>
-#include <freertos/task.h>
-#include <freertos/event_groups.h>
-#include <freertos/semphr.h>
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <math.h>
-
-#include <esp_log.h>
 #include <driver/gpio.h>
 
 #include "sdkconfig.h"
 
 #include "lamp.h"
-#include "../common.h"
 
 
-
-static const char* MY_TAG = "khaus/lamp";
-
-
-static bool relay_on = false;
-static int64_t relay_on_at = 0; // time in secs from boot when relay was turned on
+static bool m_relay_on = false;
+static int64_t m_relay_on_at = 0; // time in secs from boot when relay was turned on
+static uint8_t m_relay_pin = 0;
 
 
-static void set_relay(bool on);
-
-static EventGroupHandle_t xLightEvents;
-#define LIGHT_OFF		(1 << 0)
-#define LIGHT_ON		(1 << 1)
-#define LIGHT_TOGGLE	(1 << 2)
-
-
-#define BTN_DEBOUNCE_DIFF	50
-
-
-void lamp_btn_task(void* arg)
+void lamp_init(uint8_t relay_pin)
 {
-	xLightEvents = xEventGroupCreate();
+	m_relay_pin = relay_pin;
 
-	gpio_pad_select_gpio(PROJECT_LIGHT_RELAY_PIN);
-	gpio_set_direction(PROJECT_LIGHT_RELAY_PIN, GPIO_MODE_OUTPUT);
+	gpio_pad_select_gpio(m_relay_pin);
+	gpio_set_direction(m_relay_pin, GPIO_MODE_OUTPUT);
 
-	TickType_t last_run = xTaskGetTickCount();
-	lamp_off();
-
-	for (;;)
-	{
-		EventBits_t bits = xEventGroupWaitBits(
-				xLightEvents,
-				LIGHT_ON | LIGHT_OFF | LIGHT_TOGGLE,
-				pdTRUE,		// auto clear
-				pdFALSE,	// any single bit will do
-				100 /*portMAX_DELAY*/);
-
-		if (bits & LIGHT_ON)
-		{
-			ESP_LOGI(MY_TAG, "lamp-on");
-			set_relay(true);
-		}
-		else if (bits & LIGHT_OFF)
-		{
-			ESP_LOGI(MY_TAG, "lamp-off");
-			set_relay(false);
-		}
-		else if (bits & LIGHT_TOGGLE)
-		{
-			TickType_t diff = xTaskGetTickCount() - last_run;
-			if (diff > BTN_DEBOUNCE_DIFF)
-			{
-				last_run = xTaskGetTickCount();
-				ESP_LOGI(MY_TAG, "lamp-toggle");
-				set_relay(!relay_on);
-			}
-		}
-	}
+	lamp_set_relay(false);
 }
 
 
-void set_relay(bool on)
+void lamp_set_relay(bool on)
 {
-	relay_on = on;
+	m_relay_on = on;
 
-	if (relay_on)
-		relay_on_at = esp_timer_get_time() / 1000 / 1000;
+	if (m_relay_on)
+		m_relay_on_at = esp_timer_get_time() / 1000 / 1000;
 	else
-		relay_on_at = 0;
+		m_relay_on_at = 0;
 
-	gpio_set_level(PROJECT_LIGHT_RELAY_PIN, relay_on);
+	gpio_set_level(m_relay_pin, m_relay_on);
 }
 
 
-void lamp_on()
+int lamp_get_relay()
 {
-	xEventGroupSetBits(xLightEvents, LIGHT_ON);
+	return m_relay_on;
 }
 
 
-int64_t lamp_on_secs()
+int64_t lamp_get_on_time()
 {
-	if (relay_on_at == 0)
-		return 0;
-
-	int64_t now = esp_timer_get_time() / 1000 / 1000;
-	return now - relay_on_at;
-}
-
-
-void lamp_off()
-{
-	xEventGroupSetBits(xLightEvents, LIGHT_OFF);
-}
-
-
-void lamp_toggle()
-{
-	xEventGroupSetBits(xLightEvents, LIGHT_TOGGLE);
-}
-
-
-int lamp_status()
-{
-	return relay_on;
+	return m_relay_on_at;
 }
