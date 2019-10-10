@@ -15,8 +15,7 @@
 #include "my_sleep.h"
 #include "my_settings.h"
 #include "my_i2c.h"
-#include "bmp280.h"
-#include "voltage.h"
+#include "my_sensors.h"
 
 
 RTC_DATA_ATTR uint32_t g_boot_count = 0;
@@ -38,9 +37,7 @@ void app_main()
 
 	i2c_master_init();
 
-	xTaskCreate(bmp280_task, "bmp280_task", 2048, NULL, 5, NULL);
-
-	xTaskCreate(voltage_task, "voltage_task", 2048, NULL, 5, NULL);
+	xTaskCreate(my_sensors_task, "sensors_task", 4096, NULL, 5, NULL);
 
     xTaskCreate(light_btn_task, "light_btn_task", 2048, NULL, 5, NULL);
 

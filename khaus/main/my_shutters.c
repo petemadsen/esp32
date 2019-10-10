@@ -13,8 +13,7 @@
 #include <string.h>
 
 #include "wifi.h"
-#include "bmp280.h"
-#include "voltage.h"
+#include "my_sensors.h"
 #include "light.h"
 #include "common.h"
 #include "ota.h"
@@ -122,8 +121,8 @@ void shutters_task(void* pvParameters)
 									 "&board_voltage=%.2f"
 									 "&out_temp=%.2f"
 									 "&light=%d",
-									 bmp280_get_temp(),
-									 voltage_get(),
+									 my_sensors_board_temp(),
+									 my_sensors_board_voltage(),
 									 -1.0,
 									 light_status());
 

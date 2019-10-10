@@ -5,8 +5,7 @@
 #include "light.h"
 #include "tone.h"
 #include "ota.h"
-#include "bmp280.h"
-#include "voltage.h"
+#include "my_sensors.h"
 #include "common.h"
 #include "my_settings.h"
 
@@ -165,8 +164,8 @@ esp_err_t status_handler(httpd_req_t* req)
 						  g_boot_count,
 						  uptime,
 						  timeinfo.tm_hour, timeinfo.tm_min,
-						  bmp280_get_temp(),
-						  voltage_get());
+						  my_sensors_board_temp(),
+						  my_sensors_board_voltage());
 	httpd_resp_send(req, buf, buflen);
 
 	free(buf);

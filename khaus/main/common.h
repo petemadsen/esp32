@@ -26,7 +26,9 @@
 #define PROJECT_VOLTAGE_PIN			ADC1_GPIO34_CHANNEL
 
 
-#define PROJECT_I2C_BOARD_TEMP	0x76
+#define PROJECT_I2C_BOARD_BMP280	0x77 // FIXME: need to change
+#define PROJECT_I2C_OUT_BMP280		0x76
+#define PROJECT_I2C_OUT_DHT12		0x5c
 
 //
 #define MIN(a, b) \

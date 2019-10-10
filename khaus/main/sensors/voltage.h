@@ -5,7 +5,10 @@
 #define PROJECT_VOLTAGE_H
 
 
-void voltage_task(void* args);
+#include <esp_adc_cal.h>
+
+
+void voltage_init(adc1_channel_t);
 
 
 double voltage_get(void);
