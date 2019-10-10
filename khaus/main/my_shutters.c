@@ -14,7 +14,7 @@
 
 #include "wifi.h"
 #include "my_sensors.h"
-#include "light.h"
+#include "my_lights.h"
 #include "common.h"
 #include "ota.h"
 #include "my_settings.h"
@@ -124,7 +124,7 @@ void shutters_task(void* pvParameters)
 									 my_sensors_board_temp(),
 									 my_sensors_board_voltage(),
 									 -1.0,
-									 light_status());
+									 lamp_status());
 
 		esp_http_client_set_url(client, save_url);
 		esp_http_client_set_method(client, HTTP_METHOD_POST);

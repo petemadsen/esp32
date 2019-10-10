@@ -9,13 +9,13 @@
 #include "buttons.h"
 #include "wifi.h"
 #include "tone.h"
-#include "light.h"
 #include "my_shutters.h"
 #include "ota.h"
 #include "my_sleep.h"
 #include "my_settings.h"
 #include "my_i2c.h"
 #include "my_sensors.h"
+#include "my_lights.h"
 
 
 RTC_DATA_ATTR uint32_t g_boot_count = 0;
@@ -39,7 +39,7 @@ void app_main()
 
 	xTaskCreate(my_sensors_task, "sensors_task", 4096, NULL, 5, NULL);
 
-    xTaskCreate(light_btn_task, "light_btn_task", 2048, NULL, 5, NULL);
+	xTaskCreate(my_lights_task, "lights_task", 4096, NULL, 5, NULL);
 
 	xTaskCreate(shutters_task, "shutters_task", 4096, NULL, 5, NULL);
 

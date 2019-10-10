@@ -10,9 +10,9 @@ set(COMPONENT_SRCS
 	${HEADERS}
 	main.c
 	buttons.c
-	light.c
 	my_http.c
 	my_i2c.c
+	my_lights.c
 	my_sensors.c
 	my_settings.c
 	my_shutters.c
@@ -24,6 +24,8 @@ set(COMPONENT_SRCS
 	sensors/bmp280.c
 	sensors/voltage.c
 	sensors/dht12.c
+	lights/lamp.c
+	lights/ws2812b.c
 )
 
 register_component()

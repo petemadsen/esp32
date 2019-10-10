@@ -2,10 +2,10 @@
  * This code is public domain.
  */
 #include "my_http.h"
-#include "light.h"
 #include "tone.h"
 #include "ota.h"
 #include "my_sensors.h"
+#include "my_lights.h"
 #include "common.h"
 #include "my_settings.h"
 
@@ -158,8 +158,8 @@ esp_err_t status_handler(httpd_req_t* req)
 						  " board_voltage %.2f",
 						  PROJECT_VERSION,
 						  PROJECT_NAME,
-						  light_status(),
-						  light_on_secs(),
+						  lamp_status(),
+						  lamp_on_secs(),
 						  esp_get_free_heap_size(),
 						  g_boot_count,
 						  uptime,
@@ -281,15 +281,15 @@ esp_err_t light_handler(httpd_req_t* req)
 	if (get_int(req, &onoff) && (onoff==0 || onoff==1))
 	{
 		if (onoff == 1)
-			light_on();
+			lamp_on();
 		else
-			light_off();
+			lamp_off();
 		ret = RET_OK;
 	}
 	else
 	{
 		char* buf = malloc(20);
-		int buf_len = sprintf(buf, "%d", light_status());
+		int buf_len = sprintf(buf, "%d", lamp_status());
 		httpd_resp_send(req, buf, buf_len);
 		free(buf);
 		return ESP_OK;

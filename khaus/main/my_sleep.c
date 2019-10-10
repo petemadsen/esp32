@@ -11,7 +11,7 @@
 
 #include "wifi.h"
 #include "my_settings.h"
-#include "light.h"
+#include "my_lights.h"
 
 
 static const char* MY_TAG = "khaus/sleep";
@@ -94,9 +94,9 @@ void my_sleep_task(void* arg)
 		}
 
 		// turn off the lights
-		if (light_on_secs() > lights_off_mins * 60)
+		if (lamp_on_secs() > lights_off_mins * 60)
 		{
-			light_off();
+			lamp_off();
 		}
 
 		// -- wait 60 secs

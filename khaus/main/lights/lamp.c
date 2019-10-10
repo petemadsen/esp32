@@ -16,12 +16,12 @@
 
 #include "sdkconfig.h"
 
-#include "light.h"
-#include "common.h"
+#include "lamp.h"
+#include "../common.h"
 
 
 
-static const char* MY_TAG = "khaus/light";
+static const char* MY_TAG = "khaus/lamp";
 
 
 static bool relay_on = false;
@@ -39,7 +39,7 @@ static EventGroupHandle_t xLightEvents;
 #define BTN_DEBOUNCE_DIFF	50
 
 
-void light_btn_task(void* arg)
+void lamp_btn_task(void* arg)
 {
 	xLightEvents = xEventGroupCreate();
 
@@ -47,7 +47,7 @@ void light_btn_task(void* arg)
 	gpio_set_direction(PROJECT_LIGHT_RELAY_PIN, GPIO_MODE_OUTPUT);
 
 	TickType_t last_run = xTaskGetTickCount();
-	light_off();
+	lamp_off();
 
 	for (;;)
 	{
@@ -60,12 +60,12 @@ void light_btn_task(void* arg)
 
 		if (bits & LIGHT_ON)
 		{
-			ESP_LOGI(MY_TAG, "light-on");
+			ESP_LOGI(MY_TAG, "lamp-on");
 			set_relay(true);
 		}
 		else if (bits & LIGHT_OFF)
 		{
-			ESP_LOGI(MY_TAG, "light-off");
+			ESP_LOGI(MY_TAG, "lamp-off");
 			set_relay(false);
 		}
 		else if (bits & LIGHT_TOGGLE)
@@ -74,7 +74,7 @@ void light_btn_task(void* arg)
 			if (diff > BTN_DEBOUNCE_DIFF)
 			{
 				last_run = xTaskGetTickCount();
-				ESP_LOGI(MY_TAG, "light-toggle");
+				ESP_LOGI(MY_TAG, "lamp-toggle");
 				set_relay(!relay_on);
 			}
 		}
@@ -95,13 +95,13 @@ void set_relay(bool on)
 }
 
 
-void light_on()
+void lamp_on()
 {
 	xEventGroupSetBits(xLightEvents, LIGHT_ON);
 }
 
 
-int64_t light_on_secs()
+int64_t lamp_on_secs()
 {
 	if (relay_on_at == 0)
 		return 0;
@@ -111,19 +111,19 @@ int64_t light_on_secs()
 }
 
 
-void light_off()
+void lamp_off()
 {
 	xEventGroupSetBits(xLightEvents, LIGHT_OFF);
 }
 
 
-void light_toggle()
+void lamp_toggle()
 {
 	xEventGroupSetBits(xLightEvents, LIGHT_TOGGLE);
 }
 
 
-int light_status()
+int lamp_status()
 {
 	return relay_on;
 }
