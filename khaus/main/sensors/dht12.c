@@ -9,32 +9,32 @@
 int dht12_get(uint8_t addr, double* temp, double* humidity)
 {
 	esp_err_t err;
-	uint8_t datos[5];
+	uint8_t raw[5];
 
 	// read
-	datos[0] = 0;
-	err = i2c_master_write_slave(addr, datos, 1);
+	raw[0] = 0;
+	err = i2c_master_write_slave(addr, raw, 1);
 	if (err != ESP_OK)
 		return 1;
 	vTaskDelay(1 / portTICK_PERIOD_MS);
-	err = i2c_master_read_slave(addr, datos, 5);
+	err = i2c_master_read_slave(addr, raw, 5);
 	if (err != ESP_OK)
 		return 2;
 
 	// check sum
-	if (datos[4] != (datos[0]+datos[1]+datos[2]+datos[3]))
+	if (raw[4] != (raw[0]+raw[1]+raw[2]+raw[3]))
 		return 3;
 
 	// temp
 	if (temp)
 	{
-		*temp = datos[2] + (double)datos[3] / 10.0;
+		*temp = raw[2] + (double)raw[3] / 10.0;
 	}
 
 	// humidity
 	if (humidity)
 	{
-		*humidity = datos[0] + (double)datos[1] / 10.0;
+		*humidity = raw[0] + (double)raw[1] / 10.0;
 	}
 
 	return 0;

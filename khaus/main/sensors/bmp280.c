@@ -84,7 +84,7 @@ double bmp280_get_temp(struct bmp280_device* dev)
 	// https://cdn-shop.adafruit.com/datasheets/BST-BMP280-DS001-11.pdf
 	// Compensation formula in 32 bit fixed point
 	int32_t adc_T = (int32_t)m_i2c_read24(dev->addr, 0xfa);
-	ESP_LOGI(MY_TAG, "=>raw=>0x%x", adc_T);
+//	ESP_LOGI(MY_TAG, "=>raw=>0x%x", adc_T);
 	adc_T >>= 4;
 
 	int32_t var1 = ((((adc_T >> 3) - ((int32_t)dev->cdata.dig_T1 << 1))) *
@@ -98,8 +98,6 @@ double bmp280_get_temp(struct bmp280_device* dev)
 
 	double T = (t_fine * 5 + 128) >> 8;
 	T /= 100.0;
-	ESP_LOGI(MY_TAG, "Temp: %.2f", T);
-	//			return T / 100;
 
 	return T;
 }
