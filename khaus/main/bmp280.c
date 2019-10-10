@@ -20,7 +20,7 @@ static uint16_t m_i2c_read16(uint8_t addr, uint8_t reg);
 static uint32_t m_i2c_read24(uint8_t addr, uint8_t reg);
 
 
-static float m_last_value = 666.666f;
+static double m_last_value = 666.666;
 
 
 typedef struct {
@@ -40,7 +40,7 @@ typedef struct {
 } bmp280_calib_data;
 
 
-static void bmp280_task()
+void bmp280_task(void* args)
 {
 	const uint8_t addr = PROJECT_I2C_BOARD_TEMP;
 	uint8_t bytes[24];
@@ -130,8 +130,8 @@ static void bmp280_task()
 
 			int32_t t_fine = var1 + var2;
 
-			float T = (t_fine * 5 + 128) >> 8;
-			T /= 100.0f;
+			double T = (t_fine * 5 + 128) >> 8;
+			T /= 100.0;
 			ESP_LOGI(MY_TAG, "Temp: %.2f", T);
 //			return T / 100;
 
@@ -140,12 +140,6 @@ static void bmp280_task()
 			vTaskDelay(60000 / portTICK_PERIOD_MS);
 		}
 	}
-}
-
-
-void bmp280_init(void)
-{
-	xTaskCreate(&bmp280_task, "bmp280_task", 2048, NULL, 5, NULL);
 }
 
 
@@ -190,7 +184,7 @@ uint32_t m_i2c_read24(uint8_t addr, uint8_t reg)
 }
 
 
-float bmp280_get_temp()
+double bmp280_get_temp()
 {
 	return m_last_value;
 }

@@ -25,7 +25,7 @@ void app_main()
 {
 	++g_boot_count;
 
-	ESP_ERROR_CHECK(settings_init());
+	ESP_ERROR_CHECK(settings_init())
 
 	ota_init();
 	vTaskDelay(5000 / portTICK_PERIOD_MS);
@@ -38,9 +38,9 @@ void app_main()
 
 	i2c_master_init();
 
-	bmp280_init();
+	xTaskCreate(bmp280_task, "bmp280_task", 2048, NULL, 5, NULL);
 
-	voltage_init();
+	xTaskCreate(voltage_task, "voltage_task", 2048, NULL, 5, NULL);
 
     xTaskCreate(light_btn_task, "light_btn_task", 2048, NULL, 5, NULL);
 

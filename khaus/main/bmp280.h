@@ -5,10 +5,10 @@
 #define PROJECT_BMP280_H
 
 
-void bmp280_init();
+void bmp280_task(void* args);
 
 
-float bmp280_get_temp();
+double bmp280_get_temp(void);
 
 
 #endif
