@@ -35,7 +35,7 @@ static const char* OTA_URL = PROJECT_SHUTTERS_ADDRESS "/ota/" PROJECT_NAME;
 static char m_rcv_buffer[RCV_BUFLEN];
 
 
-static const char* MY_TAG = "khaus/ota";
+static const char* MY_TAG = PROJECT_TAG("ota");
 
 
 esp_err_t ota_init()

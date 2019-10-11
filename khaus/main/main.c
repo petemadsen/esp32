@@ -16,14 +16,11 @@
 #include "my_i2c.h"
 #include "my_sensors.h"
 #include "my_lights.h"
+#include "common.h"
 
-
-RTC_DATA_ATTR uint32_t g_boot_count = 0;
 
 void app_main()
 {
-	++g_boot_count;
-
 	ESP_ERROR_CHECK(settings_init())
 
 	ota_init();

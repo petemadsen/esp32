@@ -7,16 +7,16 @@
 #include <freertos/FreeRTOS.h>
 
 
-esp_err_t ota_init();
+esp_err_t ota_init(void);
 
 /**
  * @brief Marks the factory parition as *boot*.
  * @return NULL on sucess. Error string otherwise.
  */
-const char* ota_reboot();
+const char* ota_reboot(void);
 
 
-bool ota_need_update();
+bool ota_need_update(void);
 
 
 #endif

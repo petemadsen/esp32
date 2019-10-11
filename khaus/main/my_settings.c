@@ -2,6 +2,7 @@
  * This code is public domain.
  */
 #include "my_settings.h"
+#include "common.h"
 
 #include <esp_log.h>
 
@@ -14,7 +15,13 @@
 #define STORAGE	"app"
 
 
-static const char* MY_TAG = "khaus/settings";
+static const char* MY_TAG = PROJECT_TAG("settings");
+
+
+#define SETTING_BOOT_COUNTER "boot_counter"
+
+
+static int32_t m_boot_counter = 1;
 
 
 esp_err_t settings_init()
@@ -28,15 +35,20 @@ esp_err_t settings_init()
 		// non-OTA partition table. This size mismatch may cause NVS
 		// initialization to fail. If this happens, we erase NVS partition
 		// and initialize NVS again.
-		ESP_ERROR_CHECK(nvs_flash_erase());
-		err = nvs_flash_init();
+		ESP_ERROR_CHECK(nvs_flash_erase())
+		ESP_ERROR_CHECK(nvs_flash_init());
 	}
+
+	// boot counter
+	err = settings_get_int32(SETTING_BOOT_COUNTER, &m_boot_counter, true);
+	if (err != ESP_OK)
+		m_boot_counter = -1;
 
 	// Example of nvs_get_stats() to get the number of used entries and free entries:
 	nvs_stats_t nvs_stats;
-	nvs_get_stats(STORAGE, &nvs_stats);
+	err = nvs_get_stats(STORAGE, &nvs_stats);
 	ESP_LOGI(MY_TAG, "UsedEntries %zu FreeEntries %zu AllEntries %zu",
-		   nvs_stats.used_entries, nvs_stats.free_entries, nvs_stats.total_entries);
+			 nvs_stats.used_entries, nvs_stats.free_entries, nvs_stats.total_entries);
 
 	return err;
 }
@@ -189,4 +201,10 @@ esp_err_t settings_set_str(const char* key, const char* val, bool must_exist)
 esp_err_t settings_erase()
 {
 	return nvs_flash_erase();
+}
+
+
+int32_t settings_boot_counter()
+{
+	return m_boot_counter;
 }

@@ -16,10 +16,7 @@
 #include "read_wav.h"
 
 
-extern uint32_t g_boot_count;
-
-static const char* MY_TAG = "khaus/http";
-
+static const char* MY_TAG = PROJECT_TAG("http");
 
 
 
@@ -151,7 +148,7 @@ esp_err_t status_handler(httpd_req_t* req)
 						  " light %d\n"
 						  " light_on_secs %lld\n"
 						  " free-ram %u\n"
-						  " boots %u\n"
+						  " boots %d\n"
 						  " uptime %lld\n"
 						  " time %02d:%02d\n"
 						  " board_temp %.2f\n"
@@ -161,7 +158,7 @@ esp_err_t status_handler(httpd_req_t* req)
 						  lamp_status(),
 						  lamp_on_secs(),
 						  esp_get_free_heap_size(),
-						  g_boot_count,
+						  settings_boot_counter(),
 						  uptime,
 						  timeinfo.tm_hour, timeinfo.tm_min,
 						  my_sensors_board_temp(),
@@ -371,8 +368,8 @@ esp_err_t bell_upload_handler(httpd_req_t* req)
 	{
 		char filename[40];
 		sprintf(filename, "/spiffs/bell%d.wav", name);
-		if(!save_to_file(filename, buf, len))
-			ret = RET_ERR;
+		if (!save_to_file(filename, buf, len))
+			ret = 100;
 	}
 
 	// -- reply

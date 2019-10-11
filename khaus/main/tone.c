@@ -7,7 +7,6 @@
 
 #include <esp_log.h>
 
-#include <driver/rmt.h>
 #include <driver/i2s.h>
 
 #include <esp_spiffs.h>
@@ -17,7 +16,7 @@
 #include "read_wav.h"
 
 
-static const char* MY_TAG = "khaus/note";
+static const char* MY_TAG = PROJECT_TAG("tone");
 
 static EventGroupHandle_t x_events;
 #define EVENT_BELL		BIT0
@@ -32,101 +31,6 @@ static bool read_file();
 
 
 #define SETTING_BELL "tone.bell"
-
-
-#define USE_RMT
-#undef USE_RMT
-
-
-#ifdef USE_RMT
-#define RMT_TX_CHANNEL RMT_CHANNEL_0
-#define RMT_TX_GPIO	GPIO_NUM_25 // 13
-
-/*
- * Prepare a raw table with a message in the Morse code
- *
- * The message is "ESP" : . ... .--.
- *
- * The table structure represents the RMT item structure:
- * {duration, level, duration, level}
- *
- */
-static rmt_item32_t items_esp[] = {
-    // E : dot
-    {{{ 32767, 1, 32767, 0 }}}, // dot
-    //
-    {{{ 32767, 0, 32767, 0 }}}, // SPACE
-    // S : dot, dot, dot
-    {{{ 32767, 1, 32767, 0 }}}, // dot
-    {{{ 32767, 1, 32767, 0 }}}, // dot
-    {{{ 32767, 1, 32767, 0 }}}, // dot
-    //
-    {{{ 32767, 0, 32767, 0 }}}, // SPACE
-    // P : dot, dash, dash, dot
-    {{{ 32767, 1, 32767, 0 }}}, // dot
-    {{{ 32767, 1, 32767, 1 }}},
-    {{{ 32767, 1, 32767, 0 }}}, // dash
-    {{{ 32767, 1, 32767, 1 }}},
-    {{{ 32767, 1, 32767, 0 }}}, // dash
-    {{{ 32767, 1, 32767, 0 }}}, // dot
-
-    // RMT end marker
-    {{{ 0, 1, 0, 0 }}}
-};
-
-static rmt_item32_t items_bell[] = {
-	{{{ 32767, 1, 32767, 0 }}}, // dot
-	{{{ 32767, 0, 32767, 0 }}}, // SPACE
-	{{{ 16000, 1, 16000, 0 }}}, // dot
-	{{{ 32767, 0, 32767, 0 }}}, // SPACE
-	{{{ 32767, 1, 32767, 0 }}}, // dot
-	{{{ 32767, 0, 32767, 0 }}}, // SPACE
-
-	// RMT end marker
-	{{{ 0, 1, 0, 0 }}}
-};
-
-
-/*
- * Initialize the RMT Tx channel
- */
-static void rmt_tx_init()
-{
-    rmt_config_t config;
-    config.rmt_mode = RMT_MODE_TX;
-    config.channel = RMT_TX_CHANNEL;
-    config.gpio_num = RMT_TX_GPIO;
-    config.mem_block_num = 1;
-    config.tx_config.loop_en = 0;
-    // enable the carrier to be able to hear the Morse sound
-    // if the RMT_TX_GPIO is connected to a speaker
-    config.tx_config.carrier_en = 1;
-    config.tx_config.idle_output_en = 1;
-    config.tx_config.idle_level = 0;
-    config.tx_config.carrier_duty_percent = 50;
-    // set audible career frequency of 611 Hz
-    // actually 611 Hz is the minimum, that can be set
-    // with current implementation of the RMT API
-    config.tx_config.carrier_freq_hz = 611;
-    config.tx_config.carrier_level = 1;
-    // set the maximum clock divider to be able to output
-    // RMT pulses in range of about one hundred milliseconds
-    config.clk_div = 255;
-
-    ESP_ERROR_CHECK(rmt_config(&config));
-    ESP_ERROR_CHECK(rmt_driver_install(config.channel, 0, 0));
-}
-
-
-static void rmt_play()
-{
-	int number_of_items = sizeof(items_bell) / sizeof(items_bell[0]);
-
-		ESP_LOGI(MY_TAG, "Play bell.");
-		ESP_ERROR_CHECK(rmt_write_items(RMT_TX_CHANNEL, items_bell, number_of_items, true));
-		ESP_LOGI(MY_TAG, "Transmission complete");
-}
-#else
 
 
 #define EXAMPLE_I2S_NUM 0
@@ -234,17 +138,12 @@ static void i2s_play(uint8_t* data, size_t data_len)
 
 	free(i2s_write_buff);
 }
-#endif
 
 
 static void tone_task(void* ignore)
 {
 	ESP_LOGI(MY_TAG, "Configuring transmitter");
-#ifdef USE_RMT
-	rmt_tx_init();
-#else
 	i2s_init();
-#endif
 
 	// -- on/off pin
 	gpio_pad_select_gpio(PROJECT_TONE_ONOFF_PIN);
@@ -265,14 +164,12 @@ static void tone_task(void* ignore)
 		xEventGroupWaitBits(x_events, EVENT_BELL, true, false, portMAX_DELAY);
 
 		gpio_set_level(PROJECT_TONE_ONOFF_PIN, 1);
-#ifdef USE_RMT
-		rmt_play();
-#else
+
 		if (m_bell)
 			i2s_play(m_bell, m_bell_len);
 		else
 			i2s_play(audio_table, sizeof(audio_table));
-#endif
+
 		gpio_set_level(PROJECT_TONE_ONOFF_PIN, 0);
 
 		ESP_LOGI(MY_TAG, "--done");

@@ -24,7 +24,7 @@
 #include "common.h"
 
 
-static const char* MY_TAG = "khaus/wifi";
+static const char* MY_TAG = PROJECT_TAG("wifi");
 
 
 

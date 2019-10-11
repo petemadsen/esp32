@@ -20,7 +20,7 @@
 #include "my_settings.h"
 
 
-static const char* MY_TAG = "khaus/shutters";
+static const char* MY_TAG = PROJECT_TAG("shutters");
 
 
 #define DEFAULT_TOUCH_URL	PROJECT_SHUTTERS_ADDRESS "/khaus/touch"

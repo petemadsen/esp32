@@ -12,9 +12,10 @@
 #include "wifi.h"
 #include "my_settings.h"
 #include "my_lights.h"
+#include "common.h"
 
 
-static const char* MY_TAG = "khaus/sleep";
+static const char* MY_TAG = PROJECT_TAG("sleep");
 
 
 static struct tm timeinfo = { 0 };

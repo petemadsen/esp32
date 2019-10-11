@@ -4,6 +4,8 @@
 #ifndef PROJECT_COMMON_H
 #define PROJECT_COMMON_H
 
+#include <freertos/FreeRTOS.h>
+
 
 #define GEEKWORK_EASY_KIT_C1	1	// has two leds: 0 and 27
 #define GEEKCREIT_DEVKIT_V1		2	// has one led: 2

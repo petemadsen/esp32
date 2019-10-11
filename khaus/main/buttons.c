@@ -15,7 +15,7 @@
 #include "common.h"
 
 
-static const char* MY_TAG = "khaus/buttons";
+static const char* MY_TAG = PROJECT_TAG("buttons");
 
 
 #define BTN_DEBOUNCE_DIFF	50
