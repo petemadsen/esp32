@@ -4,6 +4,9 @@
 set(COMPONENT_REQUIRES )
 set(COMPONENT_PRIV_REQUIRES )
 
-set(COMPONENT_SRCS ./ws2812b.c ./dfplayer.c ./main.c)
+set(COMPONENT_SRCS
+	ws2812b.c
+	main.c
+)
 
 register_component()
