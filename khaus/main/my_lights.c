@@ -20,9 +20,10 @@ static const char* MY_TAG = PROJECT_TAG("my_lights");
 
 
 static EventGroupHandle_t xEvents;
-#define LAMP_OFF	(1 << 0)
-#define LAMP_ON		(1 << 1)
-#define LAMP_TOGGLE	(1 << 2)
+#define LAMP_OFF	1
+#define LAMP_ON		2
+#define LAMP_TOGGLE	4
+#define WS2812B_NEW	8
 
 #define BTN_DEBOUNCE_DIFF	50
 
@@ -35,11 +36,16 @@ void my_lights_task(void* args)
 
 	TickType_t last_run = xTaskGetTickCount();
 
+	struct ws2812b_leds_t leds;
+	leds.num_leds = 10;
+	leds.leds = malloc(sizeof(uint32_t) * leds.num_leds);
+	ws2812b_init(&leds, PROJECT_WS2812B_PIN);
+
 	for (;;)
 	{
 		EventBits_t bits = xEventGroupWaitBits(
 				xEvents,
-				LAMP_ON | LAMP_OFF | LAMP_TOGGLE,
+				LAMP_ON | LAMP_OFF | LAMP_TOGGLE | WS2812B_NEW,
 				pdTRUE,		// auto clear
 				pdFALSE,	// any single bit will do
 				100 /*portMAX_DELAY*/);
@@ -63,6 +69,17 @@ void my_lights_task(void* args)
 				ESP_LOGI(MY_TAG, "lamp-toggle");
 				lamp_set_relay(!lamp_get_relay());
 			}
+		}
+
+		// FIXME
+		uint32_t color = lamp_get_relay() ? 0xff0000 : 0x000000;
+		xSemaphoreTake(leds.sem, portMAX_DELAY);
+		ws2812b_fill(&leds, 0, leds.num_leds, color);
+		xSemaphoreGive(leds.sem);
+
+		if (bits & WS2812B_NEW)
+		{
+//			ws2812b_update();
 		}
 	}
 }

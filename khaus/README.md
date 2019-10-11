@@ -12,10 +12,12 @@
 * Save settings
 * Show blue led if has wifi
 * Switch off the lights after x minutes
+* Support ws2812b
 
 
 ## Pinout
 
+* 17 - ws2812b pin
 * 18 - bell button (external pull-up)
 * 19 - light button (external pull-up)
 * 23 - light transistor
