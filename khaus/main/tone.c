@@ -22,7 +22,7 @@ static EventGroupHandle_t x_events;
 #define EVENT_BELL		BIT0
 
 static int m_bell_num = 0;
-static uint8_t* m_bell = NULL;
+static const uint8_t* m_bell = NULL;
 static size_t m_bell_len = 0;
 static int m_bell_volume = 75;
 
@@ -82,7 +82,7 @@ static void i2s_init()
  *        DAC can only output 8bit data value.
  *        I2S DMA will still send 16 bit or 32bit data, the highest 8bit contains DAC data.
  */
-size_t example_i2s_dac_data_scale(uint8_t* d_buff, uint8_t* s_buff, size_t len)
+size_t example_i2s_dac_data_scale(uint8_t* d_buff, const uint8_t* s_buff, size_t len)
 {
 	uint32_t j = 0;
 #if (EXAMPLE_I2S_SAMPLE_BITS == 16)
@@ -107,7 +107,7 @@ size_t example_i2s_dac_data_scale(uint8_t* d_buff, uint8_t* s_buff, size_t len)
 
 
 #include "audio_example_file.h"
-static void i2s_play(uint8_t* data, size_t data_len)
+static void i2s_play(const uint8_t* data, size_t data_len)
 {
 	size_t i2s_read_len = EXAMPLE_I2S_READ_LEN;
 	size_t bytes_written;
@@ -127,7 +127,7 @@ static void i2s_play(uint8_t* data, size_t data_len)
 	while (offset < tot_size)
 	{
 		size_t play_len = ((tot_size - offset) > (4 * 1024)) ? (4 * 1024) : (tot_size - offset);
-		size_t i2s_wr_len = example_i2s_dac_data_scale(i2s_write_buff, (uint8_t*)(data + offset), play_len);
+		size_t i2s_wr_len = example_i2s_dac_data_scale(i2s_write_buff, (const uint8_t*)(data + offset), play_len);
 		i2s_write(EXAMPLE_I2S_NUM, i2s_write_buff, i2s_wr_len, &bytes_written, portMAX_DELAY);
 		offset += play_len;
 //		example_disp_buf((uint8_t*) i2s_write_buff, 32);
@@ -174,8 +174,6 @@ static void tone_task(void* ignore)
 
 		ESP_LOGI(MY_TAG, "--done");
 	}
-
-    vTaskDelete(NULL);
 }
 
 
@@ -212,69 +210,6 @@ static bool read_file()
 	}
 
 	m_bell = read_wav(file, &m_bell_len);
-
-#if 0
-	// get file len
-	fseek(file, 0L, SEEK_END);
-	long len = ftell(file);
-	rewind(file);
-	ESP_LOGI(MY_TAG, "Loading file with size: %ld", len);
-
-	//
-	if (m_bell)
-		free(m_bell);
-	m_bell = malloc(len);
-	if (!m_bell)
-	{
-		ESP_LOGE(MY_TAG, "Could not allocate memory: %ld", len);
-		fclose(file);
-		return false;
-	}
-	m_bell_len = (size_t)len;
-	ESP_LOGI(MY_TAG, "m_bell is loaded: %d", (m_bell == NULL));
-
-	// read
-	char* p = (char*)m_bell;
-	while (len)
-	{
-		ESP_LOGI(MY_TAG, "Remaining: %ld", len);
-		long read = fread(p, sizeof(char), len, file);
-		ESP_LOGI(MY_TAG, "read: %ld", read);
-		if (read < 0)
-		{
-			ESP_LOGE(MY_TAG, "Could not read file: %ld", read);
-			esp_vfs_spiffs_unregister(NULL);
-			free(m_bell);
-			m_bell = NULL;
-			return false;
-		}
-
-		len -= read;
-		p += read;
-	}
-
-	printf("==\n");
-	bool show_ascii = true;
-	for (size_t i = 0; i < m_bell_len; ++i)
-	{
-		if (show_ascii)
-		{
-			char ch = m_bell[i];
-//			char ch = (m_bell[i] >= 0 && m_bell[i] <= 'z' ? m_bell[i] : '.');
-			printf("%c", ch);
-		}
-		else
-		{
-			printf(" 0x%02x", m_bell[i]);
-			if (i!=0 && (i%8)==0)
-				printf("\n");
-		}
-	}
-	printf("--\n");
-
-	// done
-	fclose(file);
-#endif
 
 	esp_vfs_spiffs_unregister(NULL);
 	return (m_bell != NULL);// true;
