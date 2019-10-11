@@ -40,12 +40,17 @@ esp_err_t settings_init()
 	}
 
 	// boot counter
-	err = settings_get_int32(SETTING_BOOT_COUNTER, &m_boot_counter, true);
-	if (err != ESP_OK)
+	err = settings_get_int32(SETTING_BOOT_COUNTER, &m_boot_counter, false);
+	if (err == ESP_OK)
+	{
+		m_boot_counter += 1;
+		settings_set_int32(SETTING_BOOT_COUNTER, m_boot_counter, false);
+	}
+	else
 	{
 		m_boot_counter = -1;
-		ESP_LOGI(MY_TAG, "No boot counter");
 	}
+	ESP_LOGI(MY_TAG, "Boot counter: %d", m_boot_counter);
 
 	// Example of nvs_get_stats() to get the number of used entries and free entries:
 	nvs_stats_t nvs_stats;

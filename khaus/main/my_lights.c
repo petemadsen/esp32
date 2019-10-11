@@ -39,7 +39,8 @@ void my_lights_task(void* args)
 	struct ws2812b_leds_t leds;
 	leds.num_leds = 60;
 	leds.leds = malloc(sizeof(uint32_t) * leds.num_leds);
-	ws2812b_init(&leds, PROJECT_WS2812B_PIN);
+	bool ok = ws2812b_init(&leds, PROJECT_WS2812B_PIN);
+	ESP_LOGI(MY_TAG, "ws2812b: %d", ok);
 
 	lamp_off();
 

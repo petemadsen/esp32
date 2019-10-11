@@ -23,9 +23,10 @@
 * 23 - light transistor
 * 21 - i2c sda
 * 22 - i2c scl
-* 25 - PAM8304 audio amplifier
+* 25 - PAM8304 audio amplifier (DAC)
 * 32 - audio amplifier enable pin
 * 34 - voltage sense pin
+* 33 - ws2812b
 
 
 ## HTTP Server
