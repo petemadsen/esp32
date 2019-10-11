@@ -3,6 +3,7 @@
  */
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
+#include <freertos/event_groups.h>
 
 #include <driver/rmt.h>
 
@@ -11,6 +12,9 @@
 
 static void tx_task(void* args);
 static bool rmt_init(gpio_num_t pin);
+
+static EventGroupHandle_t xEvents;
+#define EVENT_RUN	1
 
 
 #define RMT_TX_CHANNEL    1     // RMT channel for transmitter
@@ -30,6 +34,8 @@ bool ws2812b_init(struct ws2812b_leds_t* leds, gpio_num_t pin)
 {
 	if (!rmt_init(pin))
 		return false;
+
+	xEvents = xEventGroupCreate();
 
 	leds->sem = xSemaphoreCreateBinary();
 	xTaskCreate(tx_task, "ws2812b_tx", 2048, leds, 10, NULL);
@@ -98,9 +104,13 @@ void tx_task(void* args)
 
 	rmt_channel_t channel = RMT_TX_CHANNEL;
 
+	xSemaphoreGive(leds->sem);
+
 	for (;;)
 	{
-		xSemaphoreTake(leds->sem, portMAX_DELAY);
+		xEventGroupWaitBits(xEvents, EVENT_RUN, true, false, portMAX_DELAY);
+
+//		xSemaphoreTake(leds->sem, portMAX_DELAY);
 
 		for (int i=0; i<leds->num_leds; ++i)
 		{
@@ -112,8 +122,9 @@ void tx_task(void* args)
 		// Wait until sending is done.
 		rmt_wait_tx_done(channel, portMAX_DELAY);
 
-		xSemaphoreGive(leds->sem);
-		vTaskDelay(100 / portTICK_PERIOD_MS);
+//		xSemaphoreGive(leds->sem);
+
+//		vTaskDelay(100 / portTICK_PERIOD_MS);
 	}
 }
 
@@ -122,4 +133,6 @@ void ws2812b_fill(struct ws2812b_leds_t* leds, int from, int to, uint32_t color)
 {
 	for (int i=from; i<=to; ++i)
 		leds->leds[i] = color;
+
+	xEventGroupSetBits(xEvents, EVENT_RUN);
 }

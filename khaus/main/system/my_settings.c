@@ -35,14 +35,17 @@ esp_err_t settings_init()
 		// non-OTA partition table. This size mismatch may cause NVS
 		// initialization to fail. If this happens, we erase NVS partition
 		// and initialize NVS again.
-		ESP_ERROR_CHECK(nvs_flash_erase())
+		ESP_ERROR_CHECK(nvs_flash_erase());
 		ESP_ERROR_CHECK(nvs_flash_init());
 	}
 
 	// boot counter
 	err = settings_get_int32(SETTING_BOOT_COUNTER, &m_boot_counter, true);
 	if (err != ESP_OK)
+	{
 		m_boot_counter = -1;
+		ESP_LOGI(MY_TAG, "No boot counter");
+	}
 
 	// Example of nvs_get_stats() to get the number of used entries and free entries:
 	nvs_stats_t nvs_stats;
@@ -50,6 +53,8 @@ esp_err_t settings_init()
 	ESP_LOGI(MY_TAG, "UsedEntries %zu FreeEntries %zu AllEntries %zu",
 			 nvs_stats.used_entries, nvs_stats.free_entries, nvs_stats.total_entries);
 
+	ESP_LOGI(MY_TAG, "Error: %s", esp_err_to_name(err));
+	return ESP_OK;
 	return err;
 }
 

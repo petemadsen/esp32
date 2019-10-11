@@ -37,9 +37,11 @@ void my_lights_task(void* args)
 	TickType_t last_run = xTaskGetTickCount();
 
 	struct ws2812b_leds_t leds;
-	leds.num_leds = 10;
+	leds.num_leds = 60;
 	leds.leds = malloc(sizeof(uint32_t) * leds.num_leds);
 	ws2812b_init(&leds, PROJECT_WS2812B_PIN);
+
+	lamp_off();
 
 	for (;;)
 	{
@@ -48,7 +50,8 @@ void my_lights_task(void* args)
 				EVENT_LAMP_ON | EVENT_LAMP_OFF | EVENT_LAMP_TOGGLE | EVENT_WS2812B_NEW,
 				pdTRUE,		// auto clear
 				pdFALSE,	// any single bit will do
-				100 /*portMAX_DELAY*/);
+				portMAX_DELAY);
+		printf("--wait: 0x%x\n", bits);
 
 		if (bits & EVENT_LAMP_ON)
 		{
@@ -72,10 +75,8 @@ void my_lights_task(void* args)
 		}
 
 		// FIXME
-		uint32_t color = lamp_get_relay() ? 0xff0000 : 0x000000;
-		xSemaphoreTake(leds.sem, portMAX_DELAY);
+		uint32_t color = lamp_get_relay() ? 0x1f0000 : 0x000000;
 		ws2812b_fill(&leds, 0, leds.num_leds, color);
-		xSemaphoreGive(leds.sem);
 
 		if (bits & EVENT_WS2812B_NEW)
 		{
