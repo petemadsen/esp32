@@ -12,7 +12,7 @@
 #include <esp_spiffs.h>
 
 #include "common.h"
-#include "read_wav.h"
+#include "sound/read_wav.h"
 #include "system/my_settings.h"
 
 

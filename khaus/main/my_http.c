@@ -1,19 +1,19 @@
 /**
  * This code is public domain.
  */
+#include <lwip/apps/sntp.h>
+
+#include <esp_spiffs.h>
+#include <esp_log.h>
+
+#include "common.h"
 #include "my_http.h"
 #include "tone.h"
 #include "my_sensors.h"
 #include "my_lights.h"
-#include "common.h"
+#include "sound/read_wav.h"
 #include "system/my_settings.h"
 #include "system/ota.h"
-
-#include <lwip/apps/sntp.h>
-
-#include "esp_spiffs.h"
-#include "esp_log.h"
-#include "read_wav.h"
 
 
 static const char* MY_TAG = PROJECT_TAG("http");

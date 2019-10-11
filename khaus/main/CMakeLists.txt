@@ -17,12 +17,12 @@ set(COMPONENT_SRCS
 	my_shutters.c
 	my_sleep.c
 	tone.c
-	read_wav.c
 	lights/lamp.c
 	lights/ws2812b.c
 	sensors/bmp280.c
 	sensors/voltage.c
 	sensors/dht12.c
+	sound/read_wav.c
 	system/my_i2c.c
 	system/ota.c
 	system/wifi.c
