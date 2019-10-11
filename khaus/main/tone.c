@@ -12,8 +12,8 @@
 #include <esp_spiffs.h>
 
 #include "common.h"
-#include "my_settings.h"
 #include "read_wav.h"
+#include "system/my_settings.h"
 
 
 static const char* MY_TAG = PROJECT_TAG("tone");

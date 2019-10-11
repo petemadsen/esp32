@@ -9,10 +9,10 @@
 
 #include <rom/uart.h>
 
-#include "wifi.h"
-#include "my_settings.h"
-#include "my_lights.h"
 #include "common.h"
+#include "my_lights.h"
+#include "system/wifi.h"
+#include "system/my_settings.h"
 
 
 static const char* MY_TAG = PROJECT_TAG("sleep");

@@ -12,12 +12,12 @@
 
 #include <string.h>
 
-#include "wifi.h"
 #include "my_sensors.h"
 #include "my_lights.h"
 #include "common.h"
-#include "ota.h"
-#include "my_settings.h"
+#include "system/ota.h"
+#include "system/my_settings.h"
+#include "system/wifi.h"
 
 
 static const char* MY_TAG = PROJECT_TAG("shutters");

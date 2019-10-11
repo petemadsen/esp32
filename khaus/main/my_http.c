@@ -3,11 +3,11 @@
  */
 #include "my_http.h"
 #include "tone.h"
-#include "ota.h"
 #include "my_sensors.h"
 #include "my_lights.h"
 #include "common.h"
-#include "my_settings.h"
+#include "system/my_settings.h"
+#include "system/ota.h"
 
 #include <lwip/apps/sntp.h>
 

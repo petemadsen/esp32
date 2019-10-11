@@ -8,7 +8,7 @@
 #include <esp_event.h>
 #include <esp_log.h>
 
-#include "../my_i2c.h"
+#include "system/my_i2c.h"
 #include "bmp280.h"
 
 

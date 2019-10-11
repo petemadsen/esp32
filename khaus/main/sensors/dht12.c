@@ -3,7 +3,7 @@
  */
 #include "dht12.h"
 
-#include "../my_i2c.h"
+#include "system/my_i2c.h"
 
 
 int dht12_get(uint8_t addr, double* temp, double* humidity)

@@ -4,16 +4,15 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
-#include "sdkconfig.h"
+#include "system/ota.h"
+#include "system/wifi.h"
+#include "system/my_settings.h"
+#include "system/my_i2c.h"
 
 #include "buttons.h"
-#include "wifi.h"
 #include "tone.h"
 #include "my_shutters.h"
-#include "ota.h"
 #include "my_sleep.h"
-#include "my_settings.h"
-#include "my_i2c.h"
 #include "my_sensors.h"
 #include "my_lights.h"
 #include "common.h"
