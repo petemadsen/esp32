@@ -77,6 +77,7 @@ void my_lights_task(void* args)
 
 		// FIXME
 		uint32_t color = lamp_get_relay() ? 0x1f0000 : 0x000000;
+		ws2812b_animation(lamp_get_relay());
 		ws2812b_fill(&leds, 0, leds.num_leds, color);
 
 		if (bits & EVENT_WS2812B_NEW)
