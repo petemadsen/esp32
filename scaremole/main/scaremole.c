@@ -41,9 +41,14 @@ void scaremole_run()
 	}
 
 	// motor
-	gpio_set_level(PIN_MOTOR, 1);
-	vTaskDelay(2000 / portTICK_PERIOD_MS);
-	gpio_set_level(PIN_MOTOR, 0);
+	TickType_t times[] = { 2000, 1000, 3000 };
+	for (int i=0; i<3; ++i)
+	{
+		gpio_set_level(PIN_MOTOR, 1);
+		vTaskDelay(times[i] / portTICK_PERIOD_MS);
+		gpio_set_level(PIN_MOTOR, 0);
+		vTaskDelay(500 / portTICK_PERIOD_MS);
+	}
 
 	// buzzer
 	for (int i=0; i<3; ++i)

@@ -1,11 +1,12 @@
 /**
  * This code is public domain.
  */
-#include "my_http.h"
-#include "common.h"
-#include "ota.h"
-
 #include <lwip/apps/sntp.h>
+
+#include "common.h"
+#include "my_http.h"
+#include "ota.h"
+#include "system/my_settings.h"
 
 
 static void reboot_task(void* arg);
@@ -95,7 +96,7 @@ esp_err_t status_handler(httpd_req_t* req)
 						  PROJECT_VERSION,
 						  PROJECT_NAME,
 						  esp_get_free_heap_size(),
-						  g_wifi_reconnects,
+						  settings_boot_counter(),
 						  uptime);
 	httpd_resp_send(req, buf, buflen);
 

@@ -5,10 +5,10 @@
 #define PROJECT_VOLTAGE_H
 
 
-void voltage_init();
+void voltage_init(void);
 
 
-float voltage_get();
+double voltage_get(void);
 
 
 #endif

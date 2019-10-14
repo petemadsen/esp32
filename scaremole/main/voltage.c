@@ -16,12 +16,14 @@
 #include <esp_adc_cal.h>
 #include <esp_log.h>
 
+#include "common.h"
+
 
 static const adc1_channel_t ADC1_EXAMPLE_CHANNEL = ADC1_GPIO34_CHANNEL;
-static const char* MY_TAG = "khaus/voltage";
+static const char* MY_TAG = PROJECT_TAG("voltage");
 
 
-static float m_last_val = 0.0;
+static double m_last_val = 0.0;
 
 
 static void voltage_task(void* args)
@@ -34,7 +36,7 @@ static void voltage_task(void* args)
     vTaskDelay(2 * portTICK_PERIOD_MS);
 
     printf("start conversion.\n");
-    while(1)
+	for (;;)
 	{
 		int read_raw = 0;
 		for (int i=0; i<NUM_SAMPLES; ++i)
@@ -43,8 +45,8 @@ static void voltage_task(void* args)
 		}
 		read_raw /= NUM_SAMPLES;
 
-		float pin_voltage = (float)read_raw / 4096.0f * 3.53f;
-		m_last_val = pin_voltage * (100.0f + 20.0f) / 20.0f; // r divider
+		double pin_voltage = (double)read_raw / 4096.0 * 3.53;
+		m_last_val = pin_voltage * (100.0 + 20.0) / 20.0; // r divider
 
 		ESP_LOGI(MY_TAG, "New measurement: %.2f", m_last_val);
 
@@ -54,7 +56,7 @@ static void voltage_task(void* args)
 }
 
 
-float voltage_get()
+double voltage_get()
 {
 	return m_last_val;
 }
@@ -62,5 +64,5 @@ float voltage_get()
 
 void voltage_init()
 {
-//	xTaskCreate(voltage_task, "voltage_task", 2048, NULL, 10, NULL);
+	xTaskCreate(voltage_task, "voltage_task", 2048, NULL, 10, NULL);
 }

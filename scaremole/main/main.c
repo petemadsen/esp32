@@ -1,20 +1,15 @@
 /**
  * This code is public domain.
  */
-#include "sdkconfig.h"
-
-#include <string.h>
-#include <sys/socket.h>
-#include <netdb.h>
-
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
-#include <freertos/event_groups.h>
 
 #include <esp_system.h>
 #include <esp_log.h>
 
 #include <nvs_flash.h>
+
+#include "system/my_settings.h"
 
 #include "config.h"
 #include "wifi.h"
@@ -25,21 +20,27 @@
 #include "scaremole.h"
 
 
-static const char* MY_TAG = "scaremole/main";
-
-
 void app_main()
 {
+	ESP_ERROR_CHECK(settings_init());
+
 	scaremole_run();
 
-	ESP_ERROR_CHECK(nvs_flash_init());
-	wifi_init(true);
+	// we got business to do
+	if ((settings_boot_counter() % 6) == 0)
+	{
+		wifi_init(true);
 
-	ota_init();
+		ota_init();
 
-	voltage_init();
+		voltage_init();
 
-	xTaskCreate(shutters_task, "shutters_task", 4096, NULL, 5, NULL);
+		xTaskCreate(shutters_task, "shutters_task", 4096, NULL, 5, NULL);
 
-	xTaskCreate(my_sleep_task, "sleep_task", 4096, NULL, 5, NULL);
+		xTaskCreate(my_sleep_task, "sleep_task", 4096, NULL, 5, NULL);
+	}
+	else
+	{
+		my_sleep_now("next-time");
+	}
 }

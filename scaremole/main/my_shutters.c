@@ -10,10 +10,12 @@
 
 #include <esp_http_client.h>
 
+#include "common.h"
+
 #include "wifi.h"
 #include "my_sleep.h"
 #include "ota.h"
-#include "common.h"
+#include "voltage.h"
 
 
 static const char* MY_TAG = "scaremole/shutters";
@@ -77,8 +79,10 @@ void shutters_task(void* pvParameters)
 		char* save_data = malloc(POST_MAXLEN);
 		int save_data_len = snprintf(save_data, POST_MAXLEN,
 									 "version=%s"
+									 " board_voltage=%.2f"
 									 " board_temp=%.2f",
 									 PROJECT_VERSION,
+									 voltage_get(),
 									 -1.0);
 
 		esp_http_client_set_url(client, SAVE_URL);
