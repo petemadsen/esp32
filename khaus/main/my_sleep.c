@@ -125,6 +125,13 @@ void my_sleep_task(void* arg)
 			lamp_off();
 		}
 
+		// FIXME
+		if (!ok_to_go_to_sleep && mins > 60 * 12)
+		{
+			mylog_add("Long time no sleep. Reboot!");
+			esp_restart();
+		}
+
 		// -- wait 60 secs
 		vTaskDelay(60 * 1000 / portTICK_PERIOD_MS);
 		++mins;
