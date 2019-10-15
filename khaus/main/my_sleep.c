@@ -49,6 +49,26 @@ void my_sleep_task(void* arg)
 	uint32_t mins = 0;
 	uint32_t nowifi_mins = 0;
 
+	bool ok_to_go_to_sleep = true;
+
+	// count deep sleep wakeups
+	esp_sleep_wakeup_cause_t wakeup_reason = esp_sleep_get_wakeup_cause();
+	if (wakeup_reason == ESP_SLEEP_WAKEUP_TIMER)
+	{
+		++m_deep_sleep_boots;
+		int32_t hours_to_sleep = hour_to + 24 - hour_from;
+		if (hour_to > hour_from)
+			hours_to_sleep = hour_to - hour_from;
+
+		// Oops, we slept too long. What happened? What to do?
+		if (m_deep_sleep_boots > hours_to_sleep)
+		{
+			ok_to_go_to_sleep = false;
+			mylog_add("deep slept too long.");
+			ESP_LOGE(MY_TAG, "Deep slept too long.");
+		}
+	}
+
 	for (;;)
 	{
 		ESP_LOGI(MY_TAG, "Run.");
@@ -61,28 +81,11 @@ void my_sleep_task(void* arg)
 		err = settings_get_int32(SETTING_LIGHTS_OFF, &lights_off_mins, true);
 		ESP_LOGW(MY_TAG, "RET=%s\n", esp_err_to_name(err));
 
-		// count deep sleep wakeups
-		esp_sleep_wakeup_cause_t wakeup_reason = esp_sleep_get_wakeup_cause();
-		if (wakeup_reason == ESP_SLEEP_WAKEUP_TIMER)
-		{
-			++m_deep_sleep_boots;
-			int32_t hours_to_sleep = hour_to + 24 - hour_from;
-			if (hour_to > hour_from)
-				hours_to_sleep = hour_to - hour_from;
-
-			// Oops, we slept too long. What happened? What to do?
-			if (m_deep_sleep_boots > hours_to_sleep)
-			{
-				mylog_add("slept too long.");
-				ESP_LOGE(MY_TAG, "Slept too long.");
-			}
-		}
-
 		//
 		update_time();
 
 		// enter night mode?
-		if (timeinfo.tm_year > 1980)
+		if (ok_to_go_to_sleep && timeinfo.tm_year > 1980)
 		{
 			bool is_night = timeinfo.tm_hour >= hour_from || timeinfo.tm_hour < hour_to;
 //			is_night = true;
