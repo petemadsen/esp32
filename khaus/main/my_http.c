@@ -13,6 +13,7 @@
 #include "my_lights.h"
 #include "sound/read_wav.h"
 #include "system/my_settings.h"
+#include "system/my_log.h"
 #include "system/ota.h"
 
 
@@ -29,6 +30,7 @@ static esp_err_t volume_handler(httpd_req_t* req);
 static esp_err_t ota_handler(httpd_req_t* req);
 static esp_err_t settings_get_handler(httpd_req_t* req);
 static esp_err_t settings_set_handler(httpd_req_t* req);
+static esp_err_t log_handler(httpd_req_t* req);
 
 
 static const char* RET_OK = "OK";
@@ -81,6 +83,11 @@ static httpd_uri_t basic_handlers[] = {
 		.uri	= "/sset",
 		.method	= HTTP_GET,
 		.handler= settings_set_handler,
+	},
+	{
+		.uri	= "/log",
+		.method	= HTTP_GET,
+		.handler= log_handler,
 	}
 };
 
@@ -92,7 +99,7 @@ httpd_handle_t http_start()
 {
 	httpd_handle_t server = NULL;
 	httpd_config_t config = HTTPD_DEFAULT_CONFIG();
-	config.max_uri_handlers = 10;
+	config.max_uri_handlers = 11;
 
 	if (httpd_start(&server, &config) == ESP_OK)
 	{
@@ -477,4 +484,18 @@ bool save_to_file(const char* filename, const char* buf, size_t buf_len)
 
 	esp_vfs_spiffs_unregister(NULL);
 	return ret;
+}
+
+
+esp_err_t log_handler(httpd_req_t* req)
+{
+	const char* line = malloc(LOG_MAX_LINELEN);
+	for (uint8_t i = 0; i < LOG_MAX_ENTRIES; ++i)
+	{
+		if (mylog_get(i, &line))
+			httpd_resp_send_chunk(req, line, strlen(line));
+	}
+	free(line);
+
+	return ESP_OK;
 }

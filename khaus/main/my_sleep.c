@@ -10,9 +10,11 @@
 #include <rom/uart.h>
 
 #include "common.h"
+
 #include "my_lights.h"
 #include "system/wifi.h"
 #include "system/my_settings.h"
+#include "system/my_log.h"
 
 
 static const char* MY_TAG = PROJECT_TAG("sleep");
@@ -29,6 +31,9 @@ static void update_time(void);
 #define SETTING_LIGHTS_OFF	"sleep.lights"
 
 
+RTC_DATA_ATTR int m_deep_sleep_boots = 0;
+
+
 void my_sleep_task(void* arg)
 {
 	// -- init time
@@ -37,9 +42,9 @@ void my_sleep_task(void* arg)
 	setenv("TZ", "CET-1CEST-2,M3.5.0/02:00:00,M10.5.0/03:00:00", 1);
 	sntp_init();
 
-	int hour_from = 21;
-	int hour_to = 7;
-	int lights_off_mins = 10;
+	int32_t hour_from = 21;
+	int32_t hour_to = 7;
+	int32_t lights_off_mins = 10;
 
 	uint32_t mins = 0;
 	uint32_t nowifi_mins = 0;
@@ -55,6 +60,23 @@ void my_sleep_task(void* arg)
 		ESP_LOGW(MY_TAG, "RET=%s\n", esp_err_to_name(err));
 		err = settings_get_int32(SETTING_LIGHTS_OFF, &lights_off_mins, true);
 		ESP_LOGW(MY_TAG, "RET=%s\n", esp_err_to_name(err));
+
+		// count deep sleep wakeups
+		esp_sleep_wakeup_cause_t wakeup_reason = esp_sleep_get_wakeup_cause();
+		if (wakeup_reason == ESP_SLEEP_WAKEUP_TIMER)
+		{
+			++m_deep_sleep_boots;
+			int32_t hours_to_sleep = hour_to + 24 - hour_from;
+			if (hour_to > hour_from)
+				hours_to_sleep = hour_to - hour_from;
+
+			// Oops, we slept too long. What happened? What to do?
+			if (m_deep_sleep_boots > hours_to_sleep)
+			{
+				mylog_add("slept too long.");
+				ESP_LOGE(MY_TAG, "Slept too long.");
+			}
+		}
 
 		//
 		update_time();
@@ -95,7 +117,7 @@ void my_sleep_task(void* arg)
 		}
 
 		// turn off the lights
-		if (lamp_on_secs() > lights_off_mins * 60)
+		if (lights_off_mins != -1 && lamp_on_secs() > lights_off_mins * 60)
 		{
 			lamp_off();
 		}

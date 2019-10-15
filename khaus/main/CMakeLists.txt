@@ -24,9 +24,10 @@ set(COMPONENT_SRCS
 	sensors/dht12.c
 	sound/read_wav.c
 	system/my_i2c.c
+	system/my_log.c
+	system/my_settings.c
 	system/ota.c
 	system/wifi.c
-	system/my_settings.c
 )
 
 register_component()

@@ -67,10 +67,10 @@ static esp_err_t _http_event_handle(esp_http_client_event_t *evt)
 
 void shutters_task(void* pvParameters)
 {
-	char* touch_url = strdup(DEFAULT_TOUCH_URL);
+	const char* touch_url = strdup(DEFAULT_TOUCH_URL);
 	settings_get_str(SETTING_TOUCH_URL, &touch_url, true);
 
-	char* save_url = strdup(DEFAULT_SAVE_URL);
+	const char* save_url = strdup(DEFAULT_SAVE_URL);
 	settings_get_str(SETTING_SAVE_URL, &save_url, true);
 
 	esp_err_t err;

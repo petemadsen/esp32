@@ -127,7 +127,7 @@ esp_err_t settings_get_int32(const char* key, int32_t* val, bool save_if_missing
 }
 
 
-esp_err_t settings_get_str(const char* key, char** buffer, bool save_if_missing)
+esp_err_t settings_get_str(const char* key, const char** buffer, bool save_if_missing)
 {
 	esp_err_t err = ESP_OK;
 	char* newval = NULL;
