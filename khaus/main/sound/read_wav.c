@@ -55,7 +55,7 @@ static int read_from_file(FILE* file, unsigned char** buf, size_t* buf_len);
 
 unsigned char* read_wav(FILE* file, size_t* len)
 {
-	unsigned char* buf;
+	unsigned char* buf = NULL;
 	int ret = read_from_file(file, &buf, len);
 	if (ret != 0)
 	{
@@ -74,58 +74,17 @@ static int read_from_file(FILE* file, unsigned char** buf, size_t* len)
 	long file_len = ftell(file);
 	rewind(file);
 	printf("--file size: %ld\n", file_len);
+	if (file_len < 44)
+		return 30;
 
 	struct wav_all_headers hdr;
 	if (fread(&hdr, sizeof(char), 44, file) != 44)
-		return 10;
+		return 31;
 	int wav = read_wav_check(&hdr, file_len);
-	if (wav)
+	if (wav != 0)
 		return wav;
 
-#if 0
-	// -- header
-	struct wav_header hdr;
-	if (fread(&hdr, sizeof(char), 12, file) != 12)
-		return 10;
-	if (strncmp(hdr.riff, "RIFF", 4) != 0)
-		return 11;
-	if (file_len != hdr.filelen + 8)
-		return 12;
-	if (strncmp(hdr.wav, "WAVE", 4) != 0)
-		return 13;
-	printf("--%c%c%c%c\n", hdr.riff[0], hdr.riff[1], hdr.riff[2], hdr.riff[3]);
-	printf("--%u\n", hdr.filelen);
-	printf("--%c%c%c%c\n", hdr.wav[0], hdr.wav[1], hdr.wav[2], hdr.wav[3]);
-
-	// -- fmt
-	struct wav_fmt fmt;
-	if (fread(&fmt, sizeof(char), 24, file) != 24)
-		return 20;
-	if (strncmp(fmt.fmt, "fmt ", 4) != 0)
-		return 21;
-	printf("\n");
-	printf("--%c%c%c%c\n", fmt.fmt[0], fmt.fmt[1], fmt.fmt[2], fmt.fmt[3]);
-	printf("--fmt len......: %u\n", fmt.len); // 16 bytes
-	printf("--fmt tag......: 0x%x (pcm: %d)\n", fmt.fmttag, fmt.fmttag==1);
-	printf("--nr channels..: %u\n", fmt.channels);
-	printf("--sample rate..: %u\n", fmt.samplerate);
-	printf("--bytes/sec....: %u\n", fmt.bytes_per_second);
-	printf("--block align..: %u\n", fmt.block_align);
-	printf("--bits/sample..: %u\n", fmt.bits_per_sample);
-	if (fmt.bits_per_sample != 16 && fmt.bits_per_sample != 8)
-		return 22;
-
-	// -- data
-	struct wav_data data;
-	if (fread(&data, sizeof(char), 8, file) != 8)
-		return 30;
-	if (strncmp(data.data, "data", 4) != 0)
-		return 31;
-	printf("\n");
-	printf("--%c%c%c%c\n", data.data[0], data.data[1], data.data[2], data.data[3]);
-	printf("--data len.....: %u\n", data.len);
-#endif
-
+	// header seams to be okay. go on.
 	const int target_bits = 8;
 	const int sampwidth = hdr.fmt.bits_per_sample;
 	int scale_val = (1 << target_bits) - 1;
@@ -175,7 +134,7 @@ static int read_from_file(FILE* file, unsigned char** buf, size_t* len)
 int read_wav_check(const char* buf, size_t buflen)
 {
 	if (buflen < 44)
-		return false;
+		return 10;
 
 	struct wav_all_headers* hdr = (struct wav_all_headers*)buf;
 
@@ -212,5 +171,5 @@ int read_wav_check(const char* buf, size_t buflen)
 	printf("--%c%c%c%c\n", hdr->data.data[0], hdr->data.data[1], hdr->data.data[2], hdr->data.data[3]);
 	printf("--data len.....: %u\n", hdr->data.len);
 
-	return true;
+	return 0;
 }

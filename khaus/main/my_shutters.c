@@ -114,16 +114,18 @@ void shutters_task(void* pvParameters)
 		}
 
 		// -- save
-		const size_t POST_MAXLEN = 200;
+		const size_t POST_MAXLEN = 300;
 		char* save_data = malloc(POST_MAXLEN);
 		int save_data_len = snprintf(save_data, POST_MAXLEN,
 									 "board_temp=%.2f"
 									 "&board_voltage=%.2f"
 									 "&out_temp=%.2f"
+									 "&out_humidity=%.2f"
 									 "&light=%d",
 									 my_sensors_board_temp(),
 									 my_sensors_board_voltage(),
-									 -1.0,
+									 my_sensors_out_temp(),
+									 my_sensors_out_humidity(),
 									 lamp_status());
 
 		esp_http_client_set_url(client, save_url);

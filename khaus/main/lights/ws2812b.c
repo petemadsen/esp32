@@ -11,9 +11,11 @@
 
 
 static EventGroupHandle_t xEvents;
-#define EVENT_RUN	1
+#define EVENT_RUN		1
+#define EVENT_STOP_ANIM	2
 
 static bool m_animation = false;
+static uint32_t m_animation_color = 0x0;
 
 
 #define RMT_TX_CHANNEL   1    // RMT channel for transmitter
@@ -31,10 +33,13 @@ static void tx_task(void* args);
 static bool rmt_init(gpio_num_t pin);
 static void animation_next(struct ws2812b_leds_t* leds, uint32_t run,
 						   uint32_t color);
+static void clear(struct ws2812b_leds_t* leds);
 
 
+static gpio_num_t m_power_pin = 0;
 
-bool ws2812b_init(struct ws2812b_leds_t* leds, gpio_num_t pin)
+
+bool ws2812b_init(struct ws2812b_leds_t* leds, gpio_num_t pin, gpio_num_t power_pin)
 {
 	if (!rmt_init(pin))
 		return false;
@@ -43,6 +48,12 @@ bool ws2812b_init(struct ws2812b_leds_t* leds, gpio_num_t pin)
 
 	leds->mutex = xSemaphoreCreateMutex();
 	xTaskCreate(tx_task, "ws2812b_tx", 2048, leds, 10, NULL);
+
+	// -- on/off pin
+	m_power_pin = power_pin;
+	gpio_pad_select_gpio(m_power_pin);
+	gpio_set_direction(m_power_pin, GPIO_MODE_OUTPUT);
+	gpio_set_level(m_power_pin, 0);
 
 	return true;
 }
@@ -65,9 +76,9 @@ static bool rmt_init(gpio_num_t pin)
 	rmt_tx.tx_config.carrier_en = false;
 	rmt_tx.tx_config.carrier_duty_percent = 50;
 	rmt_tx.tx_config.carrier_freq_hz = 38000;
-	rmt_tx.tx_config.carrier_level = 1;
+	rmt_tx.tx_config.carrier_level = 0;
 	rmt_tx.tx_config.idle_level = RMT_IDLE_LEVEL_LOW;
-	rmt_tx.tx_config.idle_output_en = true;
+	rmt_tx.tx_config.idle_output_en = false;
 
 	esp_err_t err = rmt_config(&rmt_tx);
 	if (err != ESP_OK)
@@ -109,44 +120,54 @@ static void tx_task(void* args)
 	rmt_channel_t channel = RMT_TX_CHANNEL;
 
 	uint32_t nr_run = 0;
+	esp_err_t err;
 
 	for (;;)
 	{
 		++nr_run;
 		printf("--run %u\n", nr_run);
 
-		xEventGroupWaitBits(xEvents, EVENT_RUN, true, false, portMAX_DELAY);
+		EventBits_t bits = xEventGroupWaitBits(xEvents,
+											   EVENT_RUN | EVENT_STOP_ANIM,
+											   true,
+											   false,
+											   portMAX_DELAY);
 
-		xSemaphoreTake(leds->mutex, portMAX_DELAY);
-
-		for (int i=0; i<leds->num_leds; ++i)
-			set_led_color(items + i * 24, leds->leds[i]);
-
-		rmt_write_items(channel, items, item_num, true);
-		rmt_wait_tx_done(channel, portMAX_DELAY);
-
-		xSemaphoreGive(leds->mutex);
-
-		if (m_animation)
+		if (bits & EVENT_RUN)
 		{
-			animation_next(leds, nr_run, 0x1f0000);
-			vTaskDelay(100 / portTICK_PERIOD_MS);
-			xEventGroupSetBits(xEvents, EVENT_RUN);
+			// FIXME: actually, this is not required every time.
+			xSemaphoreTake(leds->mutex, portMAX_DELAY);
+			for (int i=0; i<leds->num_leds; ++i)
+				set_led_color(items + i * 24, leds->leds[i]);
+			xSemaphoreGive(leds->mutex);
+
+			rmt_write_items(channel, items, item_num, true);
+			rmt_wait_tx_done(channel, portMAX_DELAY);
 		}
-		else
+
+		if (bits & EVENT_STOP_ANIM)
 		{
-			// stop animation
+			m_animation = false;
+
 			ws2812b_fill(leds, 0, leds->num_leds, 0x0);
 			xEventGroupSetBits(xEvents, EVENT_RUN);
 		}
+
+		if (m_animation)
+		{
+			animation_next(leds, nr_run, m_animation_color);
+			vTaskDelay(100 / portTICK_PERIOD_MS);
+			xEventGroupSetBits(xEvents, EVENT_RUN);
+		}
+//		vTaskDelay(1099 / portTICK_PERIOD_MS);
 	}
 }
 
 
-void ws2812b_fill(struct ws2812b_leds_t* leds, int from, int to, uint32_t color)
+void ws2812b_fill(struct ws2812b_leds_t* leds, uint32_t from, uint32_t to, uint32_t color)
 {
 	xSemaphoreTake(leds->mutex, portMAX_DELAY);
-	for (int i=from; i<to; ++i)
+	for (uint32_t i=from; i<to; ++i)
 		leds->leds[i] = color;
 	xSemaphoreGive(leds->mutex);
 
@@ -154,12 +175,23 @@ void ws2812b_fill(struct ws2812b_leds_t* leds, int from, int to, uint32_t color)
 }
 
 
-void ws2812b_animation(bool b)
+void ws2812b_animation(bool b, uint32_t color)
 {
 	if (b != m_animation)
 	{
 		m_animation = b;
-		xEventGroupSetBits(xEvents, EVENT_RUN);
+		m_animation_color = color;
+
+		if (!b)
+			xEventGroupSetBits(xEvents, EVENT_STOP_ANIM);
+		else
+			xEventGroupSetBits(xEvents, EVENT_RUN);
+
+		gpio_set_level(m_power_pin, m_animation);
+		if (m_animation)
+			rmt_tx_start(RMT_TX_CHANNEL, true);
+		else
+			rmt_tx_stop(RMT_TX_CHANNEL);
 	}
 }
 
@@ -170,19 +202,8 @@ static void animation_next(struct ws2812b_leds_t* leds, uint32_t run,
 	// clear first
 	ws2812b_fill(leds, 0, leds->num_leds, 0x0);
 
-	switch (run % 4)
-	{
-	case 0:
-		ws2812b_fill(leds, 0, 8, color);
-		break;
-	case 1:
-		ws2812b_fill(leds, 8, 20, color);
-		break;
-	case 2:
-		ws2812b_fill(leds, 20, 36, color);
-		break;
-	case 3:
-		ws2812b_fill(leds, 36, 60, color);
-		break;
-	}
+	uint16_t rings[] = { 0, 8, 8, 20, 20, 36, 36, 60 };
+
+	int mod = run % 4;
+	ws2812b_fill(leds, rings[mod*2], rings[mod*2+1], color);
 }

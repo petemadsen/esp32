@@ -48,6 +48,7 @@ void my_sensors_task(void* args)
 		}
 		else
 		{
+			ESP_LOGI(MY_TAG, "BoardTemp: init");
 			bmp280_init(&board_temp);
 		}
 
@@ -58,6 +59,7 @@ void my_sensors_task(void* args)
 		}
 		else
 		{
+			ESP_LOGI(MY_TAG, "OutTemp: init");
 			bmp280_init(&out_temp);
 		}
 
@@ -80,4 +82,16 @@ double my_sensors_board_voltage()
 double my_sensors_board_temp()
 {
 	return m_board_temp;
+}
+
+
+double my_sensors_out_temp()
+{
+	return m_out_temp;
+}
+
+
+double my_sensors_out_humidity()
+{
+	return m_out_humidity;
 }

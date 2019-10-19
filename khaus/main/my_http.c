@@ -159,7 +159,9 @@ esp_err_t status_handler(httpd_req_t* req)
 						  " uptime %lld\n"
 						  " time %02d:%02d\n"
 						  " board_temp %.2f\n"
-						  " board_voltage %.2f",
+						  " board_voltage %.2f\n"
+						  " out_temp %.2f\n"
+						  " out_humidity %.2f\n",
 						  PROJECT_VERSION,
 						  PROJECT_NAME,
 						  lamp_status(),
@@ -169,7 +171,9 @@ esp_err_t status_handler(httpd_req_t* req)
 						  uptime,
 						  timeinfo.tm_hour, timeinfo.tm_min,
 						  my_sensors_board_temp(),
-						  my_sensors_board_voltage());
+						  my_sensors_board_voltage(),
+						  my_sensors_out_temp(),
+						  my_sensors_out_humidity());
 	httpd_resp_send(req, buf, buflen);
 
 	free(buf);
@@ -370,6 +374,7 @@ esp_err_t bell_upload_handler(httpd_req_t* req)
 	}
 
 	// -- check file
+	len = req->content_len;
 	ret = read_wav_check(buf, len);
 	if (ret != 0)
 	{
@@ -380,7 +385,7 @@ esp_err_t bell_upload_handler(httpd_req_t* req)
 	}
 
 	// -- reply
-	ESP_LOGE(MY_TAG, "WAV file: %d", ret);
+	ESP_LOGI(MY_TAG, "WAV file: %d", ret);
 
 	int buf_len = sprintf(buf, "%d", ret);
 	httpd_resp_send(req, buf, buf_len);

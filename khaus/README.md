@@ -26,7 +26,8 @@
 * 25 - PAM8304 audio amplifier (DAC)
 * 32 - audio amplifier enable pin
 * 34 - voltage sense pin
-* 33 - ws2812b
+* 33 - ws2812b signal
+* 27 - ws2812b power
 
 
 ## HTTP Server

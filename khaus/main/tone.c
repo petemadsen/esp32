@@ -210,6 +210,7 @@ static bool read_file()
 	}
 
 	m_bell = read_wav(file, &m_bell_len);
+	fclose(file);
 
 	esp_vfs_spiffs_unregister(NULL);
 	return (m_bell != NULL);// true;

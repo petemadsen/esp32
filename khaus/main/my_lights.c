@@ -39,7 +39,7 @@ void my_lights_task(void* args)
 	struct ws2812b_leds_t leds;
 	leds.num_leds = 60;
 	leds.leds = malloc(sizeof(uint32_t) * leds.num_leds);
-	bool ok = ws2812b_init(&leds, PROJECT_WS2812B_PIN);
+	bool ok = ws2812b_init(&leds, PROJECT_WS2812B_PIN, PROJECT_WS2812B_POWER_PIN);
 	ESP_LOGI(MY_TAG, "ws2812b: %d", ok);
 
 	lamp_off();
@@ -77,7 +77,7 @@ void my_lights_task(void* args)
 
 		// FIXME
 		uint32_t color = lamp_get_relay() ? 0x1f0000 : 0x000000;
-		ws2812b_animation(lamp_get_relay());
+		ws2812b_animation(lamp_get_relay(), 0x001f00);
 		ws2812b_fill(&leds, 0, leds.num_leds, color);
 
 		if (bits & EVENT_WS2812B_NEW)

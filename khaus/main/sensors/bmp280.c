@@ -81,6 +81,16 @@ double bmp280_get_temp(struct bmp280_device* dev)
 	ESP_LOGI(MY_TAG, " [ 0x%x | 0x%x | 0x%x | 0x%x ] ", b1, b2, b3, d);
 #endif
 
+	// make sure the device is still there
+	uint8_t id = m_i2c_read8(dev->addr, 0xd0);
+	ESP_LOGI(MY_TAG, "Device ID: 0x%x", (int)id);
+	if (id != 0x58)
+	{
+		ESP_LOGE(MY_TAG, "WRONG DEVICE ID: 0x%x", dev->addr);
+		dev->initialized = false;
+		return 666.6;
+	}
+
 	// https://cdn-shop.adafruit.com/datasheets/BST-BMP280-DS001-11.pdf
 	// Compensation formula in 32 bit fixed point
 	int32_t adc_T = (int32_t)m_i2c_read24(dev->addr, 0xfa);

@@ -40,7 +40,7 @@ esp_err_t settings_init()
 	}
 
 	// boot counter
-	err = settings_get_int32(SETTING_BOOT_COUNTER, &m_boot_counter, false);
+	err = settings_get_int32(SETTING_BOOT_COUNTER, &m_boot_counter, true);
 	if (err == ESP_OK)
 	{
 		m_boot_counter += 1;
@@ -119,6 +119,8 @@ esp_err_t settings_get_int32(const char* key, int32_t* val, bool save_if_missing
 		{
 			ESP_LOGI(MY_TAG, "Saving value: %s => %d", key, *val);
 			err = nvs_set_i32(my_handle, key, *val);
+			if (err == ESP_OK)
+				err = nvs_commit(my_handle);
 		}
 	}
 
@@ -156,7 +158,11 @@ esp_err_t settings_get_str(const char* key, const char** buffer, bool save_if_mi
 	{
 		ESP_LOGW(MY_TAG, "Could not read '%s' (%d).", key, save_if_missing);
 		if (save_if_missing)
+		{
 			err = settings_set_str(key, *buffer, false);
+			if (err == ESP_OK)
+				err = nvs_commit(my_handle);
+		}
 		return err;
 	}
 
