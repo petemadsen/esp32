@@ -27,7 +27,7 @@ static size_t m_bell_len = 0;
 static int m_bell_volume = 75;
 
 
-static bool read_file();
+static bool read_file(int bell);
 
 
 #define SETTING_BELL "tone.bell"
@@ -150,7 +150,7 @@ static void tone_task(void* ignore)
 	gpio_set_direction(PROJECT_TONE_ONOFF_PIN, GPIO_MODE_OUTPUT);
 	gpio_set_level(PROJECT_TONE_ONOFF_PIN, 0);
 
-	if (!read_file())
+	if (!read_file(m_bell_num))
 	{
 		if (m_bell)
 			free(m_bell);
@@ -177,7 +177,7 @@ static void tone_task(void* ignore)
 }
 
 
-static bool read_file()
+static bool read_file(int num)
 {
 	// -- open
 	esp_vfs_spiffs_conf_t conf = {
@@ -200,7 +200,8 @@ static bool read_file()
 	}
 
 	char filename[40];
-	sprintf(filename, "/spiffs/bell%d.wav", m_bell_num);
+	sprintf(filename, "/spiffs/bell%d.wav", num);
+	ESP_LOGI(MY_TAG, "Reading file: %s", filename);
 	FILE* file = fopen(filename, "r");
 	if (!file)
 	{
@@ -235,11 +236,10 @@ bool tone_set(int num)
 	if (num == m_bell_num)
 		return true;
 
-	m_bell_num = num;
-
-	bool ok = read_file();
+	bool ok = read_file(num);
 	if (ok)
 	{
+		m_bell_num = num;
 		settings_set_int32(SETTING_BELL, m_bell_num, false);
 		tone_bell();
 	}

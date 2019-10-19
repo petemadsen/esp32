@@ -376,10 +376,11 @@ esp_err_t bell_upload_handler(httpd_req_t* req)
 	// -- check file
 	len = req->content_len;
 	ret = read_wav_check(buf, len);
-	if (ret != 0)
+	if (ret == 0)
 	{
 		char filename[40];
 		sprintf(filename, "/spiffs/bell%d.wav", name);
+		ESP_LOGI(MY_TAG, "Writing file: %s", filename);
 		if (!save_to_file(filename, buf, len))
 			ret = 100;
 	}
