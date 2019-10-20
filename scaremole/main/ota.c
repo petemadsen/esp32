@@ -30,12 +30,12 @@ static const char* ERR_NOBOOT = "NOBOOT";
 #define BIN_NAME PROJECT_NAME ".bin"
 
 
-static const char* OTA_URL = PROJECT_SHUTTERS_ADDRESS "/ota/" PROJECT_NAME;
+static const char* OTA_URL = PROJECT_SHUTTERS_ADDRESS "/ota/" PROJECT_NAME "?" PROJECT_VERSION;
 #define RCV_BUFLEN 20
 static char m_rcv_buffer[RCV_BUFLEN];
 
 
-static const char* MY_TAG = PROJECT_NAME "/ota";
+static const char* MY_TAG = PROJECT_TAG("ota");
 
 
 esp_err_t ota_init()
