@@ -7,6 +7,7 @@
 #include <lwip/apps/sntp.h>
 
 #include <rom/uart.h>
+#include <esp_sleep.h>
 
 #include "wifi.h"
 #include "common.h"

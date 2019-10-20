@@ -9,6 +9,8 @@
 
 #include <esp_log.h>
 
+#include <driver/gpio.h>
+
 static const char* MY_TAG = "scaremole/scaremole";
 
 

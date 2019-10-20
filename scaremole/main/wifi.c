@@ -15,6 +15,8 @@
 
 #include <esp_image_format.h>
 
+#include <driver/gpio.h>
+
 #include "my_http.h"
 #include "wifi.h"
 
