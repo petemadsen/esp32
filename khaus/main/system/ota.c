@@ -27,10 +27,10 @@
 static const char* ERR_NOFACTORY = "NOFACTORY";
 static const char* ERR_NOBOOT = "NOBOOT";
 
-#define BIN_NAME "khaus.bin"
+#define BIN_NAME PROJECT_NAME ".bin"
 
 
-static const char* OTA_URL = PROJECT_SHUTTERS_ADDRESS "/ota/" PROJECT_NAME;
+static const char* OTA_URL = PROJECT_SHUTTERS_ADDRESS "/ota/" PROJECT_NAME "?" PROJECT_VERSION;
 #define RCV_BUFLEN 20
 static char m_rcv_buffer[RCV_BUFLEN];
 
@@ -128,6 +128,8 @@ bool ota_need_update()
 {
 	bool need_update = false;
 	m_rcv_buffer[0] = 0;
+
+	ESP_LOGI(MY_TAG, "Checking for update: %s", OTA_URL);
 
 	esp_http_client_config_t request = {
 		.url = OTA_URL,

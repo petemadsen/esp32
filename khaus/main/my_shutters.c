@@ -97,9 +97,10 @@ void shutters_task(void* pvParameters)
 			ESP_LOGE(MY_TAG, "OTA reboot failed: %s", err_msg);
 		}
 		else
-			ESP_LOGI(MY_TAG, "No OTA update needed.");
+			ESP_LOGI(MY_TAG, "No OTA update available.");
 
 		// -- touch
+		ESP_LOGI(MY_TAG, "Touch/Status: %s", touch_url);
 		esp_http_client_config_t config = {
 			.url = touch_url,
 			.event_handler = _http_event_handle,
@@ -114,6 +115,7 @@ void shutters_task(void* pvParameters)
 		}
 
 		// -- save
+		ESP_LOGI(MY_TAG, "Save: %s", save_url);
 		const size_t POST_MAXLEN = 300;
 		char* save_data = malloc(POST_MAXLEN);
 		int save_data_len = snprintf(save_data, POST_MAXLEN,
@@ -142,6 +144,48 @@ void shutters_task(void* pvParameters)
 
 		// -- cleanup
 		esp_http_client_cleanup(client);
+
+#if 1
+	time_t now;
+	struct tm timeinfo;
+
+	for (int i=0; i<3; ++i)
+	{
+		time(&now);
+		localtime_r(&now, &timeinfo);
+		if (timeinfo.tm_year != 0)
+		{
+			timeinfo.tm_year += 1900;
+			break;
+		}
+
+		vTaskDelay(60 * 1000 / portTICK_PERIOD_MS);
+	}
+
+	ESP_LOGW(MY_TAG, "TIME: %02d:%02d / %04d",
+			 timeinfo.tm_hour, timeinfo.tm_min,
+			 timeinfo.tm_year);
+
+#endif
+
+#if 1
+		ESP_LOGW(MY_TAG, "Turning off WiFi.");
+		if (lamp_status() == 0)
+		{
+			wifi_stop(); // to save energy
+
+			// wait 1h
+			vTaskDelay(3600 * 1000 / portTICK_PERIOD_MS);
+
+			// wait for the lamp to turn off
+			while (lamp_status() != 0)
+				vTaskDelay(60 * 1000 / portTICK_PERIOD_MS);
+
+			if (lamp_status() == 0)
+				esp_restart();
+		}
+
+#endif
 
 		// -- wait 3600 secs = 1h
 		vTaskDelay(3600 * 1000 / portTICK_PERIOD_MS);

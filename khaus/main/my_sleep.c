@@ -100,6 +100,7 @@ void my_sleep_task(void* arg)
 		}
 
 		// reboot/sleep if no wifi
+#if 0
 		EventBits_t bits = xEventGroupGetBits(wifi_event_group);
 		if ((bits & WIFI_CONNECTED) == 0)
 		{
@@ -118,6 +119,7 @@ void my_sleep_task(void* arg)
 		{
 			nowifi_mins = 0;
 		}
+#endif
 
 		// turn off the lights
 		if (lights_off_mins != -1 && lamp_on_secs() > lights_off_mins * 60)
