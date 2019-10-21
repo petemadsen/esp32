@@ -1,4 +1,5 @@
 EESchema Schematic File Version 4
+LIBS:khaus1-cache
 EELAYER 30 0
 EELAYER END
 $Descr A4 11693 8268
@@ -24,4 +25,315 @@ F 3 "https://www.espressif.com/sites/default/files/documentation/esp32-wroom-32_
 	1    3050 3450
 	1    0    0    -1  
 $EndComp
+$Comp
+L power:+3.3V #PWR?
+U 1 1 5DAD31E2
+P 5250 2250
+F 0 "#PWR?" H 5250 2100 50  0001 C CNN
+F 1 "+3.3V" H 5265 2423 50  0000 C CNN
+F 2 "" H 5250 2250 50  0001 C CNN
+F 3 "" H 5250 2250 50  0001 C CNN
+	1    5250 2250
+	1    0    0    -1  
+$EndComp
+$Comp
+L power:GND #PWR?
+U 1 1 5DAD38AF
+P 5250 4100
+F 0 "#PWR?" H 5250 3850 50  0001 C CNN
+F 1 "GND" H 5255 3927 50  0000 C CNN
+F 2 "" H 5250 4100 50  0001 C CNN
+F 3 "" H 5250 4100 50  0001 C CNN
+	1    5250 4100
+	1    0    0    -1  
+$EndComp
+$Comp
+L Device:R R?
+U 1 1 5DAD3A19
+P 5250 2850
+F 0 "R?" H 5320 2896 50  0000 L CNN
+F 1 "100k" H 5320 2805 50  0000 L CNN
+F 2 "" V 5180 2850 50  0001 C CNN
+F 3 "~" H 5250 2850 50  0001 C CNN
+	1    5250 2850
+	1    0    0    -1  
+$EndComp
+$Comp
+L Device:R R?
+U 1 1 5DAD3DA1
+P 5250 3550
+F 0 "R?" H 5320 3596 50  0000 L CNN
+F 1 "20k" H 5320 3505 50  0000 L CNN
+F 2 "" V 5180 3550 50  0001 C CNN
+F 3 "~" H 5250 3550 50  0001 C CNN
+	1    5250 3550
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	5250 2250 5250 2700
+Wire Wire Line
+	5250 3000 5250 3200
+Wire Wire Line
+	5250 3700 5250 4100
+Wire Wire Line
+	5250 3200 5800 3200
+Connection ~ 5250 3200
+Wire Wire Line
+	5250 3200 5250 3400
+Text GLabel 5800 3200 2    50   Input ~ 0
+VOLTAGE_PIN
+Text GLabel 3650 4450 2    50   Input ~ 0
+VOLTAGE_PIN
+$Comp
+L Device:R R?
+U 1 1 5DAD67AF
+P 5250 5350
+F 0 "R?" V 5043 5350 50  0000 C CNN
+F 1 "1k" V 5134 5350 50  0000 C CNN
+F 2 "" V 5180 5350 50  0001 C CNN
+F 3 "~" H 5250 5350 50  0001 C CNN
+	1    5250 5350
+	0    1    1    0   
+$EndComp
+Text GLabel 5100 5350 0    50   Input ~ 0
+LIGHT_OUT
+$Comp
+L Transistor_BJT:BC337 Q?
+U 1 1 5DAD928A
+P 5800 5350
+F 0 "Q?" H 5991 5396 50  0000 L CNN
+F 1 "BC337" H 5991 5305 50  0000 L CNN
+F 2 "Package_TO_SOT_THT:TO-92_Inline" H 6000 5275 50  0001 L CIN
+F 3 "https://diotec.com/tl_files/diotec/files/pdf/datasheets/bc337.pdf" H 5800 5350 50  0001 L CNN
+	1    5800 5350
+	1    0    0    -1  
+$EndComp
+$Comp
+L power:GND #PWR?
+U 1 1 5DAD9AEE
+P 5900 5950
+F 0 "#PWR?" H 5900 5700 50  0001 C CNN
+F 1 "GND" H 5905 5777 50  0000 C CNN
+F 2 "" H 5900 5950 50  0001 C CNN
+F 3 "" H 5900 5950 50  0001 C CNN
+	1    5900 5950
+	1    0    0    -1  
+$EndComp
+$Comp
+L power:+12V #PWR?
+U 1 1 5DAD9D36
+P 5900 4750
+F 0 "#PWR?" H 5900 4600 50  0001 C CNN
+F 1 "+12V" H 5915 4923 50  0000 C CNN
+F 2 "" H 5900 4750 50  0001 C CNN
+F 3 "" H 5900 4750 50  0001 C CNN
+	1    5900 4750
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	5400 5350 5600 5350
+Wire Wire Line
+	5900 4750 5900 5150
+Wire Wire Line
+	5900 5550 5900 5950
+Text GLabel 3650 3850 2    50   Input ~ 0
+LIGHT_OUT
+$Comp
+L Device:R R?
+U 1 1 5DAE08CB
+P 7200 2600
+F 0 "R?" H 7270 2646 50  0000 L CNN
+F 1 "10k" H 7270 2555 50  0000 L CNN
+F 2 "" V 7130 2600 50  0001 C CNN
+F 3 "~" H 7200 2600 50  0001 C CNN
+	1    7200 2600
+	1    0    0    -1  
+$EndComp
+$Comp
+L Device:R R?
+U 1 1 5DAE0B22
+P 7200 3500
+F 0 "R?" H 7270 3546 50  0000 L CNN
+F 1 "1k" H 7270 3455 50  0000 L CNN
+F 2 "" V 7130 3500 50  0001 C CNN
+F 3 "~" H 7200 3500 50  0001 C CNN
+	1    7200 3500
+	1    0    0    -1  
+$EndComp
+$Comp
+L power:GND #PWR?
+U 1 1 5DAE105E
+P 7200 4200
+F 0 "#PWR?" H 7200 3950 50  0001 C CNN
+F 1 "GND" H 7205 4027 50  0000 C CNN
+F 2 "" H 7200 4200 50  0001 C CNN
+F 3 "" H 7200 4200 50  0001 C CNN
+	1    7200 4200
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	7200 3650 7200 4200
+Wire Wire Line
+	7200 3350 7200 3200
+Text GLabel 3650 3950 2    50   Input ~ 0
+AUDIO_OUT
+Text GLabel 6650 2100 0    50   Input ~ 0
+AUDIO_OUT
+Wire Wire Line
+	7200 2450 7200 2100
+Wire Wire Line
+	7200 2100 6650 2100
+Wire Wire Line
+	7200 3200 7900 3200
+Connection ~ 7200 3200
+Wire Wire Line
+	7200 3200 7200 2750
+Text GLabel 7900 3200 2    50   Input ~ 0
+PAM8304
+$Comp
+L power:+3.3V #PWR?
+U 1 1 5DAE4348
+P 9600 1200
+F 0 "#PWR?" H 9600 1050 50  0001 C CNN
+F 1 "+3.3V" H 9615 1373 50  0000 C CNN
+F 2 "" H 9600 1200 50  0001 C CNN
+F 3 "" H 9600 1200 50  0001 C CNN
+	1    9600 1200
+	1    0    0    -1  
+$EndComp
+$Comp
+L Device:R R?
+U 1 1 5DAE4B00
+P 9600 1550
+F 0 "R?" H 9670 1596 50  0000 L CNN
+F 1 "10k" H 9670 1505 50  0000 L CNN
+F 2 "" V 9530 1550 50  0001 C CNN
+F 3 "~" H 9600 1550 50  0001 C CNN
+	1    9600 1550
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	9600 1200 9600 1400
+$Comp
+L power:GND #PWR?
+U 1 1 5DAE5653
+P 9600 2050
+F 0 "#PWR?" H 9600 1800 50  0001 C CNN
+F 1 "GND" H 9605 1877 50  0000 C CNN
+F 2 "" H 9600 2050 50  0001 C CNN
+F 3 "" H 9600 2050 50  0001 C CNN
+	1    9600 2050
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	9600 1700 9600 1800
+Wire Wire Line
+	9600 1800 10000 1800
+Connection ~ 9600 1800
+Wire Wire Line
+	9600 1800 9600 2050
+Text GLabel 10000 1800 2    50   Input ~ 0
+BELL_BTN
+Text GLabel 3650 3450 2    50   Input ~ 0
+BELL_BTN
+$Comp
+L Switch:SW_Push SW_BELL
+U 1 1 5DAE7E5D
+P 9100 1800
+F 0 "SW_BELL" H 9100 2085 50  0000 C CNN
+F 1 "SW_Push" H 9100 1994 50  0000 C CNN
+F 2 "" H 9100 2000 50  0001 C CNN
+F 3 "~" H 9100 2000 50  0001 C CNN
+	1    9100 1800
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	9300 1800 9600 1800
+$Comp
+L power:GND #PWR?
+U 1 1 5DAF1FF1
+P 8700 2050
+F 0 "#PWR?" H 8700 1800 50  0001 C CNN
+F 1 "GND" H 8705 1877 50  0000 C CNN
+F 2 "" H 8700 2050 50  0001 C CNN
+F 3 "" H 8700 2050 50  0001 C CNN
+	1    8700 2050
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	8700 2050 8700 1800
+Wire Wire Line
+	8700 1800 8900 1800
+$Comp
+L Switch:SW_Push SW_LIGHT
+U 1 1 5DAF67B0
+P 9050 3500
+F 0 "SW_LIGHT" H 9050 3785 50  0000 C CNN
+F 1 "SW_Push" H 9050 3694 50  0000 C CNN
+F 2 "" H 9050 3700 50  0001 C CNN
+F 3 "~" H 9050 3700 50  0001 C CNN
+	1    9050 3500
+	1    0    0    -1  
+$EndComp
+$Comp
+L Device:R R?
+U 1 1 5DAF6C09
+P 9600 2850
+F 0 "R?" H 9670 2896 50  0000 L CNN
+F 1 "10k" H 9670 2805 50  0000 L CNN
+F 2 "" V 9530 2850 50  0001 C CNN
+F 3 "~" H 9600 2850 50  0001 C CNN
+	1    9600 2850
+	1    0    0    -1  
+$EndComp
+$Comp
+L power:+3.3V #PWR?
+U 1 1 5DAF6E89
+P 9600 2650
+F 0 "#PWR?" H 9600 2500 50  0001 C CNN
+F 1 "+3.3V" H 9615 2823 50  0000 C CNN
+F 2 "" H 9600 2650 50  0001 C CNN
+F 3 "" H 9600 2650 50  0001 C CNN
+	1    9600 2650
+	1    0    0    -1  
+$EndComp
+Text GLabel 10050 3500 2    50   Input ~ 0
+LIGHT_BTN
+$Comp
+L power:GND #PWR?
+U 1 1 5DAF7240
+P 9600 3900
+F 0 "#PWR?" H 9600 3650 50  0001 C CNN
+F 1 "GND" H 9605 3727 50  0000 C CNN
+F 2 "" H 9600 3900 50  0001 C CNN
+F 3 "" H 9600 3900 50  0001 C CNN
+	1    9600 3900
+	1    0    0    -1  
+$EndComp
+$Comp
+L power:GND #PWR?
+U 1 1 5DAF7408
+P 8650 3900
+F 0 "#PWR?" H 8650 3650 50  0001 C CNN
+F 1 "GND" H 8655 3727 50  0000 C CNN
+F 2 "" H 8650 3900 50  0001 C CNN
+F 3 "" H 8650 3900 50  0001 C CNN
+	1    8650 3900
+	1    0    0    -1  
+$EndComp
+Wire Wire Line
+	8650 3900 8650 3500
+Wire Wire Line
+	8650 3500 8850 3500
+Wire Wire Line
+	9600 3900 9600 3500
+Wire Wire Line
+	9250 3500 9600 3500
+Connection ~ 9600 3500
+Wire Wire Line
+	9600 3500 9600 3000
+Wire Wire Line
+	9600 3500 10050 3500
+Text GLabel 3650 3550 2    50   Input ~ 0
+LIGHT_BTN
 $EndSCHEMATC
