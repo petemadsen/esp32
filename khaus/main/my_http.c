@@ -153,7 +153,7 @@ static bool is_string(httpd_req_t* req, const char* str)
 		free(buf);
 	}
 
-	return true;
+	return ret;
 }
 
 
@@ -330,8 +330,8 @@ esp_err_t light_handler(httpd_req_t* req)
 esp_err_t bell_handler(httpd_req_t* req)
 {
 	const char* ret = RET_ERR;
-
 	int num;
+
 	if (get_int(req, &num) && num >= 0)
 	{
 		if (tone_set(num))
@@ -339,17 +339,15 @@ esp_err_t bell_handler(httpd_req_t* req)
 	}
 	else if (is_string(req, "list"))
 	{
-		size_t buf_len = BELL_MAX + 1;
+		size_t buf_len = BELL_MAX;
 		char* buf = malloc(buf_len);
-		printf("--LIST BELLS\n");
 		for (int i=0; i<BELL_MAX; ++i)
 			buf[i] = tone_has_bell(i) ? '1': '0';
-		buf[BELL_MAX] = 0;
 		httpd_resp_send(req, buf, buf_len);
 		free(buf);
 		ret = RET_OK;
 	}
-	else
+	else if (httpd_req_get_url_query_len(req) == 0)
 	{
 		char* buf = malloc(20);
 		int buf_len = sprintf(buf, "%d", tone_get());
@@ -370,7 +368,7 @@ esp_err_t bell_upload_handler(httpd_req_t* req)
 	ESP_LOGE(MY_TAG, "bell-upload-handler: %d", (int)len);
 
 	int name = -1;
-	if (!get_int(req, &name))
+	if (!get_int(req, &name) || name >= BELL_MAX)
 	{
 		httpd_resp_send(req, RET_ERR, strlen(RET_ERR));
 		return ESP_OK;
