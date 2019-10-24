@@ -1,18 +1,23 @@
 # OTA
 
-Origin: https://github.com/espressif/esp-idf/tree/master/examples/system/ota
+Based on https://github.com/espressif/esp-idf/tree/master/examples/system/ota
 
-# Changes
+## Requirements
 
-Configuration in config.h
+WiFi configuration in config.h
 ```
-#define EXAMPLE_WIFI_SSID ""
-#define EXAMPLE_WIFI_PASS ""
+#define CONFIG_SSID ""
+#define CONFIG_PASS ""
+#define CONFIG_GATEWAY ""
+#define CONFIG_NETMASK "255.255.255.0"
+#define CONFIG_ADDRESS ""
 ```
 
-Sequence:
-* Try to download EXAMPLE_FILENAME several times. If successful, download, install and boot into it.
-* Otherwise, try to find a valid OTA image and boot into it.
+## How does it work?
+
+* Try to download EXAMPLE_FILENAME several times.
+  * If successful, download, install and boot into it.
+  * Otherwise, try to find a valid OTA image and boot into it.
 * Finally, simply reboot.
 
 ## Todo

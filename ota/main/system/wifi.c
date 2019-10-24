@@ -159,7 +159,7 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
 #endif
 
 
-void wifi_init(bool b)
+void wifi_init(bool fixed_ip)
 {
 	// -- status led
 	gpio_pad_select_gpio(PROJECT_LED_PIN);
@@ -170,26 +170,21 @@ void wifi_init(bool b)
 
 	tcpip_adapter_dhcpc_stop(TCPIP_ADAPTER_IF_STA); // no DHCP
 
-	tcpip_adapter_ip_info_t ipInfo;
-	inet_pton(AF_INET, CONFIG_ADDRESS, &ipInfo.ip);
-	inet_pton(AF_INET, CONFIG_GATEWAY, &ipInfo.gw);
-	inet_pton(AF_INET, CONFIG_NETMASK, &ipInfo.netmask);
-	tcpip_adapter_set_ip_info(TCPIP_ADAPTER_IF_STA, &ipInfo);
-
-	if (b)
+	if (fixed_ip)
 	{
-#ifdef NEW_WIFI
-		ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &event_handler, &server));
-		ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &event_handler, &server));
-#else
-		wifi_event_group = xEventGroupCreate();
-		ESP_ERROR_CHECK(esp_event_loop_init(event_handler, &server));
-#endif
+		tcpip_adapter_ip_info_t ipInfo;
+		inet_pton(AF_INET, CONFIG_ADDRESS, &ipInfo.ip);
+		inet_pton(AF_INET, CONFIG_GATEWAY, &ipInfo.gw);
+		inet_pton(AF_INET, CONFIG_NETMASK, &ipInfo.netmask);
+		tcpip_adapter_set_ip_info(TCPIP_ADAPTER_IF_STA, &ipInfo);
 	}
+
+	ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &event_handler, &server));
+	ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &event_handler, &server));
 
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
-    ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
+	ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
 
 	wifi_config_t wifi_config = {
 		.sta = {

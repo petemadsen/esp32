@@ -12,6 +12,7 @@
 #include <esp_spiffs.h>
 
 #include "common.h"
+#include "tone.h"
 #include "sound/read_wav.h"
 #include "system/my_settings.h"
 
@@ -233,6 +234,9 @@ void tone_bell()
 
 bool tone_set(int num)
 {
+	if (num >= BELL_MAX)
+		return false;
+
 	if (num == m_bell_num)
 		return true;
 
@@ -246,6 +250,45 @@ bool tone_set(int num)
 
 	ESP_LOGI(MY_TAG, "Tone set: %d", ok);
 	return ok;
+}
+
+
+bool tone_has_bell(int num)
+{
+	bool ret = false;
+
+	// -- open
+	esp_vfs_spiffs_conf_t conf = {
+			.base_path = "/spiffs",
+			.partition_label = NULL,
+			.max_files = 1,
+			.format_if_mount_failed = true
+	};
+	esp_err_t err = esp_vfs_spiffs_register(&conf);
+	if (err != ESP_OK)
+	{
+		if (err == ESP_FAIL)
+			ESP_LOGE(MY_TAG, "Failed to mount or format filesystem");
+		else if (err == ESP_ERR_NOT_FOUND)
+			ESP_LOGE(MY_TAG, "Failed to find SPIFFS partition");
+		else
+			ESP_LOGE(MY_TAG, "Failed to initialize SPIFFS (%s)", esp_err_to_name(err));
+
+		return false;
+	}
+
+	char* filename = malloc(40);
+	sprintf(filename, "/spiffs/bell%d.wav", num);
+	FILE* file = fopen(filename, "r");
+	if (file)
+	{
+		ret = true;
+		fclose(file);
+	}
+	free(filename);
+
+	esp_vfs_spiffs_unregister(NULL);
+	return ret;
 }
 
 

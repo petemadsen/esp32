@@ -8,6 +8,9 @@
 #include <freertos/FreeRTOS.h>
 
 
+#define BELL_MAX	10
+
+
 void tone_init(void);
 
 
@@ -15,6 +18,9 @@ void tone_bell(void);
 
 
 bool tone_set(int num);
+
+
+bool tone_has_bell(int num);
 
 
 int tone_get(void);

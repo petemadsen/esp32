@@ -38,6 +38,7 @@
 
 #include "config.h"
 #include "common.h"
+#include "system/wifi.h"
 
 
 #define BUFFSIZE			1024
@@ -61,6 +62,7 @@ static const char* MY_TAG = "ota";
 static char ota_write_data[BUFFSIZE + 1] = { 0 };
 
 
+#if 0
 // Event group to signal when we are connected & ready to make a request */
 static EventGroupHandle_t wifi_event_group;
 static const EventBits_t CONNECTED_BIT = BIT0;
@@ -99,8 +101,8 @@ static void initialise_wifi(void)
 	ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
     wifi_config_t wifi_config = {
         .sta = {
-            .ssid = EXAMPLE_WIFI_SSID,
-            .password = EXAMPLE_WIFI_PASS,
+			.ssid = CONFIG_SSID,
+			.password = CONFIG_PASS,
         },
     };
 	ESP_LOGI(MY_TAG, "Setting WiFi configuration SSID %s...", wifi_config.sta.ssid);
@@ -108,6 +110,7 @@ static void initialise_wifi(void)
 	ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config));
 	ESP_ERROR_CHECK(esp_wifi_start());
 }
+#endif
 
 
 static void http_cleanup(esp_http_client_handle_t client)
@@ -117,13 +120,15 @@ static void http_cleanup(esp_http_client_handle_t client)
 }
 
 
-static void __attribute__((noreturn)) task_fatal_error()
+static void __attribute__((noreturn)) ota_fatal_error()
 {
-	ESP_LOGE(MY_TAG, "Exiting task due to fatal error...");
-    (void)vTaskDelete(NULL);
+//	ESP_LOGE(MY_TAG, "Exiting task due to fatal error...");
+//    (void)vTaskDelete(NULL);
 
-    while (1) {
-        ;
+	while (1)
+	{
+		vTaskDelay(60 * 1000 / portTICK_PERIOD_MS);
+		esp_restart();
     }
 }
 
@@ -144,7 +149,7 @@ static bool download_and_install()
 	{
 		ESP_LOGE(MY_TAG, "Failed to initialise HTTP connection");
 		return false;
-//		task_fatal_error();
+//		ota_fatal_error();
 	}
 	err = esp_http_client_open(client, 0);
 	if (err != ESP_OK)
@@ -152,7 +157,7 @@ static bool download_and_install()
 		ESP_LOGE(MY_TAG, "Failed to open HTTP connection: %s", esp_err_to_name(err));
 		esp_http_client_cleanup(client);
 		return false;
-//		task_fatal_error();
+//		ota_fatal_error();
 	}
 
 	int datalen = esp_http_client_fetch_headers(client);
@@ -181,7 +186,7 @@ static bool download_and_install()
 	{
 		ESP_LOGE(MY_TAG, "esp_ota_begin failed (%s)", esp_err_to_name(err));
 		http_cleanup(client);
-		task_fatal_error();
+		ota_fatal_error();
 	}
 	ESP_LOGI(MY_TAG, "esp_ota_begin succeeded");
 
@@ -194,7 +199,7 @@ static bool download_and_install()
 		{
 			ESP_LOGE(MY_TAG, "Error: SSL data read error");
 			http_cleanup(client);
-			task_fatal_error();
+			ota_fatal_error();
 		}
 		else if (data_read > 0)
 		{
@@ -202,7 +207,7 @@ static bool download_and_install()
 			if (err != ESP_OK)
 			{
 				http_cleanup(client);
-				task_fatal_error();
+				ota_fatal_error();
 			}
 			binary_file_length += data_read;
 			ESP_LOGD(MY_TAG, "Written image length %d", binary_file_length);
@@ -219,7 +224,7 @@ static bool download_and_install()
 	{
 		ESP_LOGE(MY_TAG, "esp_ota_end failed!");
 		http_cleanup(client);
-		task_fatal_error();
+		ota_fatal_error();
 	}
 
 #if 0
@@ -241,7 +246,7 @@ static bool download_and_install()
 	{
 		ESP_LOGE(MY_TAG, "esp_ota_set_boot_partition failed (%s)!", esp_err_to_name(err));
 		http_cleanup(client);
-		task_fatal_error();
+		ota_fatal_error();
 	}
 
 	return true;
@@ -279,7 +284,7 @@ static bool find_and_activate()
 }
 
 
-static void ota_example_task(void *pvParameter)
+void ota_task(void *pvParameter)
 {
 	ESP_LOGI(MY_TAG, "Starting OTA...");
 
@@ -296,7 +301,7 @@ static void ota_example_task(void *pvParameter)
              running->type, running->subtype, running->address);
 
 	// -- wait for wifi
-    xEventGroupWaitBits(wifi_event_group, CONNECTED_BIT,
+	xEventGroupWaitBits(wifi_event_group, WIFI_CONNECTED,
                         false, true, portMAX_DELAY);
 	ESP_LOGI(MY_TAG, "Connected to Wifi! Start to connect to server....");
     
@@ -336,8 +341,6 @@ static void ota_example_task(void *pvParameter)
 	ESP_LOGI(MY_TAG, "Ready to restart system!");
 	vTaskDelay(1000 / portTICK_PERIOD_MS);
 	esp_restart();
-
-	return;
 }
 
 
@@ -373,6 +376,7 @@ esp_err_t read_ota()
 }
 
 
+#if 0
 static void nowifi_watch_task(void *pvParameter)
 {
 	const int64_t max_seconds = 2 * 60;
@@ -407,24 +411,12 @@ static void nowifi_watch_task(void *pvParameter)
 		}
 	}
 }
+#endif
 
 
-void app_main()
+
+void ota_init()
 {
-    // Initialize NVS.
-    esp_err_t err = nvs_flash_init();
-    if (err == ESP_ERR_NVS_NO_FREE_PAGES)
-	{
-        // OTA app partition table has a smaller NVS partition size than the
-		// non-OTA partition table. This size mismatch may cause NVS
-		// initialization to fail.
-		// If this happens, we erase NVS partition and initialize NVS again.
-        ESP_ERROR_CHECK(nvs_flash_erase());
-        err = nvs_flash_init();
-		ESP_LOGW(MY_TAG, "Initializing VNS.");
-    }
-    ESP_ERROR_CHECK(err);
-
 	// create download url
 	if (read_ota() != ESP_OK)
 	{
@@ -437,17 +429,7 @@ void app_main()
 	if (len >= DOWNLOAD_URL_MAXLEN)
 	{
 		ESP_LOGE(MY_TAG, "Download URL too long!");
-        task_fatal_error();
+		ota_fatal_error();
 	}
 	ESP_LOGI(MY_TAG, "Using url: %s", download_url);
-	vTaskDelay(5000 / portTICK_PERIOD_MS);
-
-	// -- led
-	gpio_pad_select_gpio(PROJECT_LED_PIN);
-	gpio_set_direction(PROJECT_LED_PIN, GPIO_MODE_OUTPUT);
-
-    initialise_wifi();
-    xTaskCreate(&ota_example_task, "ota_example_task", 8192, NULL, 5, NULL);
-
-	xTaskCreate(&nowifi_watch_task, "nowifi_watch_task", 4096, NULL, 5, NULL);
 }
