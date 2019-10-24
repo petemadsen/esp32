@@ -23,7 +23,7 @@ static EventGroupHandle_t x_events;
 #define EVENT_BELL		BIT0
 
 static int m_bell_num = 0;
-static const uint8_t* m_bell = NULL;
+static uint8_t* m_bell = NULL;
 static size_t m_bell_len = 0;
 static int m_bell_volume = 75;
 

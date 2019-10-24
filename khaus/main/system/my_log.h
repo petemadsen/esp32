@@ -12,7 +12,7 @@
 esp_err_t mylog_add(const char* str);
 
 
-bool mylog_get(uint8_t num, const char**);
+bool mylog_get(uint8_t num, char**);
 
 
 #endif

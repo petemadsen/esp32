@@ -61,7 +61,7 @@ esp_err_t mylog_add(const char* msg)
 }
 
 
-bool mylog_get(uint8_t num, const char** buf)
+bool mylog_get(uint8_t num, char** buf)
 {
 	if (num >= LOG_MAX_ENTRIES)
 		return false;

@@ -524,14 +524,14 @@ bool save_to_file(const char* filename, const char* buf, size_t buf_len)
 
 esp_err_t log_handler(httpd_req_t* req)
 {
-	const char* line = malloc(LOG_MAX_LINELEN);
+	char* line = malloc(LOG_MAX_LINELEN);
 	for (uint8_t i = 0; i < LOG_MAX_ENTRIES; ++i)
 	{
 		if (mylog_get(i, &line))
-			httpd_resp_send_chunk(req, line, strlen(line));
+			httpd_resp_sendstr_chunk(req, line);
 	}
 	free(line);
-	httpd_resp_send_chunk(req, NULL, 0);
+	httpd_resp_sendstr(req, NULL);
 
 	return ESP_OK;
 }
