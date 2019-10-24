@@ -12,6 +12,7 @@
 #include <esp_spiffs.h>
 
 #include "common.h"
+#include "tone.h"
 #include "sound/read_wav.h"
 #include "system/my_settings.h"
 
@@ -233,6 +234,9 @@ void tone_bell()
 
 bool tone_set(int num)
 {
+	if (num >= BELL_MAX)
+		return false;
+
 	if (num == m_bell_num)
 		return true;
 

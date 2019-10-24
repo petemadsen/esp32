@@ -138,9 +138,22 @@ static bool get_int(httpd_req_t* req, int* val)
 }
 
 
-static bool has_string(httpd_req_t* req, const char* str)
+static bool is_string(httpd_req_t* req, const char* str)
 {
-	return false;
+	bool ret = false;
+
+	size_t buf_len = httpd_req_get_url_query_len(req) + 1;
+	if (buf_len > 1)
+	{
+		char* buf = malloc(buf_len);
+		if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK)
+		{
+			ret = strcmp(buf, str) == 0;
+		}
+		free(buf);
+	}
+
+	return true;
 }
 
 
@@ -323,6 +336,18 @@ esp_err_t bell_handler(httpd_req_t* req)
 	{
 		if (tone_set(num))
 			ret = RET_OK;
+	}
+	else if (is_string(req, "list"))
+	{
+		size_t buf_len = BELL_MAX + 1;
+		char* buf = malloc(buf_len);
+		printf("--LIST BELLS\n");
+		for (int i=0; i<BELL_MAX; ++i)
+			buf[i] = tone_has_bell(i) ? '1': '0';
+		buf[BELL_MAX] = 0;
+		httpd_resp_send(req, buf, buf_len);
+		free(buf);
+		ret = RET_OK;
 	}
 	else
 	{

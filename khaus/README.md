@@ -52,21 +52,28 @@ Plays currently selected bell sound.
 
 Command to upload binary files:
 
-```curl --data-binary @uploadfile "IP/bell?NUM"```
+`curl --data-binary @uploadfile "IP/bell?NUM"`
 
 Example:
 
-```curl --data-binary @440Hz8bitUnsigned.wav 192.168.1.56/bell?3```
+`curl --data-binary @440Hz8bitUnsigned.wav 192.168.1.56/bell?3`
 
 Return value:
 
 0 on success.
 
-Any other value to be found in ```read_wav.c```.
+Any other value to be found in `read_wav.c`.
 
 ### GET /bell[?NUM]
 
 Sets/gets the bell to play.
+
+
+### GET /bell?list
+
+Return a string that describes if a sound slot is used or not.
+
+Format: `100100001` where 1 stand for is used, 0 is not.
 
 ### GET /volume
 
