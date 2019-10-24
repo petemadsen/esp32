@@ -166,11 +166,8 @@ esp_err_t settings_get_str(const char* key, const char** buffer, bool save_if_mi
 		return err;
 	}
 
-	printf("-------%s\n", newval);
-	printf("--+----%s\n", *buffer);
 	if (strcmp(newval, *buffer) != 0)
 	{
-		printf("----------------- changed from: %s -> %s\n", *buffer, newval);
 		free(*buffer);
 		*buffer = newval;
 	}

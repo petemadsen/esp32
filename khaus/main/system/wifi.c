@@ -37,8 +37,6 @@ static httpd_handle_t server = NULL;
 
 
 
-#define NEW_WIFI 1
-#ifdef NEW_WIFI
 static void event_handler(void* arg, esp_event_base_t event_base,
 								int32_t event_id, void* event_data)
 {
@@ -94,72 +92,9 @@ static void event_handler(void* arg, esp_event_base_t event_base,
 		}
 	}
 }
-#else
-static esp_err_t event_handler(void *ctx, system_event_t *event)
-{
-	httpd_handle_t* http = (httpd_handle_t*)ctx;
-
-    switch (event->event_id) {
-    case SYSTEM_EVENT_STA_START:
-		ESP_LOGI(MY_TAG, "SYSTEM_EVENT_STA_START");
-		gpio_set_level(PROJECT_LED_PIN, 0);
-        esp_wifi_connect();
-        break;
-
-    case SYSTEM_EVENT_STA_GOT_IP:
-		ESP_LOGI(MY_TAG, "SYSTEM_EVENT_STA_GOT_IP");
-        xEventGroupSetBits(wifi_event_group, WIFI_CONNECTED);
-		xEventGroupClearBits(wifi_event_group, WIFI_DISCONNECTED);
-
-		gpio_set_level(PROJECT_LED_PIN, 1);
-
-		if (*http == NULL)
-		{
-			*http = http_start();
-		}
-
-		// set DNS
-		{
-			ip_addr_t d;
-			d.type = IPADDR_TYPE_V4;
-			d.u_addr.ip4.addr = 0x0101a8c0; // 1 1 168 192 dns
-			dns_setserver(0, &d);
-
-//			ip_addr_t dns_addr;
-//			ip_addr_set_ip4_u32(&dns_addr, htonl(dhcp_get_option_value(dhcp, DHCP_OPTION_IDX_DNS_SERVER + n)));
-//			dns_setserver(n, &dns_addr);
-		}
-
-        break;
-
-    case SYSTEM_EVENT_STA_DISCONNECTED:
-		ESP_LOGI(MY_TAG, "SYSTEM_EVENT_STA_DISCONNECTED");
-		xEventGroupClearBits(wifi_event_group, WIFI_CONNECTED);
-		xEventGroupSetBits(wifi_event_group, WIFI_DISCONNECTED);
-
-		gpio_set_level(PROJECT_LED_PIN, 0);
-
-		if (reconnect)
-			esp_wifi_connect();
-
-		if (*http)
-		{
-			http_stop(http);
-			http = NULL;
-		}
-        break;
-
-    default:
-		ESP_LOGI(MY_TAG, "WTF: %d", event->event_id);
-        break;
-    }
-
-    return ESP_OK;
-}
-#endif
 
 
-void wifi_init(bool b)
+void wifi_init(bool fixed_ip)
 {
 	// -- status led
 	gpio_pad_select_gpio(PROJECT_LED_PIN);
@@ -167,29 +102,26 @@ void wifi_init(bool b)
 
 	// -- wifi
     tcpip_adapter_init();
+	ESP_ERROR_CHECK(esp_event_loop_create_default());
 
-	tcpip_adapter_dhcpc_stop(TCPIP_ADAPTER_IF_STA); // no DHCP
-
-	tcpip_adapter_ip_info_t ipInfo;
-	inet_pton(AF_INET, CONFIG_ADDRESS, &ipInfo.ip);
-	inet_pton(AF_INET, CONFIG_GATEWAY, &ipInfo.gw);
-	inet_pton(AF_INET, CONFIG_NETMASK, &ipInfo.netmask);
-	tcpip_adapter_set_ip_info(TCPIP_ADAPTER_IF_STA, &ipInfo);
-
-	if (b)
+	if (fixed_ip)
 	{
-#ifdef NEW_WIFI
-		ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &event_handler, &server));
-		ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &event_handler, &server));
-#else
-		wifi_event_group = xEventGroupCreate();
-		ESP_ERROR_CHECK(esp_event_loop_init(event_handler, &server));
-#endif
+		tcpip_adapter_dhcpc_stop(TCPIP_ADAPTER_IF_STA); // no DHCP
+
+		tcpip_adapter_ip_info_t ipInfo;
+		inet_pton(AF_INET, CONFIG_ADDRESS, &ipInfo.ip);
+		inet_pton(AF_INET, CONFIG_GATEWAY, &ipInfo.gw);
+		inet_pton(AF_INET, CONFIG_NETMASK, &ipInfo.netmask);
+		tcpip_adapter_set_ip_info(TCPIP_ADAPTER_IF_STA, &ipInfo);
 	}
 
-    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
-    ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
+	wifi_event_group = xEventGroupCreate();
+	ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, ESP_EVENT_ANY_ID, &event_handler, &server));
+	ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &event_handler, &server));
+
+	wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+	ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+	ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
 
 	wifi_config_t wifi_config = {
 		.sta = {
