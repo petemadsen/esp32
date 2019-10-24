@@ -138,6 +138,12 @@ static bool get_int(httpd_req_t* req, int* val)
 }
 
 
+static bool has_string(httpd_req_t* req, const char* str)
+{
+	return false;
+}
+
+
 esp_err_t status_handler(httpd_req_t* req)
 {
 	time_t now;
