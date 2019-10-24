@@ -277,11 +277,15 @@ bool tone_has_bell(int num)
 		return false;
 	}
 
-	char filename[40];
+	char* filename = malloc(40);
 	sprintf(filename, "/spiffs/bell%d.wav", num);
 	FILE* file = fopen(filename, "r");
 	if (file)
+	{
+		ret = true;
 		fclose(file);
+	}
+	free(filename);
 
 	esp_vfs_spiffs_unregister(NULL);
 	return ret;
