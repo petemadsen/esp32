@@ -20,7 +20,6 @@
 static const char* MY_TAG = PROJECT_TAG("http");
 
 
-
 static esp_err_t status_handler(httpd_req_t* req);
 static esp_err_t light_handler(httpd_req_t* req);
 static esp_err_t bell_handler(httpd_req_t* req);
@@ -32,11 +31,10 @@ static esp_err_t settings_get_handler(httpd_req_t* req);
 static esp_err_t settings_set_handler(httpd_req_t* req);
 static esp_err_t log_handler(httpd_req_t* req);
 
-
 static const char* RET_OK = "OK";
 static const char* RET_ERR = "ERR";
 static const char* RET_ERR_SIZE = "ERR_SIZE";
-
+static const char* RET_ERR_INVALID = "ERR_INVALID";
 
 static httpd_uri_t basic_handlers[] = {
 	{
@@ -166,7 +164,7 @@ esp_err_t status_handler(httpd_req_t* req)
 
 	int64_t uptime = esp_timer_get_time() / 1000 / 1000;
 
-	const size_t bufsize = 320;
+	const size_t bufsize = 1024;
 	char* buf = malloc(bufsize);
 	int buflen = snprintf(buf, bufsize,
 						  "version %s\n"
@@ -205,11 +203,11 @@ esp_err_t ota_handler(httpd_req_t* req)
 	const char* err = ota_reboot();
 	if (!err)
 	{
-		httpd_resp_send(req, RET_OK, strlen(RET_OK));
+		httpd_resp_sendstr(req, RET_OK);
 		return ESP_OK;
 	}
 
-	httpd_resp_send(req, err, strlen(err));
+	httpd_resp_sendstr(req, err);
 	return ESP_OK;
 }
 
@@ -294,7 +292,7 @@ esp_err_t settings_set_handler(httpd_req_t* req)
 	if (ret != ESP_OK)
 		httpd_resp_send_404(req);
 	else
-		httpd_resp_send(req, RET_OK, strlen(RET_OK));
+		httpd_resp_sendstr(req, RET_OK);
 
 	return ret;
 }
@@ -322,20 +320,19 @@ esp_err_t light_handler(httpd_req_t* req)
 		return ESP_OK;
 	}
 
-	httpd_resp_send(req, ret, strlen(ret));
+	httpd_resp_sendstr(req, ret);
 	return ESP_OK;
 }
 
 
 esp_err_t bell_handler(httpd_req_t* req)
 {
-	const char* ret = RET_ERR;
+	const char* ret = NULL;
 	int num;
 
 	if (get_int(req, &num) && num >= 0)
 	{
-		if (tone_set(num))
-			ret = RET_OK;
+		ret = tone_set(num) ? RET_OK : RET_ERR;
 	}
 	else if (is_string(req, "list"))
 	{
@@ -345,7 +342,6 @@ esp_err_t bell_handler(httpd_req_t* req)
 			buf[i] = tone_has_bell(i) ? '1': '0';
 		httpd_resp_send(req, buf, buf_len);
 		free(buf);
-		ret = RET_OK;
 	}
 	else if (httpd_req_get_url_query_len(req) == 0)
 	{
@@ -355,8 +351,14 @@ esp_err_t bell_handler(httpd_req_t* req)
 		free(buf);
 		return ESP_OK;
 	}
+	else
+	{
+		ret = RET_ERR_INVALID;
+	}
 
-	httpd_resp_send(req, ret, strlen(ret));
+	if (ret)
+		httpd_resp_sendstr(req, ret);
+
 	return ESP_OK;
 }
 
@@ -370,7 +372,7 @@ esp_err_t bell_upload_handler(httpd_req_t* req)
 	int name = -1;
 	if (!get_int(req, &name) || name >= BELL_MAX)
 	{
-		httpd_resp_send(req, RET_ERR, strlen(RET_ERR));
+		httpd_resp_sendstr(req, RET_ERR);
 		return ESP_OK;
 	}
 	ESP_LOGE(MY_TAG, "Name: %d", name);
@@ -379,7 +381,7 @@ esp_err_t bell_upload_handler(httpd_req_t* req)
 	char* buf = malloc(len);
 	if (!buf)
 	{
-		httpd_resp_send(req, RET_ERR_SIZE, strlen(RET_ERR_SIZE));
+		httpd_resp_sendstr(req, RET_ERR_SIZE);
 		return ESP_OK;
 	}
 
@@ -393,7 +395,7 @@ esp_err_t bell_upload_handler(httpd_req_t* req)
 				continue;
 
 			free(buf);
-			httpd_resp_send(req, RET_ERR, strlen(RET_ERR));
+			httpd_resp_sendstr(req, RET_ERR);
 			return ESP_FAIL;
 		}
 
@@ -441,31 +443,25 @@ esp_err_t play_handler(httpd_req_t* req)
 	}
 #endif
 
-	httpd_resp_send(req, ret, strlen(ret));
+	httpd_resp_sendstr(req, ret);
 	return ESP_OK;
 }
 
 
 esp_err_t volume_handler(httpd_req_t* req)
 {
-	const char* ret = RET_ERR;
-
 	int volume;
 	if (get_int(req, &volume) && volume >= 0 && volume <= 100)
 	{
 		tone_set_volume_p(volume);
-		ret = RET_OK;
-	}
-	else
-	{
-		char* buf = malloc(20);
-		int buf_len = sprintf(buf, "%d", tone_get_volume_p());
-		httpd_resp_send(req, buf, buf_len);
-		free(buf);
+		httpd_resp_sendstr(req, RET_OK);
 		return ESP_OK;
 	}
 
-	httpd_resp_send(req, ret, strlen(ret));
+	char* buf = malloc(20);
+	int buf_len = sprintf(buf, "%d", tone_get_volume_p());
+	httpd_resp_send(req, buf, buf_len);
+	free(buf);
 	return ESP_OK;
 }
 

@@ -21,7 +21,6 @@
 
 #define CFG_OTA_STORAGE			"ota"
 #define CFG_OTA_FILENAME		"filename"
-#define CFG_OTA_FILENAME_LENGTH 30
 
 
 static const char* ERR_NOFACTORY = "NOFACTORY";
