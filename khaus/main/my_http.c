@@ -531,6 +531,7 @@ esp_err_t log_handler(httpd_req_t* req)
 			httpd_resp_send_chunk(req, line, strlen(line));
 	}
 	free(line);
+	httpd_resp_send_chunk(req, NULL, 0);
 
 	return ESP_OK;
 }
