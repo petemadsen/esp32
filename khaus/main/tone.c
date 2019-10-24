@@ -253,6 +253,41 @@ bool tone_set(int num)
 }
 
 
+bool tone_has_bell(int num)
+{
+	bool ret = false;
+
+	// -- open
+	esp_vfs_spiffs_conf_t conf = {
+			.base_path = "/spiffs",
+			.partition_label = NULL,
+			.max_files = 1,
+			.format_if_mount_failed = true
+	};
+	esp_err_t err = esp_vfs_spiffs_register(&conf);
+	if (err != ESP_OK)
+	{
+		if (err == ESP_FAIL)
+			ESP_LOGE(MY_TAG, "Failed to mount or format filesystem");
+		else if (err == ESP_ERR_NOT_FOUND)
+			ESP_LOGE(MY_TAG, "Failed to find SPIFFS partition");
+		else
+			ESP_LOGE(MY_TAG, "Failed to initialize SPIFFS (%s)", esp_err_to_name(err));
+
+		return false;
+	}
+
+	char filename[40];
+	sprintf(filename, "/spiffs/bell%d.wav", num);
+	FILE* file = fopen(filename, "r");
+	if (file)
+		fclose(file);
+
+	esp_vfs_spiffs_unregister(NULL);
+	return ret;
+}
+
+
 int tone_get()
 {
 	return m_bell_num;
