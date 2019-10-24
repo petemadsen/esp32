@@ -23,11 +23,9 @@
 static const char* MY_TAG = PROJECT_TAG("shutters");
 
 
-#define DEFAULT_TOUCH_URL	PROJECT_SHUTTERS_ADDRESS "/khaus/touch"
 #define DEFAULT_SAVE_URL	PROJECT_SHUTTERS_ADDRESS "/khaus/save"
 
 
-#define SETTING_TOUCH_URL	"shutters.touch"
 #define SETTING_SAVE_URL	"shutters.save"
 
 
@@ -67,10 +65,7 @@ static esp_err_t _http_event_handle(esp_http_client_event_t *evt)
 
 void shutters_task(void* pvParameters)
 {
-	const char* touch_url = strdup(DEFAULT_TOUCH_URL);
-	settings_get_str(SETTING_TOUCH_URL, &touch_url, true);
-
-	const char* save_url = strdup(DEFAULT_SAVE_URL);
+	char* save_url = strdup(DEFAULT_SAVE_URL);
 	settings_get_str(SETTING_SAVE_URL, &save_url, true);
 
 	esp_err_t err;
@@ -80,7 +75,6 @@ void shutters_task(void* pvParameters)
 				portMAX_DELAY);
 		ESP_LOGI(MY_TAG, "Run.");
 
-		settings_get_str(SETTING_TOUCH_URL, &touch_url, true);
 		settings_get_str(SETTING_SAVE_URL, &save_url, true);
 
 		// -- check for ota update
@@ -99,21 +93,6 @@ void shutters_task(void* pvParameters)
 		else
 			ESP_LOGI(MY_TAG, "No OTA update available.");
 
-		// -- touch
-		ESP_LOGI(MY_TAG, "Touch/Status: %s", touch_url);
-		esp_http_client_config_t config = {
-			.url = touch_url,
-			.event_handler = _http_event_handle,
-		};
-		esp_http_client_handle_t client = esp_http_client_init(&config);
-		err = esp_http_client_perform(client);
-		if (err == ESP_OK)
-		{
-			ESP_LOGI(MY_TAG, "Touch/Status = %d, content_length = %d",
-					esp_http_client_get_status_code(client),
-					esp_http_client_get_content_length(client));
-		}
-
 		// -- save
 		ESP_LOGI(MY_TAG, "Save: %s", save_url);
 		const size_t POST_MAXLEN = 300;
@@ -130,7 +109,11 @@ void shutters_task(void* pvParameters)
 									 my_sensors_out_humidity(),
 									 lamp_status());
 
-		esp_http_client_set_url(client, save_url);
+		esp_http_client_config_t config = {
+			.url = save_url,
+			.event_handler = _http_event_handle,
+		};
+		esp_http_client_handle_t client = esp_http_client_init(&config);
 		esp_http_client_set_method(client, HTTP_METHOD_POST);
 		esp_http_client_set_post_field(client, save_data, save_data_len);
 		err = esp_http_client_perform(client);
@@ -145,46 +128,47 @@ void shutters_task(void* pvParameters)
 		// -- cleanup
 		esp_http_client_cleanup(client);
 
-#if 1
+#if 0
 	time_t now;
 	struct tm timeinfo;
 
 	for (int i=0; i<3; ++i)
 	{
-		time(&now);
+		time_t ret = time(&now);
+		printf("--T %ld (%d)\n", now, ret == ((time_t)-1));
 		localtime_r(&now, &timeinfo);
-		if (timeinfo.tm_year != 0)
+		printf("--Y %d\n", timeinfo.tm_year);
+		printf("--x %d\n", timeinfo.tm_isdst);
+		if (timeinfo.tm_year != 0 && timeinfo.tm_year < 1900)
 		{
 			timeinfo.tm_year += 1900;
 			break;
 		}
 
-		vTaskDelay(60 * 1000 / portTICK_PERIOD_MS);
+		ESP_LOGW(MY_TAG, "--time");
+		vTaskDelay(2000 / portTICK_PERIOD_MS);
 	}
 
 	ESP_LOGW(MY_TAG, "TIME: %02d:%02d / %04d",
 			 timeinfo.tm_hour, timeinfo.tm_min,
 			 timeinfo.tm_year);
 
-#endif
+	ESP_LOGW(MY_TAG, "Turning off WiFi.");
+	if (lamp_status() == 0)
+	{
+		wifi_stop(); // to save energy
 
-#if 1
-		ESP_LOGW(MY_TAG, "Turning off WiFi.");
+		// wait 1h
+		vTaskDelay(60 * 1000 / portTICK_PERIOD_MS);
+//		vTaskDelay(3600 * 1000 / portTICK_PERIOD_MS);
+
+		// wait for the lamp to turn off
+		while (lamp_status() != 0)
+			vTaskDelay(60 * 1000 / portTICK_PERIOD_MS);
+
 		if (lamp_status() == 0)
-		{
-			wifi_stop(); // to save energy
-
-			// wait 1h
-			vTaskDelay(3600 * 1000 / portTICK_PERIOD_MS);
-
-			// wait for the lamp to turn off
-			while (lamp_status() != 0)
-				vTaskDelay(60 * 1000 / portTICK_PERIOD_MS);
-
-			if (lamp_status() == 0)
-				esp_restart();
-		}
-
+			esp_restart();
+	}
 #endif
 
 		// -- wait 3600 secs = 1h
