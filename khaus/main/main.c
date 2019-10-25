@@ -23,7 +23,7 @@ void app_main()
 	ESP_ERROR_CHECK(settings_init());
 
 	ota_init();
-	vTaskDelay(5000 / portTICK_PERIOD_MS);
+//	vTaskDelay(5000 / portTICK_PERIOD_MS);
 
 	buttons_init();
 

@@ -19,4 +19,7 @@ const char* ota_reboot(void);
 bool ota_need_update(void);
 
 
+void ota_reboot_task(void* arg);
+
+
 #endif

@@ -20,9 +20,6 @@
 static const char* MY_TAG = PROJECT_TAG("sleep");
 
 
-static struct tm timeinfo = { 0 };
-
-
 static void update_time(void);
 
 
@@ -36,11 +33,15 @@ RTC_DATA_ATTR int m_deep_sleep_boots = 0;
 
 void my_sleep_task(void* arg)
 {
+#if 0
 	// -- init time
 	sntp_setoperatingmode(SNTP_OPMODE_POLL);
 	sntp_setservername(0, "pool.ntp.org");
 	setenv("TZ", "CET-1CEST-2,M3.5.0/02:00:00,M10.5.0/03:00:00", 1);
 	sntp_init();
+#else
+	setenv("TZ", "CET-1CEST-2,M3.5.0/02:00:00,M10.5.0/03:00:00", 1);
+#endif
 
 	int32_t hour_from = 21;
 	int32_t hour_to = 7;
@@ -71,7 +72,7 @@ void my_sleep_task(void* arg)
 
 	for (;;)
 	{
-		ESP_LOGI(MY_TAG, "Run.");
+		ESP_LOGI(MY_TAG, "Run [%d]", mins);
 
 		// read settings
 		esp_err_t err = settings_get_int32(SETTING_HOUR_FROM, &hour_from, true);
@@ -81,8 +82,14 @@ void my_sleep_task(void* arg)
 		err = settings_get_int32(SETTING_LIGHTS_OFF, &lights_off_mins, true);
 		ESP_LOGW(MY_TAG, "RET=%s\n", esp_err_to_name(err));
 
-		//
-		update_time();
+		// update time
+		time_t now;
+		struct tm timeinfo;
+		time(&now);
+		localtime_r(&now, &timeinfo);
+		timeinfo.tm_year += 1900;
+		ESP_LOGW(MY_TAG, "TIME: %02d:%02d / %04d",
+				 timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_year);
 
 		// enter night mode?
 		if (ok_to_go_to_sleep && timeinfo.tm_year > 1980)
@@ -100,7 +107,7 @@ void my_sleep_task(void* arg)
 		}
 
 		// reboot/sleep if no wifi
-#if 0
+#if 1
 		EventBits_t bits = xEventGroupGetBits(wifi_event_group);
 		if ((bits & WIFI_CONNECTED) == 0)
 		{
@@ -138,39 +145,4 @@ void my_sleep_task(void* arg)
 		vTaskDelay(60 * 1000 / portTICK_PERIOD_MS);
 		++mins;
 	}
-}
-
-
-void update_time()
-{
-	ESP_LOGI(MY_TAG, "Updating time");
-
-	// -- update time
-	time_t now = 0;
-
-	timeinfo.tm_year = 0;
-	for (int i=0; i<1; ++i)
-	{
-		time(&now);
-		localtime_r(&now, &timeinfo);
-		printf("-->%d\n", timeinfo.tm_year);
-		if (timeinfo.tm_year != 0)
-		{
-			timeinfo.tm_year += 1900;
-			break;
-		}
-
-		ESP_LOGI(MY_TAG, "Waiting...");
-		vTaskDelay(2000 / portTICK_PERIOD_MS);
-	}
-	if (timeinfo.tm_year == 0)
-		return;
-
-	ESP_LOGI(MY_TAG, "%04d-%02d-%02d %02d:%02d:%02d",
-			timeinfo.tm_year, timeinfo.tm_mon, timeinfo.tm_mday,
-			timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_sec);
-
-	char buf[64];
-	strftime(buf, sizeof(buf), "%c", &timeinfo);
-	ESP_LOGI(MY_TAG, "%s", buf);
 }

@@ -26,7 +26,7 @@ static esp_err_t bell_handler(httpd_req_t* req);
 static esp_err_t bell_upload_handler(httpd_req_t* req);
 static esp_err_t play_handler(httpd_req_t* req);
 static esp_err_t volume_handler(httpd_req_t* req);
-static esp_err_t ota_handler(httpd_req_t* req);
+static esp_err_t system_handler(httpd_req_t* req);
 static esp_err_t settings_get_handler(httpd_req_t* req);
 static esp_err_t settings_set_handler(httpd_req_t* req);
 static esp_err_t log_handler(httpd_req_t* req);
@@ -68,9 +68,9 @@ static httpd_uri_t basic_handlers[] = {
 		.handler= volume_handler,
 	},
 	{
-		.uri	= "/ota",
+		.uri	= "/system",
 		.method	= HTTP_GET,
-		.handler= ota_handler,
+		.handler= system_handler,
 	},
 	{
 		.uri	= "/sget",
@@ -198,16 +198,32 @@ esp_err_t status_handler(httpd_req_t* req)
 }
 
 
-esp_err_t ota_handler(httpd_req_t* req)
+esp_err_t system_handler(httpd_req_t* req)
 {
-	const char* err = ota_reboot();
-	if (!err)
+	const char* reply = RET_ERR;
+
+	size_t buf_len = httpd_req_get_url_query_len(req) + 1;
+	if (buf_len > 1)
 	{
-		httpd_resp_sendstr(req, RET_OK);
-		return ESP_OK;
+		char* buf = malloc(buf_len);
+		if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK)
+		{
+			if (strcmp(buf, "ota") == 0)
+			{
+				reply = ota_reboot();
+				if (!reply)
+					reply = RET_OK;
+			}
+			else if (strcmp(buf, "reboot") == 0)
+			{
+				xTaskCreate(ota_reboot_task, "ota_reboot_task", 2048, NULL, 5, NULL);
+				reply = RET_OK;
+			}
+		}
+		free(buf);
 	}
 
-	httpd_resp_sendstr(req, err);
+	httpd_resp_sendstr(req, reply);
 	return ESP_OK;
 }
 

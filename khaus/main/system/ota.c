@@ -30,7 +30,8 @@ static const char* ERR_NOBOOT = "NOBOOT";
 
 
 static const char* OTA_URL = PROJECT_SHUTTERS_ADDRESS "/ota/" PROJECT_NAME "?" PROJECT_VERSION;
-#define RCV_BUFLEN 20
+
+#define RCV_BUFLEN 32
 static char m_rcv_buffer[RCV_BUFLEN];
 
 
@@ -63,7 +64,7 @@ esp_err_t ota_init()
 }
 
 
-static void reboot_task(void* arg)
+void ota_reboot_task(void* arg)
 {
 	ESP_LOGI(MY_TAG, "Going OTA in 3 seconds.");
 	vTaskDelay(3000 / portTICK_PERIOD_MS);
@@ -81,7 +82,7 @@ const char* ota_reboot()
 		return ERR_NOBOOT;
 
 	// get ready to reboot
-	xTaskCreate(reboot_task, "reboot_task", 2048, NULL, 5, NULL);
+	xTaskCreate(ota_reboot_task, "ota_reboot_task", 2048, NULL, 5, NULL);
 	return NULL;
 }
 
@@ -133,6 +134,7 @@ bool ota_need_update()
 	esp_http_client_config_t request = {
 		.url = OTA_URL,
 		.event_handler = _http_event_handle,
+		.timeout_ms = 1000,
 	};
 	esp_http_client_handle_t client = esp_http_client_init(&request);
 	esp_err_t err = esp_http_client_perform(client);
