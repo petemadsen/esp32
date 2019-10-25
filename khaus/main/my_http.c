@@ -219,11 +219,23 @@ esp_err_t system_handler(httpd_req_t* req)
 				xTaskCreate(ota_reboot_task, "ota_reboot_task", 2048, NULL, 5, NULL);
 				reply = RET_OK;
 			}
+			else if (strcmp(buf, "logs") == 0)
+			{
+				if (log_handler(req) == ESP_OK)
+					reply = NULL;
+			}
+			else if (strcmp(buf, "status") == 0)
+			{
+				if (status_handler(req) == ESP_OK)
+					reply = NULL;
+			}
 		}
 		free(buf);
 	}
 
-	httpd_resp_sendstr(req, reply);
+	if (reply)
+		httpd_resp_sendstr(req, reply);
+
 	return ESP_OK;
 }
 
