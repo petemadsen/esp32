@@ -44,8 +44,6 @@
 #define BUFFSIZE			1024
 #define TEXT_BUFFSIZE		1024
 #define DEFAULT_FILENAME	"peterpan.bin"
-#define DEFAULT_SERVER_IP	"192.168.1.51"
-#define DEFAULT_SERVER_PORT	"8081"
 
 #define DOWNLOAD_URL_MAXLEN	80
 static char download_url[DOWNLOAD_URL_MAXLEN];
@@ -60,57 +58,6 @@ static char ota_filename[CFG_OTA_FILENAME_LENGTH];
 static const char* MY_TAG = "ota";
 /*an ota data write buffer ready to write to the flash*/
 static char ota_write_data[BUFFSIZE + 1] = { 0 };
-
-
-#if 0
-// Event group to signal when we are connected & ready to make a request */
-static EventGroupHandle_t wifi_event_group;
-static const EventBits_t CONNECTED_BIT = BIT0;
-
-
-static esp_err_t event_handler(void *ctx, system_event_t *event)
-{
-    switch (event->event_id)
-	{
-    case SYSTEM_EVENT_STA_START:
-        esp_wifi_connect();
-        break;
-    case SYSTEM_EVENT_STA_GOT_IP:
-        xEventGroupSetBits(wifi_event_group, CONNECTED_BIT);
-        break;
-    case SYSTEM_EVENT_STA_DISCONNECTED:
-        /* This is a workaround as ESP32 WiFi libs don't currently
-           auto-reassociate. */
-        esp_wifi_connect();
-        xEventGroupClearBits(wifi_event_group, CONNECTED_BIT);
-        break;
-    default:
-        break;
-    }
-    return ESP_OK;
-}
-
-
-static void initialise_wifi(void)
-{
-    tcpip_adapter_init();
-    wifi_event_group = xEventGroupCreate();
-	ESP_ERROR_CHECK(esp_event_loop_init(event_handler, NULL));
-    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-	ESP_ERROR_CHECK(esp_wifi_init(&cfg) );
-	ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
-    wifi_config_t wifi_config = {
-        .sta = {
-			.ssid = CONFIG_SSID,
-			.password = CONFIG_PASS,
-        },
-    };
-	ESP_LOGI(MY_TAG, "Setting WiFi configuration SSID %s...", wifi_config.sta.ssid);
-	ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
-	ESP_ERROR_CHECK(esp_wifi_set_config(ESP_IF_WIFI_STA, &wifi_config));
-	ESP_ERROR_CHECK(esp_wifi_start());
-}
-#endif
 
 
 static void http_cleanup(esp_http_client_handle_t client)
@@ -136,28 +83,33 @@ static void __attribute__((noreturn)) ota_fatal_error()
 static bool download_and_install()
 {
 	esp_err_t err;
-	/* update handle : set by esp_ota_begin(), must be freed via esp_ota_end() */
+
+	// update handle:
+	// set by esp_ota_begin(), must be freed via esp_ota_end()
 	esp_ota_handle_t update_handle = 0 ;
 	const esp_partition_t* update_partition = NULL;
+
+	ESP_LOGI(MY_TAG, "Downloading from: %s", download_url);
 
 	esp_http_client_config_t config = {
 		.url = download_url,
 //        .cert_pem = (char *)server_cert_pem_start,
+		.timeout_ms = 1000,
 	};
 	esp_http_client_handle_t client = esp_http_client_init(&config);
 	if (client == NULL)
 	{
 		ESP_LOGE(MY_TAG, "Failed to initialise HTTP connection");
 		return false;
-//		ota_fatal_error();
 	}
+
 	err = esp_http_client_open(client, 0);
 	if (err != ESP_OK)
 	{
-		ESP_LOGE(MY_TAG, "Failed to open HTTP connection: %s", esp_err_to_name(err));
+		ESP_LOGE(MY_TAG, "Failed to open connection: %s",
+				 esp_err_to_name(err));
 		esp_http_client_cleanup(client);
 		return false;
-//		ota_fatal_error();
 	}
 
 	int datalen = esp_http_client_fetch_headers(client);
@@ -171,7 +123,7 @@ static bool download_and_install()
 	int statuscode = esp_http_client_get_status_code(client);
 	if (statuscode != 200)
 	{
-		ESP_LOGE(MY_TAG, "Image not found: %d", statuscode);
+		ESP_LOGE(MY_TAG, "File not found: %d", statuscode);
 		esp_http_client_cleanup(client);
 		return false;
 	}
@@ -191,7 +143,7 @@ static bool download_and_install()
 	ESP_LOGI(MY_TAG, "esp_ota_begin succeeded");
 
 	int binary_file_length = 0;
-	/* deal with all receive packet */
+	// deal with all receive packet
 	while (1)
 	{
 		int data_read = esp_http_client_read(client, ota_write_data, BUFFSIZE);
@@ -203,7 +155,7 @@ static bool download_and_install()
 		}
 		else if (data_read > 0)
 		{
-			err = esp_ota_write( update_handle, (const void *)ota_write_data, data_read);
+			err = esp_ota_write(update_handle, (const void*)ota_write_data, data_read);
 			if (err != ESP_OK)
 			{
 				http_cleanup(client);
@@ -310,20 +262,20 @@ void ota_task(void *pvParameter)
 	for (int i=0; i<5; ++i)
 	{
 		ESP_LOGI(MY_TAG, "Attempt #%d", (i+1));
-		gpio_set_level(PROJECT_LED_PIN, PROJECT_LED_PIN_ON);
 
 		found = download_and_install();
 		if (found)
 			break;
 
-		gpio_set_level(PROJECT_LED_PIN, PROJECT_LED_PIN_OFF);
 		vTaskDelay(5000 / portTICK_PERIOD_MS);
 	}
 
 	// -- reboot
 	if (!found)
 	{
-		// no update found. try to boot into the existing partition again.
+		// no update found.
+		// trying to boot into the existing partition again.
+		ESP_LOGI(MY_TAG, "Trying to boot into an existing partition.");
 		found = find_and_activate();
 	}
 
@@ -333,7 +285,7 @@ void ota_task(void *pvParameter)
 		ESP_LOGE(MY_TAG, "Update failed. Rebooting into OTA. Deep sleep.");
 		vTaskDelay(10000 / portTICK_PERIOD_MS);
 
-		esp_wifi_stop();
+//		esp_wifi_stop();
 		uart_tx_wait_idle(CONFIG_CONSOLE_UART_NUM);
 		esp_deep_sleep(300LL * 1000000LL);
 	}
@@ -365,7 +317,7 @@ esp_err_t read_ota()
 	}
 	if (keylen > CFG_OTA_FILENAME_LENGTH)
 	{
-		ESP_LOGE(MY_TAG, "Filename too long: %u", keylen);
+		ESP_LOGE(MY_TAG, "Filename too long: %zu", keylen);
 		return ESP_FAIL;
 	}
 
@@ -376,15 +328,14 @@ esp_err_t read_ota()
 }
 
 
-#if 0
-static void nowifi_watch_task(void *pvParameter)
+void ota_nowifi_task(void *pvParameter)
 {
 	const int64_t max_seconds = 2 * 60;
 	int64_t last_ok = esp_timer_get_time() / 1000 / 1000;
 	for (;;)
 	{
 		EventBits_t bits = xEventGroupGetBits(wifi_event_group);
-		if (bits & CONNECTED_BIT)
+		if (bits & WIFI_CONNECTED)
 		{
 			last_ok = esp_timer_get_time() / 1000 / 1000;
 			vTaskDelay(1000 / portTICK_PERIOD_MS);
@@ -411,8 +362,6 @@ static void nowifi_watch_task(void *pvParameter)
 		}
 	}
 }
-#endif
-
 
 
 void ota_init()
@@ -424,8 +373,9 @@ void ota_init()
 		ESP_LOGE(MY_TAG, "Using default filename: %s", DEFAULT_FILENAME);
 	}
 	ESP_LOGI(MY_TAG, "Using filename: %s", ota_filename);
-	int len = snprintf(download_url, DOWNLOAD_URL_MAXLEN, "http://%s:%s/%s",
-			DEFAULT_SERVER_IP, DEFAULT_SERVER_PORT, ota_filename);
+	int len = snprintf(download_url, DOWNLOAD_URL_MAXLEN,
+					   "%s/ota/file/%s",
+					   PROJECT_SHUTTERS_ADDRESS, ota_filename);
 	if (len >= DOWNLOAD_URL_MAXLEN)
 	{
 		ESP_LOGE(MY_TAG, "Download URL too long!");

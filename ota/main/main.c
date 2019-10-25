@@ -42,5 +42,5 @@ void app_main()
 
 	xTaskCreate(&ota_task, "ota_task", 8192, NULL, 5, NULL);
 
-//	xTaskCreate(&nowifi_watch_task, "nowifi_watch_task", 4096, NULL, 5, NULL);
+	xTaskCreate(&ota_nowifi_task, "ota_nowifi_task", 4096, NULL, 5, NULL);
 }

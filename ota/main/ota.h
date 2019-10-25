@@ -14,4 +14,7 @@ void ota_fatal_error(void);
 void ota_task(void* args);
 
 
+void ota_nowifi_task(void *pvParameter);
+
+
 #endif
