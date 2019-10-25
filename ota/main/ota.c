@@ -56,7 +56,7 @@ static char ota_filename[CFG_OTA_FILENAME_LENGTH];
 
 
 static const char* MY_TAG = "ota";
-/*an ota data write buffer ready to write to the flash*/
+// an ota data write buffer ready to write to the flash
 static char ota_write_data[BUFFSIZE + 1] = { 0 };
 
 
@@ -113,7 +113,7 @@ static bool download_and_install()
 	}
 
 	int datalen = esp_http_client_fetch_headers(client);
-	if (datalen <= 0)
+	if (datalen < 0)
 	{
 		ESP_LOGE(MY_TAG, "Failed to read headers: %d", datalen);
 		esp_http_client_cleanup(client);
@@ -280,6 +280,7 @@ void ota_task(void *pvParameter)
 	}
 
 	// Oops, will reboot into OTA but after a deep sleep.
+#if 0
 	if (!found)
 	{
 		ESP_LOGE(MY_TAG, "Update failed. Rebooting into OTA. Deep sleep.");
@@ -289,6 +290,7 @@ void ota_task(void *pvParameter)
 		uart_tx_wait_idle(CONFIG_CONSOLE_UART_NUM);
 		esp_deep_sleep(300LL * 1000000LL);
 	}
+#endif
 
 	ESP_LOGI(MY_TAG, "Ready to restart system!");
 	vTaskDelay(1000 / portTICK_PERIOD_MS);
@@ -342,10 +344,14 @@ void ota_nowifi_task(void *pvParameter)
 			continue;
 		}
 
+#if 0
 		gpio_set_level(PROJECT_LED_PIN, PROJECT_LED_PIN_ON);
 		vTaskDelay(1000 / portTICK_PERIOD_MS);
 		gpio_set_level(PROJECT_LED_PIN, PROJECT_LED_PIN_OFF);
 		vTaskDelay(1000 / portTICK_PERIOD_MS);
+#else
+		vTaskDelay(1000 / portTICK_PERIOD_MS);
+#endif
 
 		int64_t now = esp_timer_get_time() / 1000 / 1000;
 		int64_t diff = now - last_ok;
