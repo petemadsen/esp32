@@ -94,7 +94,7 @@ static bool download_and_install()
 	esp_http_client_config_t config = {
 		.url = download_url,
 //        .cert_pem = (char *)server_cert_pem_start,
-		.timeout_ms = 1000,
+//		.timeout_ms = 1000,
 	};
 	esp_http_client_handle_t client = esp_http_client_init(&config);
 	if (client == NULL)
@@ -162,11 +162,11 @@ static bool download_and_install()
 				ota_fatal_error();
 			}
 			binary_file_length += data_read;
-			ESP_LOGD(MY_TAG, "Written image length %d", binary_file_length);
+			ESP_LOGI(MY_TAG, "Written image length %d", binary_file_length);
 		}
 		else if (data_read == 0)
 		{
-			ESP_LOGI(MY_TAG, "Connection closed,all data received");
+			ESP_LOGI(MY_TAG, "Connection closed, all data received");
 			break;
 		}
 	}
