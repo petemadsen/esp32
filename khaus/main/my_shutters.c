@@ -195,8 +195,8 @@ void shutters_task(void* pvParameters)
 				wifi_stop(); // to save energy
 
 				// wait 1h
-				vTaskDelay(60 * 1000 / portTICK_PERIOD_MS);
-//		vTaskDelay(3600 * 1000 / portTICK_PERIOD_MS);
+//				vTaskDelay(60 * 1000 / portTICK_PERIOD_MS);
+				vTaskDelay(3600 * 1000 / portTICK_PERIOD_MS);
 
 				// wait for the lamp to turn off
 				while (lamp_status() != 0)

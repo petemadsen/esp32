@@ -76,11 +76,8 @@ void my_sleep_task(void* arg)
 
 		// read settings
 		esp_err_t err = settings_get_int32(SETTING_HOUR_FROM, &hour_from, true);
-		ESP_LOGW(MY_TAG, "RET=%s\n", esp_err_to_name(err));
 		err = settings_get_int32(SETTING_HOUR_TO, &hour_to, true);
-		ESP_LOGW(MY_TAG, "RET=%s\n", esp_err_to_name(err));
 		err = settings_get_int32(SETTING_LIGHTS_OFF, &lights_off_mins, true);
-		ESP_LOGW(MY_TAG, "RET=%s\n", esp_err_to_name(err));
 
 		// update time
 		time_t now;

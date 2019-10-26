@@ -5,6 +5,7 @@
 #define PROJECT_COMMON_H
 
 #include <freertos/FreeRTOS.h>
+#include "config.h"
 
 
 #define GEEKWORK_EASY_KIT_C1	1	// has two leds: 0 and 27
@@ -12,12 +13,15 @@
 
 
 #define PROJECT_NAME "khaus"
-#define PROJECT_VERSION "2019-10-20/0"
+#define PROJECT_VERSION "2019-10-26/1"
 #define PROJECT_BOARD GEEKCREIT_DEVKIT_V1
 #define PROJECT_TAG(x) PROJECT_NAME "/" x
 
-#define PROJECT_SHUTTERS_ADDRESS "http://192.168.1.51:8080"
+#ifdef PROJECT_DEBUG
 #define PROJECT_SHUTTERS_ADDRESS "http://192.168.1.86:8080"
+#else
+#define PROJECT_SHUTTERS_ADDRESS "http://192.168.1.51:8080"
+#endif
 
 
 #define PROJECT_TONE_ONOFF_PIN		GPIO_NUM_32

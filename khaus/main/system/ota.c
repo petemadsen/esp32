@@ -89,37 +89,39 @@ const char* ota_reboot()
 
 static esp_err_t _http_event_handle(esp_http_client_event_t *evt)
 {
-	switch(evt->event_id) {
-		case HTTP_EVENT_ERROR:
-			ESP_LOGD(MY_TAG, "HTTP_EVENT_ERROR");
-			break;
-		case HTTP_EVENT_ON_CONNECTED:
-			ESP_LOGD(MY_TAG, "HTTP_EVENT_ON_CONNECTED");
-			break;
-		case HTTP_EVENT_HEADER_SENT:
-			ESP_LOGD(MY_TAG, "HTTP_EVENT_HEADER_SENT");
-			break;
-		case HTTP_EVENT_ON_HEADER:
-			ESP_LOGD(MY_TAG, "HTTP_EVENT_ON_HEADER");
-			printf("%.*s", evt->data_len, (char*)evt->data);
-			break;
-		case HTTP_EVENT_ON_DATA:
-			ESP_LOGI(MY_TAG, "HTTP_EVENT_ON_DATA, len=%d is_chunked=%d",
-					 evt->data_len,
-					 esp_http_client_is_chunked_response(evt->client));
-			if (evt->data_len < RCV_BUFLEN)
-			{
-				strncpy(m_rcv_buffer, (char*)evt->data, evt->data_len);
-				ESP_LOGI(MY_TAG, "ooook(%s)", m_rcv_buffer);
-			}
-			break;
-		case HTTP_EVENT_ON_FINISH:
-			ESP_LOGD(MY_TAG, "HTTP_EVENT_ON_FINISH");
-			break;
-		case HTTP_EVENT_DISCONNECTED:
-			ESP_LOGD(MY_TAG, "HTTP_EVENT_DISCONNECTED");
-			break;
+	switch(evt->event_id)
+	{
+	case HTTP_EVENT_ERROR:
+		ESP_LOGI(MY_TAG, "HTTP_EVENT_ERROR");
+		break;
+	case HTTP_EVENT_ON_CONNECTED:
+		ESP_LOGI(MY_TAG, "HTTP_EVENT_ON_CONNECTED");
+		break;
+	case HTTP_EVENT_HEADER_SENT:
+		ESP_LOGI(MY_TAG, "HTTP_EVENT_HEADER_SENT");
+		break;
+	case HTTP_EVENT_ON_HEADER:
+		ESP_LOGI(MY_TAG, "HTTP_EVENT_ON_HEADER");
+		printf("%.*s", evt->data_len, (char*)evt->data);
+		break;
+	case HTTP_EVENT_ON_DATA:
+		ESP_LOGI(MY_TAG, "HTTP_EVENT_ON_DATA, len=%d is_chunked=%d",
+				 evt->data_len,
+				 esp_http_client_is_chunked_response(evt->client));
+		if (evt->data_len < RCV_BUFLEN)
+		{
+			strncpy(m_rcv_buffer, (char*)evt->data, evt->data_len);
+			ESP_LOGI(MY_TAG, "ooook(%s)", m_rcv_buffer);
+		}
+		break;
+	case HTTP_EVENT_ON_FINISH:
+		ESP_LOGI(MY_TAG, "HTTP_EVENT_ON_FINISH");
+		break;
+	case HTTP_EVENT_DISCONNECTED:
+		ESP_LOGI(MY_TAG, "HTTP_EVENT_DISCONNECTED");
+		break;
 	}
+
 	return ESP_OK;
 }
 

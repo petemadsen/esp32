@@ -31,7 +31,9 @@ static const char* MY_TAG = PROJECT_TAG("wifi");
 EventGroupHandle_t wifi_event_group;
 const EventBits_t WIFI_CONNECTED = BIT0;
 const EventBits_t WIFI_DISCONNECTED = BIT1;
+
 static bool reconnect = true;
+static bool run_httpd = true;
 
 static httpd_handle_t server = NULL;
 
@@ -74,12 +76,13 @@ static void event_handler(void* arg, esp_event_base_t event_base,
 		gpio_set_level(PROJECT_LED_PIN, PROJECT_LED_PIN_ON);
 		xEventGroupSetBits(wifi_event_group, WIFI_CONNECTED);
 
-		if (*http == NULL)
+		if (run_httpd && *http == NULL)
 		{
 			*http = http_start();
 		}
 
 		// set DNS
+#if 0
 		{
 			ip_addr_t d;
 			d.type = IPADDR_TYPE_V4;
@@ -90,6 +93,7 @@ static void event_handler(void* arg, esp_event_base_t event_base,
 //			ip_addr_set_ip4_u32(&dns_addr, htonl(dhcp_get_option_value(dhcp, DHCP_OPTION_IDX_DNS_SERVER + n)));
 //			dns_setserver(n, &dns_addr);
 		}
+#endif
 	}
 }
 
