@@ -83,7 +83,7 @@ void shutters_task(void* pvParameters)
 
 	char* cmd_url = strdup(DEFAULT_CMD_URL);
 
-	bool turn_off_wifi = true;
+	bool with_wifi = false;
 
 	for (;;)
 	{
@@ -144,9 +144,9 @@ void shutters_task(void* pvParameters)
 			if (status == 200 && strlen(m_rcv_buffer))
 			{
 				if (strcmp(m_rcv_buffer, "wifi") == 0)
-					turn_off_wifi = false;
+					with_wifi = true;
 				else if(strcmp(m_rcv_buffer, "nowifi") == 0)
-					turn_off_wifi = true;
+					with_wifi = false;
 				ESP_LOGI(MY_TAG, "Cmd: %s", m_rcv_buffer);
 			}
 		}
@@ -163,13 +163,15 @@ void shutters_task(void* pvParameters)
 									 "&out_temp=%.2f"
 									 "&out_humidity=%.2f"
 									 "&boots=%d"
-									 "&light=%d",
+									 "&light=%d"
+									 "&wifi=%d",
 									 my_sensors_board_temp(),
 									 my_sensors_board_voltage(),
 									 my_sensors_out_temp(),
 									 my_sensors_out_humidity(),
 									 settings_boot_counter(),
-									 lamp_status());
+									 lamp_status(),
+									 with_wifi ? 1 : 0);
 
 		esp_http_client_set_method(client, HTTP_METHOD_POST);
 		esp_http_client_set_url(client, save_url);
@@ -187,7 +189,7 @@ void shutters_task(void* pvParameters)
 		esp_http_client_cleanup(client);
 
 #if 1
-		if (turn_off_wifi)
+		if (!with_wifi)
 		{
 			ESP_LOGW(MY_TAG, "Turning off WiFi.");
 			if (lamp_status() == 0)
