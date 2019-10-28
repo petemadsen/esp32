@@ -160,7 +160,7 @@ static void tone_task(void* ignore)
 
 	for (;;)
 	{
-		settings_get_int32(SETTING_BELL, &m_bell_num, true);
+		settings_get_int32(STORAGE_APP, SETTING_BELL, &m_bell_num, true);
 
 		xEventGroupWaitBits(x_events, EVENT_BELL, true, false, portMAX_DELAY);
 
@@ -244,7 +244,7 @@ bool tone_set(int num)
 	if (ok)
 	{
 		m_bell_num = num;
-		settings_set_int32(SETTING_BELL, m_bell_num, false);
+		settings_set_int32(STORAGE_APP, SETTING_BELL, m_bell_num, false);
 		tone_bell();
 	}
 

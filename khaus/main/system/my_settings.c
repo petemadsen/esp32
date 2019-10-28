@@ -12,7 +12,7 @@
 #include <string.h>
 
 
-#define STORAGE	"app"
+#define APP_STORAGE	"app"
 
 
 static const char* MY_TAG = PROJECT_TAG("settings");
@@ -40,11 +40,11 @@ esp_err_t settings_init()
 	}
 
 	// boot counter
-	err = settings_get_int32(SETTING_BOOT_COUNTER, &m_boot_counter, true);
+	err = settings_get_int32(STORAGE_APP, SETTING_BOOT_COUNTER, &m_boot_counter, true);
 	if (err == ESP_OK)
 	{
 		m_boot_counter += 1;
-		settings_set_int32(SETTING_BOOT_COUNTER, m_boot_counter, false);
+		settings_set_int32(STORAGE_APP, SETTING_BOOT_COUNTER, m_boot_counter, false);
 	}
 	else
 	{
@@ -54,25 +54,25 @@ esp_err_t settings_init()
 
 	// Example of nvs_get_stats() to get the number of used entries and free entries:
 	nvs_stats_t nvs_stats;
-	err = nvs_get_stats(STORAGE, &nvs_stats);
+	err = nvs_get_stats(APP_STORAGE, &nvs_stats);
 	ESP_LOGI(MY_TAG, "UsedEntries %zu FreeEntries %zu AllEntries %zu",
 			 nvs_stats.used_entries, nvs_stats.free_entries, nvs_stats.total_entries);
 
-	ESP_LOGI(MY_TAG, "Error: %s", esp_err_to_name(err));
+	ESP_LOGI(MY_TAG, "Error: %s/%d", esp_err_to_name(err), err);
 	return ESP_OK;
 	return err;
 }
 
 
-esp_err_t settings_set_int32(const char* key, int32_t val, bool must_exist)
+esp_err_t settings_set_int32(const char* storage, const char* key, int32_t val, bool must_exist)
 {
 	esp_err_t err = ESP_OK;
 
 	nvs_handle my_handle;
-	err = nvs_open(STORAGE, NVS_READWRITE, &my_handle);
+	err = nvs_open(storage, NVS_READWRITE, &my_handle);
 	if (err != ESP_OK)
 	{
-		ESP_LOGE(MY_TAG, "Could not open storage: %s", STORAGE);
+		ESP_LOGE(MY_TAG, "Could not open storage: %s", storage);
 		return err;
 	}
 
@@ -99,15 +99,15 @@ esp_err_t settings_set_int32(const char* key, int32_t val, bool must_exist)
 }
 
 
-esp_err_t settings_get_int32(const char* key, int32_t* val, bool save_if_missing)
+esp_err_t settings_get_int32(const char* storage, const char* key, int32_t* val, bool save_if_missing)
 {
 	esp_err_t err;
 
 	nvs_handle my_handle;
-	err = nvs_open(STORAGE, NVS_READWRITE, &my_handle);
+	err = nvs_open(storage, NVS_READWRITE, &my_handle);
 	if (err != ESP_OK)
 	{
-		ESP_LOGE(MY_TAG, "Could not open storage: %s", STORAGE);
+		ESP_LOGE(MY_TAG, "Could not open storage: %s", storage);
 		return err;
 	}
 
@@ -129,13 +129,13 @@ esp_err_t settings_get_int32(const char* key, int32_t* val, bool save_if_missing
 }
 
 
-esp_err_t settings_get_str(const char* key, char** buffer, bool save_if_missing)
+esp_err_t settings_get_str(const char* storage, const char* key, char** buffer, bool save_if_missing)
 {
 	esp_err_t err = ESP_OK;
 	char* newval = NULL;
 
 	nvs_handle my_handle;
-	err = nvs_open(STORAGE, NVS_READWRITE, &my_handle);
+	err = nvs_open(storage, NVS_READWRITE, &my_handle);
 	if (err == ESP_OK)
 	{
 		size_t len = 0;
@@ -159,9 +159,7 @@ esp_err_t settings_get_str(const char* key, char** buffer, bool save_if_missing)
 		ESP_LOGW(MY_TAG, "Could not read '%s' (%d).", key, save_if_missing);
 		if (save_if_missing)
 		{
-			err = settings_set_str(key, *buffer, false);
-			if (err == ESP_OK)
-				err = nvs_commit(my_handle);
+			err = settings_set_str(storage, key, *buffer, false);
 		}
 		return err;
 	}
@@ -176,15 +174,15 @@ esp_err_t settings_get_str(const char* key, char** buffer, bool save_if_missing)
 }
 
 
-esp_err_t settings_set_str(const char* key, const char* val, bool must_exist)
+esp_err_t settings_set_str(const char* storage, const char* key, const char* val, bool must_exist)
 {
 	esp_err_t err;
 
 	nvs_handle my_handle;
-	err = nvs_open(STORAGE, NVS_READWRITE, &my_handle);
+	err = nvs_open(storage, NVS_READWRITE, &my_handle);
 	if (err != ESP_OK)
 	{
-		ESP_LOGE(MY_TAG, "Could not open storage: %s", STORAGE);
+		ESP_LOGE(MY_TAG, "Could not open storage: %s", storage);
 		return err;
 	}
 
@@ -207,6 +205,28 @@ esp_err_t settings_set_str(const char* key, const char* val, bool must_exist)
 	}
 
 	nvs_close(my_handle);
+	return err;
+}
+
+
+esp_err_t settings_clear(const char* storage)
+{
+	esp_err_t err;
+
+	nvs_handle handle;
+	err = nvs_open(storage, NVS_READWRITE, &handle);
+	if (err != ESP_OK)
+	{
+		ESP_LOGE(MY_TAG, "Could not open storage: %s", storage);
+		return err;
+	}
+
+	if ((err = nvs_erase_all(handle)) == ESP_OK)
+	{
+		err = nvs_commit(handle);
+	}
+
+	nvs_close(handle);
 	return err;
 }
 

@@ -76,7 +76,7 @@ static esp_err_t _http_event_handle(esp_http_client_event_t *evt)
 void shutters_task(void* pvParameters)
 {
 	char* save_url = strdup(DEFAULT_SAVE_URL);
-	settings_get_str(SETTING_SAVE_URL, &save_url, true);
+	settings_get_str(STORAGE_APP, SETTING_SAVE_URL, &save_url, true);
 
 	char* time_url = strdup(DEFAULT_TIME_URL);
 //	settings_get_str(SETTING_TIME_URL, &save_url, true);
@@ -91,7 +91,7 @@ void shutters_task(void* pvParameters)
 				portMAX_DELAY);
 		ESP_LOGI(MY_TAG, "Run.");
 
-		settings_get_str(SETTING_SAVE_URL, &save_url, true);
+		settings_get_str(STORAGE_APP, SETTING_SAVE_URL, &save_url, true);
 //		settings_get_str(SETTING_TIME_URL, &time_url, true);
 
 		// -- check for ota update

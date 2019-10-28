@@ -23,7 +23,7 @@ esp_err_t mylog_add(const char* msg)
 
 	// get next log entry position
 	int32_t next_pos = 0;
-	ret = settings_get_int32(SETTING_NEXT_LOG_POS, &next_pos, true);
+	ret = settings_get_int32(STORAGE_APP, SETTING_NEXT_LOG_POS, &next_pos, true);
 	if ( ret != ESP_OK)
 		return ret;
 
@@ -44,7 +44,7 @@ esp_err_t mylog_add(const char* msg)
 			msg);
 
 	// write msg
-	ret = settings_set_str(key, buffer, false);
+	ret = settings_set_str(STORAGE_APP, key, buffer, false);
 
 	// cleanup
 	free(key);
@@ -54,7 +54,7 @@ esp_err_t mylog_add(const char* msg)
 	if (ret == ESP_OK)
 	{
 		next_pos = (next_pos + 1) % LOG_MAX_ENTRIES;
-		settings_set_int32(SETTING_NEXT_LOG_POS, next_pos, false);
+		settings_set_int32(STORAGE_APP, SETTING_NEXT_LOG_POS, next_pos, false);
 	}
 
 	return ret;
@@ -69,7 +69,7 @@ bool mylog_get(uint8_t num, char** buf)
 	char* key = malloc(10 + strlen(SETTING_LOG_PREFIX));
 	sprintf(key, SETTING_LOG_PREFIX, num);
 
-	esp_err_t err = settings_get_str(key, buf, false);
+	esp_err_t err = settings_get_str(STORAGE_APP, key, buf, false);
 	if (err != ESP_OK)
 		return false;
 

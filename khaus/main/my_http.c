@@ -253,7 +253,7 @@ esp_err_t settings_get_handler(httpd_req_t* req)
 		if (httpd_req_get_url_query_str(req, key, buf_len) == ESP_OK)
 		{
 			int32_t val;
-			ret = settings_get_int32(key, &val, false);
+			ret = settings_get_int32(STORAGE_APP, key, &val, false);
 			if (ret == ESP_OK)
 			{
 				reply_len = 20;
@@ -265,7 +265,7 @@ esp_err_t settings_get_handler(httpd_req_t* req)
 			if (!reply)
 			{
 				reply = strdup(RET_ERR);
-				ret = settings_get_str(key, &reply, false);
+				ret = settings_get_str(STORAGE_APP, key, &reply, false);
 				reply_len = strlen(reply);
 			}
 		}
@@ -300,13 +300,17 @@ esp_err_t settings_set_handler(httpd_req_t* req)
 
 			if (sscanf(buf, "%s=%d", key, &val) == 2)
 			{
-				ret = settings_set_int32(key, val, true);
+				ret = settings_set_int32(STORAGE_APP, key, val, true);
 			}
 			else if (sscanf(buf, "%[^=]=%s", key, value) == 2)
 			{
-				ret = settings_set_str(key, value, true);
+				ret = settings_set_str(STORAGE_APP, key, value, true);
 			}
-			else if (strcmp(buf, "ERASE") == 0)
+			else if (strcmp(buf, "clear") == 0)
+			{
+				ret = settings_clear(STORAGE_APP);
+			}
+			else if (strcmp(buf, "ERASEALL") == 0)
 			{
 				ret = settings_erase();
 			}
