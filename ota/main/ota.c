@@ -27,19 +27,19 @@
 #include "config.h"
 #include "common.h"
 #include "system/wifi.h"
+#include "system/my_settings.h"
 
 
 #define BUFFSIZE			1024
 #define DEFAULT_FILENAME	"peterpan.bin"
 
-#define DOWNLOAD_URL_MAXLEN	128
-static char download_url[DOWNLOAD_URL_MAXLEN];
-
-
-#define CFG_OTA_STORAGE			"ota"
 #define CFG_OTA_FILENAME		"filename"
-#define CFG_OTA_FILENAME_LENGTH	64
-static char ota_filename[CFG_OTA_FILENAME_LENGTH];
+#define CFG_OTA_URL				"url"
+
+#define DOWNLOAD_URL_MAXLEN	128
+static char* ota_url;
+
+
 
 
 static const char* MY_TAG = "ota";
@@ -64,149 +64,6 @@ static void __attribute__((noreturn)) ota_fatal_error()
 		vTaskDelay(60 * 1000 / portTICK_PERIOD_MS);
 		esp_restart();
     }
-}
-
-
-static int download_and_install_old()
-{
-	esp_err_t err;
-
-	// update handle:
-	// set by esp_ota_begin(), must be freed via esp_ota_end()
-	esp_ota_handle_t update_handle = 0 ;
-	const esp_partition_t* update_partition = NULL;
-
-	ESP_LOGI(MY_TAG, "Connecting to: %s", download_url);
-
-	esp_http_client_config_t config = {
-		.url = download_url,
-//        .cert_pem = (char *)server_cert_pem_start,
-//		.timeout_ms = 2000,
-	};
-	esp_http_client_handle_t client = esp_http_client_init(&config);
-	if (client == NULL)
-	{
-		ESP_LOGE(MY_TAG, "Failed to initialise HTTP connection");
-		return false;
-	}
-
-	err = esp_http_client_open(client, 0);
-	if (err != ESP_OK)
-	{
-		ESP_LOGE(MY_TAG, "Failed to open connection: %s/%d",
-				 esp_err_to_name(err), err);
-		esp_http_client_cleanup(client);
-		return false;
-	}
-
-	int datalen = esp_http_client_fetch_headers(client);
-	if (datalen < 0)
-	{
-		ESP_LOGE(MY_TAG, "Failed to read headers: %d", datalen);
-		esp_http_client_cleanup(client);
-		return false;
-	}
-
-	int statuscode = esp_http_client_get_status_code(client);
-	if (statuscode != 200)
-	{
-		ESP_LOGE(MY_TAG, "File not found: %d", statuscode);
-		esp_http_client_cleanup(client);
-		return statuscode;
-	}
-
-	// -- connected
-
-	int file_size = esp_http_client_get_content_length(client);
-	double next_progress = 9.0;
-	ESP_LOGE(MY_TAG, "SIZE: %d", file_size);
-
-	update_partition = esp_ota_get_next_update_partition(NULL);
-	ESP_LOGI(MY_TAG, "Writing to partition subtype %d at offset 0x%x",
-			 update_partition->subtype, update_partition->address);
-	assert(update_partition != NULL);
-	if (update_partition == NULL)
-	{
-		ESP_LOGE(MY_TAG, "Could not set update parition!");
-		http_cleanup(client);
-		ota_fatal_error();
-	}
-
-	err = esp_ota_begin(update_partition, OTA_SIZE_UNKNOWN, &update_handle);
-	if (err != ESP_OK)
-	{
-		ESP_LOGE(MY_TAG, "esp_ota_begin failed (%s)", esp_err_to_name(err));
-		http_cleanup(client);
-		ota_fatal_error();
-	}
-	ESP_LOGI(MY_TAG, "esp_ota_begin succeeded");
-
-	int binary_file_length = 0;
-	// deal with all receive packet
-	while (1)
-	{
-		int data_read = esp_http_client_read(client, ota_read_buf, BUFFSIZE);
-		if (data_read < 0)
-		{
-			ESP_LOGE(MY_TAG, "Error: SSL data read error");
-			http_cleanup(client);
-			ota_fatal_error();
-		}
-		else if (data_read > 0)
-		{
-			err = esp_ota_write(update_handle, (const void*)ota_read_buf, data_read);
-			if (err != ESP_OK)
-			{
-				http_cleanup(client);
-				ota_fatal_error();
-			}
-			binary_file_length += data_read;
-
-			double progress = (double)binary_file_length / (double)file_size * 100.0;
-			if (progress > next_progress)
-			{
-				ESP_LOGI(MY_TAG, "Received: %.1f", progress);
-				next_progress += 10.0;
-			}
-		}
-		else if (data_read == 0)
-		{
-			ESP_LOGI(MY_TAG, "Connection closed, all data received");
-			break;
-		}
-	}
-	ESP_LOGI(MY_TAG, "Total received: %d / %d", binary_file_length, file_size);
-
-	if (esp_ota_end(update_handle) != ESP_OK)
-	{
-		ESP_LOGE(MY_TAG, "esp_ota_end failed!");
-		http_cleanup(client);
-		ota_fatal_error();
-	}
-
-#if 0
-	if (esp_partition_check_identity(esp_ota_get_running_partition(), update_partition) == true)
-	{
-		ESP_LOGI(MY_TAG, "The current running firmware is same as the firmware just downloaded");
-		int i = 0;
-		ESP_LOGI(MY_TAG, "When a new firmware is available on the server, press the reset button to download it");
-		while(1)
-		{
-			ESP_LOGI(MY_TAG, "Waiting for a new firmware ... %d", ++i);
-			vTaskDelay(2000 / portTICK_PERIOD_MS);
-		}
-	}
-#endif
-
-	err = esp_ota_set_boot_partition(update_partition);
-	if (err != ESP_OK)
-	{
-		ESP_LOGE(MY_TAG, "esp_ota_set_boot_partition failed (%s)!", esp_err_to_name(err));
-		http_cleanup(client);
-		ota_fatal_error();
-	}
-
-	return 200;
 }
 
 
@@ -332,7 +189,7 @@ static bool do_download(esp_http_client_handle_t client)
 static int download_and_install()
 {
 	esp_http_client_config_t config = {
-		.url = download_url,
+		.url = ota_url,
 //        .cert_pem = (char *)server_cert_pem_start,
 //		.timeout_ms = 2000,
 	};
@@ -460,38 +317,6 @@ void ota_task(void *pvParameter)
 }
 
 
-esp_err_t read_ota()
-{
-	esp_err_t err;
-
-	nvs_handle my_handle;
-    err = nvs_open(CFG_OTA_STORAGE, NVS_READWRITE, &my_handle);
-	if (err != ESP_OK)
-	{
-		ESP_LOGE(MY_TAG, "Could not open storage: %s", CFG_OTA_STORAGE);
-		return err;
-	}
-
-	size_t keylen;
-	err = nvs_get_str(my_handle, CFG_OTA_FILENAME, NULL, &keylen);
-	if (err != ESP_OK)
-	{
-		ESP_LOGE(MY_TAG, "Key not found: %s", CFG_OTA_FILENAME);
-		return err;
-	}
-	if (keylen > CFG_OTA_FILENAME_LENGTH)
-	{
-		ESP_LOGE(MY_TAG, "Filename too long: %zu", keylen);
-		return ESP_FAIL;
-	}
-
-	err = nvs_get_str(my_handle, CFG_OTA_FILENAME, ota_filename, &keylen);
-	ESP_LOGI(MY_TAG, "Filename to load: %s/%zu", ota_filename, keylen);
-
-	return ESP_OK;
-}
-
-
 void ota_nowifi_task(void *pvParameter)
 {
 	const int64_t max_seconds = 2 * 60;
@@ -534,23 +359,22 @@ void ota_nowifi_task(void *pvParameter)
 
 void ota_init()
 {
-	// create download url
-	if (read_ota() != ESP_OK)
-	{
-		strcpy(ota_filename, DEFAULT_FILENAME);
-		ESP_LOGE(MY_TAG, "Using default filename: %s", DEFAULT_FILENAME);
-	}
-	ESP_LOGI(MY_TAG, "Using filename: %s", ota_filename);
+	// -- NEW: try to read the complete url first
+	if (settings_get_str(STORAGE_OTA, CFG_OTA_URL, &ota_url, false) == ESP_OK)
+		return;
+
+	// -- OLD: get filename
+	char* filename = strdup(DEFAULT_FILENAME);
+	settings_get_str(STORAGE_OTA, CFG_OTA_FILENAME, &filename, false);
+
 	int len;
-	len = snprintf(download_url, DOWNLOAD_URL_MAXLEN,
+	ota_url = malloc(DOWNLOAD_URL_MAXLEN + 1);
+	len = snprintf(ota_url, DOWNLOAD_URL_MAXLEN,
 				   "%s/ota/file/%s",
-				   PROJECT_SHUTTERS_ADDRESS, ota_filename);
-//	len = snprintf(download_url, DOWNLOAD_URL_MAXLEN, "http://192.168.1.51:8081/khaus.bin");
-	len = snprintf(download_url, DOWNLOAD_URL_MAXLEN, "http://192.168.1.86:8080/ota/file/khaus.bin");
+				   PROJECT_SHUTTERS_ADDRESS, filename);
 	if (len >= DOWNLOAD_URL_MAXLEN)
 	{
-		ESP_LOGE(MY_TAG, "Download URL too long!");
+		ESP_LOGE(MY_TAG, "Download URL too long! This should never happen!");
 		ota_fatal_error();
 	}
-	ESP_LOGI(MY_TAG, "Using url: %s", download_url);
 }

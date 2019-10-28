@@ -13,6 +13,7 @@ set(COMPONENT_SRCS
 	my_http.c
 	ota.c
 	system/wifi.c
+	system/my_settings.c
 )
 
 register_component()
