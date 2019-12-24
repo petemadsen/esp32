@@ -1,28 +1,24 @@
 #set(COMPONENT_ADD_INCLUDEDIRS include)
+set(COMPONENT_ADD_INCLUDEDIRS .)
 
 # Edit following two lines to set component requirements (see docs)
 set(COMPONENT_REQUIRES )
 set(COMPONENT_PRIV_REQUIRES )
 
+file(GLOB_RECURSE HEADERS "*.h")
+
 set(COMPONENT_SRCS
-        common.h
-        msgeq7.c
-        msgeq7.h
-        telnet.c
-        telnet.h
-        ws2812b.c
-        ws2812b.h
-        parser.c
-        parser.h
-        main.c
+	${HEADERS}
+	msgeq7.c
+	telnet.c
+	ws2812b.c
+	parser.c
+	main.c
 	colors.c
-        colors.h
-        my_http.c
-        my_http.h
-        wifi.c
-        wifi.h
-        ota.h
-        ota.c
+	my_http.c
+	system/ota.c
+	system/my_settings.c
+	system/wifi.c
 )
 
 register_component()

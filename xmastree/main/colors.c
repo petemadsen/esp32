@@ -541,6 +541,7 @@ void colors_init()
 	leds.sem = xSemaphoreCreateBinary();
 	leds.num_leds = 60;
 	leds.num_leds = 150;
+	leds.num_leds = 300;
 	leds.leds = malloc(sizeof(uint32_t) * leds.num_leds);
 	memset(leds.leds, 0, sizeof(uint32_t) * leds.num_leds);
 

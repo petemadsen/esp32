@@ -1,12 +1,13 @@
 /**
  * This code is public domain.
  */
+#include <lwip/apps/sntp.h>
+
 #include "my_http.h"
 #include "common.h"
 #include "colors.h"
-#include "ota.h"
+#include "system/ota.h"
 
-#include <lwip/apps/sntp.h>
 
 
 static void reboot_task(void* arg);
@@ -137,7 +138,7 @@ esp_err_t mode_handler(httpd_req_t* req)
 	{
 		if (mode < COLORS_NUM_MODES)
 		{
-			colors_mode(mode);
+			colors_set_mode(mode);
 			ret = RET_OK;
 		}
 	}

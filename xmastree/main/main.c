@@ -30,7 +30,10 @@
 #include "parser.h"
 #include "colors.h"
 #include "msgeq7.h"
-#include "wifi.h"
+
+#include "system/my_settings.h"
+#include "system/ota.h"
+#include "system/wifi.h"
 
 
 static const char* MY_TAG = "xmastree/main";
@@ -105,7 +108,9 @@ static void button_task(void* arg)
 
 void app_main(void)
 {
-	ESP_ERROR_CHECK(nvs_flash_init());
+	ESP_ERROR_CHECK(settings_init());
+
+	ota_init();
 
 	colors_init();
 
