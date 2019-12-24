@@ -15,6 +15,7 @@ static void reboot_task(void* arg);
 
 static esp_err_t status_handler(httpd_req_t* req);
 static esp_err_t mode_handler(httpd_req_t* req);
+static esp_err_t modedesc_handler(httpd_req_t* req);
 static esp_err_t ota_handler(httpd_req_t* req);
 
 
@@ -32,6 +33,11 @@ static httpd_uri_t basic_handlers[] = {
 		.uri	= "/mode",
 		.method	= HTTP_GET,
 		.handler= mode_handler,
+	},
+	{
+		.uri	= "/modedesc",
+		.method	= HTTP_GET,
+		.handler= modedesc_handler,
 	},
 	{
 		.uri	= "/ota",
@@ -149,6 +155,24 @@ esp_err_t mode_handler(httpd_req_t* req)
 		httpd_resp_send(req, buf, buf_len);
 		free(buf);
 		return ESP_OK;
+	}
+
+	httpd_resp_send(req, ret, strlen(ret));
+	return ESP_OK;
+}
+
+
+esp_err_t modedesc_handler(httpd_req_t* req)
+{
+	const char* ret = RET_ERR;
+
+	int mode;
+	if (get_int(req, &mode))
+	{
+		if (mode < COLORS_NUM_MODES)
+		{
+			ret = colors_mode_desc(mode);
+		}
 	}
 
 	httpd_resp_send(req, ret, strlen(ret));
