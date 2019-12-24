@@ -164,7 +164,11 @@ esp_err_t settings_get_str(const char* storage, const char* key, char** buffer, 
 		return err;
 	}
 
-	if (strcmp(newval, *buffer) != 0)
+	if (*buffer == NULL)
+	{
+		*buffer = newval;
+	}
+	else if (strcmp(newval, *buffer) != 0)
 	{
 		free(*buffer);
 		*buffer = newval;

@@ -357,6 +357,12 @@ void ota_nowifi_task(void *pvParameter)
 }
 
 
+const char* ota_get_url(void)
+{
+	return ota_url;
+}
+
+
 void ota_init()
 {
 	// -- NEW: try to read the complete url first

@@ -8,6 +8,9 @@
 esp_err_t ota_init(void);
 
 
+const char* ota_get_url(void);
+
+
 void ota_fatal_error(void);
 
 

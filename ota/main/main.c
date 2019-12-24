@@ -25,6 +25,7 @@ void app_main()
 	ESP_ERROR_CHECK(settings_init());
 
 	ota_init();
+	ESP_LOGI(MY_TAG, "%s", ota_get_url());
 	vTaskDelay(5000 / portTICK_PERIOD_MS);
 
 	wifi_init(false);
