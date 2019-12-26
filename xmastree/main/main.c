@@ -77,7 +77,7 @@ unsigned int g_wifi_reconnects = 0;
  *
  */
 SemaphoreHandle_t xButtonSem = NULL;
-#define CONFIG_BUTTON_PIN 0 /* FIXME: can we have this in sdkconfig? */
+#define CONFIG_BUTTON_PIN 5 /* FIXME: can we have this in sdkconfig? */
 
 void IRAM_ATTR button_isr_handler(void* arg)
 {

@@ -12,6 +12,7 @@
 #include "colors.h"
 #include "config.h"
 #include "msgeq7.h"
+#include "system/my_settings.h"
 
 
 static void run_mode(int m, struct leds_t* leds, bool single_run);
@@ -48,6 +49,7 @@ static bool m_do_stop = false;
 
 
 
+#define SETTING_MODE "colors.mode"
 static int m_mode = COLORS_BLACK;
 
 
@@ -211,6 +213,7 @@ void colors_set_mode(int mode)
 
 	xSemaphoreTake(leds.sem, portMAX_DELAY);
 	m_mode = mode;
+	settings_set_int32(STORAGE_APP, SETTING_MODE, m_mode, false);
 	xSemaphoreGive(leds.sem);
 
 	m_do_stop = true;
@@ -231,6 +234,7 @@ void colors_next_mode()
 {
 	xSemaphoreTake(leds.sem, portMAX_DELAY);
 	m_mode = (m_mode + 1) % COLORS_NUM_MODES;
+	settings_set_int32(STORAGE_APP, SETTING_MODE, m_mode, false);
 	xSemaphoreGive(leds.sem);
 
 	m_do_stop = true;
@@ -267,6 +271,7 @@ static void colors_task(void* arg)
 {
     struct leds_t* leds = (struct leds_t*)arg;
 
+	settings_get_int32(STORAGE_APP, SETTING_MODE, &m_mode, false);
 	int last_mode = COLORS_NUM_MODES; // forces a first run
 	for (;;)
 	{
