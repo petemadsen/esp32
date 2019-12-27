@@ -20,7 +20,7 @@
 static const char* MY_TAG = PROJECT_TAG("sleep");
 
 
-static void update_time(void);
+static bool m_watch_wifi = true;
 
 
 #define SETTING_HOUR_FROM	"sleep.from"
@@ -46,6 +46,7 @@ void my_sleep_task(void* arg)
 	int32_t hour_from = 21;
 	int32_t hour_to = 7;
 	int32_t lights_off_mins = 10;
+	int32_t max_nowifi_mins = 60;
 
 	uint32_t mins = 0;
 	uint32_t nowifi_mins = 0;
@@ -104,26 +105,27 @@ void my_sleep_task(void* arg)
 		}
 
 		// reboot/sleep if no wifi
-#if 1
-		EventBits_t bits = xEventGroupGetBits(wifi_event_group);
-		if ((bits & WIFI_CONNECTED) == 0)
+		if (m_watch_wifi)
 		{
-			ESP_LOGW(MY_TAG, "NoWiFi %d", nowifi_mins);
-			if (++nowifi_mins > 10)
+			EventBits_t bits = xEventGroupGetBits(wifi_event_group);
+			if ((bits & WIFI_CONNECTED) == 0)
 			{
-				ESP_LOGW(MY_TAG, "Entering SECURITY MODE");
-				wifi_stop();
-				uart_tx_wait_idle(CONFIG_CONSOLE_UART_NUM); // wait for line output
+				ESP_LOGW(MY_TAG, "NoWiFi %d", nowifi_mins);
+				if (++nowifi_mins > max_nowifi_mins)
+				{
+					ESP_LOGW(MY_TAG, "Entering SECURITY MODE");
+					wifi_stop();
+					uart_tx_wait_idle(CONFIG_CONSOLE_UART_NUM); // wait for line output
 //				esp_deep_sleep(600LL * 1000000LL);
-				esp_restart();
+					esp_restart();
+				}
+				esp_wifi_connect();
 			}
-			esp_wifi_connect();
+			else
+			{
+				nowifi_mins = 0;
+			}
 		}
-		else
-		{
-			nowifi_mins = 0;
-		}
-#endif
 
 		// turn off the lights
 		if (lights_off_mins != -1 && lamp_on_secs() > lights_off_mins * 60)
@@ -142,4 +144,10 @@ void my_sleep_task(void* arg)
 		vTaskDelay(60 * 1000 / portTICK_PERIOD_MS);
 		++mins;
 	}
+}
+
+
+void my_sleep_watch_wifi(bool b)
+{
+	m_watch_wifi = b;
 }

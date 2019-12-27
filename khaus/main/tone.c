@@ -222,7 +222,7 @@ static bool read_file(int num)
 void tone_init()
 {
 	x_events = xEventGroupCreate();
-	xTaskCreate(tone_task, "tone_task", 2048, NULL, 5, NULL);
+	xTaskCreate(tone_task, "tone_task", 4096, NULL, 5, NULL);
 }
 
 

@@ -12,12 +12,13 @@
 
 #include <string.h>
 
-#include "my_sensors.h"
-#include "my_lights.h"
 #include "common.h"
 #include "system/ota.h"
 #include "system/my_settings.h"
 #include "system/wifi.h"
+#include "my_sleep.h"
+#include "my_sensors.h"
+#include "my_lights.h"
 
 
 static const char* MY_TAG = PROJECT_TAG("shutters");
@@ -189,6 +190,7 @@ void shutters_task(void* pvParameters)
 		esp_http_client_cleanup(client);
 
 #if 1
+		my_sleep_watch_wifi(with_wifi);
 		if (!with_wifi)
 		{
 			ESP_LOGW(MY_TAG, "Turning off WiFi.");
