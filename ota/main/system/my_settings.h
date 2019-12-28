@@ -15,6 +15,8 @@
 esp_err_t settings_init(void);
 esp_err_t settings_erase(void);
 
+esp_err_t settings_clear(const char* storage);
+
 esp_err_t settings_set_int32(const char* storage, const char* key, int32_t val, bool must_exist);
 esp_err_t settings_get_int32(const char* storage, const char* key, int32_t* val, bool save_if_missing);
 

@@ -35,6 +35,7 @@
 
 #define CFG_OTA_FILENAME		"filename"
 #define CFG_OTA_URL				"url"
+#define CFG_OTA_LOADER			"loader"
 
 #define DOWNLOAD_URL_MAXLEN	128
 static char* ota_url;
@@ -143,7 +144,7 @@ static bool do_download(esp_http_client_handle_t client)
 			double progress = (double)binary_file_length / (double)file_size * 100.0;
 			if (progress > next_progress)
 			{
-				ESP_LOGI(MY_TAG, "Received: %.1f", progress);
+				ESP_LOGI(MY_TAG, "Received: %.1f%%", progress);
 				next_progress += 10.0;
 			}
 		}
@@ -365,11 +366,15 @@ const char* ota_get_url(void)
 
 void ota_init()
 {
+	// -- save our version
+	settings_set_str(STORAGE_OTA, CFG_OTA_LOADER, PROJECT_VERSION, false);
+
 	// -- NEW: try to read the complete url first
 	if (settings_get_str(STORAGE_OTA, CFG_OTA_URL, &ota_url, false) == ESP_OK)
 		return;
 
 	// -- OLD: get filename
+	ESP_LOGI(MY_TAG, "Fallback to OLD");
 	char* filename = strdup(DEFAULT_FILENAME);
 	settings_get_str(STORAGE_OTA, CFG_OTA_FILENAME, &filename, false);
 

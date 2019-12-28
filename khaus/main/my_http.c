@@ -7,14 +7,16 @@
 #include <esp_log.h>
 
 #include "common.h"
+#include "system/my_settings.h"
+#include "system/my_log.h"
+#include "system/ota.h"
+
 #include "my_http.h"
 #include "tone.h"
 #include "my_sensors.h"
 #include "my_lights.h"
 #include "sound/read_wav.h"
-#include "system/my_settings.h"
-#include "system/my_log.h"
-#include "system/ota.h"
+#include "my_sleep.h"
 
 
 static const char* MY_TAG = PROJECT_TAG("http");
@@ -172,6 +174,8 @@ esp_err_t status_handler(httpd_req_t* req)
 						  " light %d\n"
 						  " light_on_secs %lld\n"
 						  " free-ram %u\n"
+						  " sleep_nightmode %d\n"
+						  " sleep_watch_wifi %d\n"
 						  " boots %d\n"
 						  " uptime %lld\n"
 						  " time %02d:%02d\n"
@@ -184,6 +188,8 @@ esp_err_t status_handler(httpd_req_t* req)
 						  lamp_status(),
 						  lamp_on_secs(),
 						  esp_get_free_heap_size(),
+						  my_sleep_nightmode(),
+						  my_sleep_watch_wifi(),
 						  settings_boot_counter(),
 						  uptime,
 						  timeinfo.tm_hour, timeinfo.tm_min,

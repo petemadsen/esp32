@@ -11,7 +11,12 @@
 void my_sleep_task(void* arg);
 
 
-void my_sleep_watch_wifi(bool);
+void my_sleep_enable_nightmode(bool);
+void my_sleep_enable_watch_wifi(bool);
+
+
+bool my_sleep_nightmode();
+bool my_sleep_watch_wifi();
 
 
 #endif

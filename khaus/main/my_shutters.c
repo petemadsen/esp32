@@ -34,6 +34,8 @@ static const char* MY_TAG = PROJECT_TAG("shutters");
 #define RCV_BUFLEN 64
 static char m_rcv_buffer[RCV_BUFLEN];
 
+static bool has_option(char* buffer, const char* option);
+
 
 static esp_err_t _http_event_handle(esp_http_client_event_t *evt)
 {
@@ -144,11 +146,15 @@ void shutters_task(void* pvParameters)
 			int status = esp_http_client_get_status_code(client);
 			if (status == 200 && strlen(m_rcv_buffer))
 			{
-				if (strcmp(m_rcv_buffer, "wifi") == 0)
-					with_wifi = true;
-				else if(strcmp(m_rcv_buffer, "nowifi") == 0)
-					with_wifi = false;
 				ESP_LOGI(MY_TAG, "Cmd: %s", m_rcv_buffer);
+				if (has_option(m_rcv_buffer, "wifi"))
+					with_wifi = true;
+				else if (has_option(m_rcv_buffer, "nowifi"))
+					with_wifi = false;
+				else if (has_option(m_rcv_buffer, "sleep"))
+					my_sleep_enable_nightmode(true);
+				else if (has_option(m_rcv_buffer, "nosleep"))
+					my_sleep_enable_nightmode(false);
 			}
 		}
 		else
@@ -163,6 +169,8 @@ void shutters_task(void* pvParameters)
 									 "&board_voltage=%.2f"
 									 "&out_temp=%.2f"
 									 "&out_humidity=%.2f"
+									 "&sleep_nightmode=%d"
+									 "&sleep_watch_wifi=%d"
 									 "&boots=%d"
 									 "&light=%d"
 									 "&wifi=%d",
@@ -170,6 +178,8 @@ void shutters_task(void* pvParameters)
 									 my_sensors_board_voltage(),
 									 my_sensors_out_temp(),
 									 my_sensors_out_humidity(),
+									 my_sleep_nightmode(),
+									 my_sleep_watch_wifi(),
 									 settings_boot_counter(),
 									 lamp_status(),
 									 with_wifi ? 1 : 0);
@@ -190,7 +200,7 @@ void shutters_task(void* pvParameters)
 		esp_http_client_cleanup(client);
 
 #if 1
-		my_sleep_watch_wifi(with_wifi);
+		my_sleep_enable_watch_wifi(with_wifi);
 		if (!with_wifi)
 		{
 			ESP_LOGW(MY_TAG, "Turning off WiFi.");
@@ -217,3 +227,23 @@ void shutters_task(void* pvParameters)
 	}
 }
 
+
+static bool has_option(char* buffer_ro, const char* option)
+{
+	char* buffer = strdup(buffer_ro);
+	bool ret = false;
+	char delimiter[] = ",";
+	char* ptr = strtok(buffer, delimiter);
+	while (ptr != NULL)
+	{
+		if (strcmp(ptr, option) == 0)
+		{
+			ret = true;
+			break;
+		}
+		ptr = strtok(NULL, delimiter);
+	}
+
+	free(buffer);
+	return ret;
+}

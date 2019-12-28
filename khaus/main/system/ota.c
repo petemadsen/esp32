@@ -26,11 +26,8 @@
 static const char* ERR_NOFACTORY = "NOFACTORY";
 static const char* ERR_NOBOOT = "NOBOOT";
 
-#define BIN_NAME PROJECT_NAME ".bin"
-
-
 static const char* OTA_URL = PROJECT_SHUTTERS_ADDRESS "/ota/" PROJECT_NAME "?" PROJECT_VERSION;
-static const char* OTA_FILE = PROJECT_SHUTTERS_ADDRESS "/ota/file/" PROJECT_NAME;
+static const char* OTA_FILE = PROJECT_SHUTTERS_ADDRESS "/ota/file/" PROJECT_NAME ".bin";
 
 #define RCV_BUFLEN 32
 static char m_rcv_buffer[RCV_BUFLEN];

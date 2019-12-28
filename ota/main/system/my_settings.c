@@ -26,6 +26,8 @@ static int32_t m_boot_counter = 1;
 
 esp_err_t settings_init()
 {
+	ESP_LOGI(MY_TAG, "%s / %s / %d", PROJECT_NAME, PROJECT_VERSION, PROJECT_BOARD);
+
 	// -- initialize nvs.
 	esp_err_t err = nvs_flash_init();
 	if (err == ESP_ERR_NVS_NO_FREE_PAGES)
@@ -209,6 +211,28 @@ esp_err_t settings_set_str(const char* storage, const char* key, const char* val
 	}
 
 	nvs_close(my_handle);
+	return err;
+}
+
+
+esp_err_t settings_clear(const char* storage)
+{
+	esp_err_t err;
+
+	nvs_handle handle;
+	err = nvs_open(storage, NVS_READWRITE, &handle);
+	if (err != ESP_OK)
+	{
+		ESP_LOGE(MY_TAG, "Could not open storage: %s", storage);
+		return err;
+	}
+
+	if ((err = nvs_erase_all(handle)) == ESP_OK)
+	{
+		err = nvs_commit(handle);
+	}
+
+	nvs_close(handle);
 	return err;
 }
 

@@ -26,6 +26,8 @@ static int32_t m_boot_counter = 1;
 
 esp_err_t settings_init()
 {
+	ESP_LOGI(MY_TAG, "%s / %s / %d", PROJECT_NAME, PROJECT_VERSION, PROJECT_BOARD);
+
 	// -- initialize nvs.
 	esp_err_t err = nvs_flash_init();
 	if (err == ESP_ERR_NVS_NO_FREE_PAGES)
@@ -164,7 +166,11 @@ esp_err_t settings_get_str(const char* storage, const char* key, char** buffer, 
 		return err;
 	}
 
-	if (strcmp(newval, *buffer) != 0)
+	if (*buffer == NULL)
+	{
+		*buffer = newval;
+	}
+	else if (strcmp(newval, *buffer) != 0)
 	{
 		free(*buffer);
 		*buffer = newval;

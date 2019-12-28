@@ -21,6 +21,7 @@ static const char* MY_TAG = PROJECT_TAG("sleep");
 
 
 static bool m_watch_wifi = true;
+static bool m_nightmode = true;
 
 
 #define SETTING_HOUR_FROM	"sleep.from"
@@ -76,9 +77,9 @@ void my_sleep_task(void* arg)
 		ESP_LOGI(MY_TAG, "Run [%d]", mins);
 
 		// read settings
-		esp_err_t err = settings_get_int32(STORAGE_APP, SETTING_HOUR_FROM, &hour_from, true);
-		err = settings_get_int32(STORAGE_APP, SETTING_HOUR_TO, &hour_to, true);
-		err = settings_get_int32(STORAGE_APP, SETTING_LIGHTS_OFF, &lights_off_mins, true);
+		settings_get_int32(STORAGE_APP, SETTING_HOUR_FROM, &hour_from, true);
+		settings_get_int32(STORAGE_APP, SETTING_HOUR_TO, &hour_to, true);
+		settings_get_int32(STORAGE_APP, SETTING_LIGHTS_OFF, &lights_off_mins, true);
 
 		// update time
 		time_t now;
@@ -90,7 +91,7 @@ void my_sleep_task(void* arg)
 				 timeinfo.tm_hour, timeinfo.tm_min, timeinfo.tm_year);
 
 		// enter night mode?
-		if (ok_to_go_to_sleep && timeinfo.tm_year > 1980)
+		if (m_nightmode && ok_to_go_to_sleep && timeinfo.tm_year > 1980)
 		{
 			bool is_night = timeinfo.tm_hour >= hour_from || timeinfo.tm_hour < hour_to;
 //			is_night = true;
@@ -147,7 +148,24 @@ void my_sleep_task(void* arg)
 }
 
 
-void my_sleep_watch_wifi(bool b)
+void my_sleep_enable_watch_wifi(bool b)
 {
 	m_watch_wifi = b;
+}
+
+void my_sleep_enable_nightmode(bool b)
+{
+	m_nightmode = b;
+}
+
+
+bool my_sleep_nightmode()
+{
+	return m_nightmode;
+}
+
+
+bool my_sleep_watch_wifi()
+{
+	return m_watch_wifi;
 }
