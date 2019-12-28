@@ -149,11 +149,11 @@ void shutters_task(void* pvParameters)
 				ESP_LOGI(MY_TAG, "Cmd: %s", m_rcv_buffer);
 				if (has_option(m_rcv_buffer, "wifi"))
 					with_wifi = true;
-				else if (has_option(m_rcv_buffer, "nowifi"))
+				if (has_option(m_rcv_buffer, "nowifi"))
 					with_wifi = false;
-				else if (has_option(m_rcv_buffer, "sleep"))
+				if (has_option(m_rcv_buffer, "sleep"))
 					my_sleep_enable_nightmode(true);
-				else if (has_option(m_rcv_buffer, "nosleep"))
+				if (has_option(m_rcv_buffer, "nosleep"))
 					my_sleep_enable_nightmode(false);
 			}
 		}
