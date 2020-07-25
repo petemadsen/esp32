@@ -115,7 +115,8 @@ void shutters_task(void* pvParameters)
 			ESP_LOGI(MY_TAG, "No OTA update needed.");
 
 
-		my_sleep_now("after shutters connection");
+		ESP_LOGE(MY_TAG, "SLEEP NOW DISABLED.");
+//		my_sleep_now("after shutters connection");
 
 		// -- wait 3600 secs = 1h
 		vTaskDelay(3600 * 1000 / portTICK_PERIOD_MS);

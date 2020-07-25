@@ -12,13 +12,14 @@ set(COMPONENT_SRCS
 	main.c
 	wifi.c
 	my_http.c
-	ota.h
+	oled.c
 	ota.c
 	my_sleep.c
 	my_shutters.c
 	voltage.c
 	scaremole.c
 	system/my_settings.c
+	system/my_i2c.c
 )
 
 register_component()

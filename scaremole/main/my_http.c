@@ -4,9 +4,12 @@
 #include <lwip/apps/sntp.h>
 
 #include "common.h"
+
+#include "system/my_settings.h"
+
 #include "my_http.h"
 #include "ota.h"
-#include "system/my_settings.h"
+#include "voltage.h"
 
 
 static void reboot_task(void* arg);
@@ -92,11 +95,13 @@ esp_err_t status_handler(httpd_req_t* req)
 						  " ident %s\n"
 						  " free-ram %u\n"
 						  " wifi-reconnects %u\n"
+						  " voltage %.2f\n"
 						  " uptime %lld\n",
 						  PROJECT_VERSION,
 						  PROJECT_NAME,
 						  esp_get_free_heap_size(),
 						  settings_boot_counter(),
+						  voltage_get(),
 						  uptime);
 	httpd_resp_send(req, buf, buflen);
 

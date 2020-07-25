@@ -18,12 +18,26 @@
 #include "ota.h"
 #include "voltage.h"
 #include "scaremole.h"
+#include "oled.h"
+
+
+#define MODE_TEMP
 
 
 void app_main()
 {
 	ESP_ERROR_CHECK(settings_init());
 
+#ifdef MODE_TEMP
+	wifi_init(true);
+
+	voltage_init();
+
+//	xTaskCreate(shutters_task, "shutters_task", 4096, NULL, 5, NULL);
+
+	xTaskCreate(oled_task, "oled_task", 4096, NULL, 5, NULL);
+
+#else
 	scaremole_run();
 
 	// we got business to do
@@ -43,4 +57,5 @@ void app_main()
 	{
 		my_sleep_now("next-time");
 	}
+#endif
 }
