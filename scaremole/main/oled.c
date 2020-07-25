@@ -1,5 +1,7 @@
 /**
  * This code is public domain.
+ *
+ * https://www.avrfreaks.net/forum/ssd1306-lcd-initialization-commands
  */
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
@@ -32,6 +34,14 @@ static const char* MY_TAG = "scaremole/oled";
 
 #define SSD1306_SET_CONTRAST					0x81
 
+#define SSD1306_COLUMN_ADDR						0x21
+#define SSD1306_PAGE_ADDR						0x22
+
+#define LCD_WIDTH	128
+#define LCD_HEIGHT	64
+
+static uint8_t buffer[1024 + 1];
+
 
 static void display_init(uint8_t addr);
 static void display_flush(uint8_t addr);
@@ -63,10 +73,13 @@ void oled_task(void* pvParameters)
 
 static void oledSendCommand(uint8_t addr, uint8_t cmd)
 {
-	uint8_t data[1];
+	uint8_t control = 0x00;
+	uint8_t data[2];
 
-	data[0] = cmd;
-	esp_err_t ret = i2c_master_write_slave(addr, data, 1);
+	data[0] = control;
+	data[1] = cmd;
+
+	esp_err_t ret = i2c_master_write_slave(addr, data, 2);
 	if (ret == ESP_OK)
 		ESP_LOGE(MY_TAG, "%x good", cmd);
 	else
@@ -76,8 +89,6 @@ static void oledSendCommand(uint8_t addr, uint8_t cmd)
 
 void display_init(uint8_t addr)
 {
-	uint8_t height = 32;
-
 	oledSendCommand(addr, SSD1306_DISPLAY_OFF);
 
 	oledSendCommand(addr, SSD1306_SET_DISPLAY_CLOCK_DIV_RATIO);
@@ -85,7 +96,7 @@ void display_init(uint8_t addr)
 //	oledSendCommand(addr, 0x3f);
 
 	oledSendCommand(addr, SSD1306_SET_MULTIPLEX);
-	oledSendCommand(addr, height - 1);
+	oledSendCommand(addr, LCD_HEIGHT - 1);
 
 	oledSendCommand(addr, SSD1306_SET_DISPLAY_OFFSET);
 	oledSendCommand(addr, 0x0);
@@ -93,10 +104,10 @@ void display_init(uint8_t addr)
 	oledSendCommand(addr, SSD1306_SET_START_LINE | 0x0);
 
 	oledSendCommand(addr, SSD1306_CHARGE_PUMP);
-	oledSendCommand(addr, 0x14);
+	oledSendCommand(addr, 0x14);	// internal VCC
 
 	oledSendCommand(addr, SSD1306_MEMORY_ADDR_MODE);
-	oledSendCommand(addr, 0x00);
+	oledSendCommand(addr, 0x00);	// horizontal addressing
 
 	oledSendCommand(addr, SSD1306_SET_SEGMENT_REMAP | 0x1);
 
@@ -124,10 +135,42 @@ void display_init(uint8_t addr)
 
 void display_flush(uint8_t addr)
 {
-	// begin transaction
+	ESP_LOGI(MY_TAG, "--display");
+
+	// set col address
+#if 0
+	{
+		uint8_t control = 0x00;
+		uint8_t data[4];
+
+		data[0] = control;
+		data[1] = SSD1306_COLUMN_ADDR;
+		data[2] = 0;
+		data[3] = LCD_WIDTH - 1;
+
+		esp_err_t ret = i2c_master_write_slave(addr, data, 4);
+		if (ret == ESP_OK)
+			ESP_LOGE(MY_TAG, "set-col good");
+		else
+			ESP_LOGE(MY_TAG, "sel-col bad");
+	}
+#endif
+	oledSendCommand(addr, SSD1306_COLUMN_ADDR);
+	oledSendCommand(addr, 0);
+	oledSendCommand(addr, LCD_WIDTH - 1);
+	// set page addr
+	oledSendCommand(addr, SSD1306_PAGE_ADDR);
+	oledSendCommand(addr, 0);
+	oledSendCommand(addr, LCD_HEIGHT / 8 - 1);
 
 	// flush
-//	oledSendCommand(addr,
+	for (int i=0; i<1025; ++i)
+		buffer[i] = i;
+	buffer[0] = SSD1306_SET_START_LINE;
 
-	// end transaction
+	esp_err_t ret = i2c_master_write_slave(addr, buffer, 1025);
+	if (ret == ESP_OK)
+		ESP_LOGE(MY_TAG, "flush good");
+	else
+		ESP_LOGE(MY_TAG, "flush bad");
 }
