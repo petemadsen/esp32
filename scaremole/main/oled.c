@@ -165,8 +165,19 @@ void display_flush(uint8_t addr)
 
 	// flush
 	for (int i=0; i<1025; ++i)
-		buffer[i] = i;
+		buffer[i] = 0x55;// i;
 	buffer[0] = SSD1306_SET_START_LINE;
+
+	size_t pos = 0;
+	for (int k=0; k<9; ++k)
+	{
+		for (int i=0; i<8; ++i)
+			buffer[pos+1+i] = 0;
+		pos += 8;
+		for (int i=0; i<8; ++i)
+			buffer[pos+1+i] = 0xff;
+		pos += 8;
+	}
 
 	esp_err_t ret = i2c_master_write_slave(addr, buffer, 1025);
 	if (ret == ESP_OK)
