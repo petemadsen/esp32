@@ -240,7 +240,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.__new_selection()
 
     def __new_selection(self):
-        self.status.setText(f"{self.editor.glyph_index} / {self.editor.num_glyphs}")
+        self.status.setText(f"{self.editor.glyph_index} / #{self.editor.num_glyphs}")
 
     def closeEvent(self, event: QtGui.QCloseEvent) -> None:
         self.editor.save()
