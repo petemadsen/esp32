@@ -55,6 +55,12 @@ class MyFileParser:
         self.glyphs[index] = glyph
 #        self.to_file(self.filename)
 
+    def add(self, index):
+        self.glyphs.insert(index, [0 for x in range(8)])
+
+    def remove(self, index):
+        del self.glyphs[index]
+
     def size(self):
         return len(self.glyphs)
 
@@ -75,6 +81,8 @@ class MyEditor(QtWidgets.QWidget):
             self.segments.append(col)
 
         self.colors = [QtCore.Qt.gray, QtCore.Qt.black]
+        self.current_color = 0
+        self.current_pos = (-1, -1)
 
         self.setMinimumSize(400, 400)
 
@@ -138,12 +146,45 @@ class MyEditor(QtWidgets.QWidget):
                 painter.fillRect(x * size, y * size, size, size, c)
 
     def mousePressEvent(self, event: QtGui.QMouseEvent) -> None:
-        x = int(event.pos().x() / self.tile_size)
-        y = int(event.pos().y() / self.tile_size)
-        print(event.pos(), x, y)
+        x, y = self.get_xy(event.pos())
+        if x is None:
+            return
 
-        self.segments[x][y] = (self.segments[x][y] + 1) % 2
+        if event.button() == QtCore.Qt.LeftButton:
+            self.current_color = 1
+        elif event.button() == QtCore.Qt.RightButton:
+            self.current_color = 0
+        else:
+            return
+
+        self.segments[x][y] = self.current_color
+
         self.update()
+
+    def mouseMoveEvent(self, event: QtGui.QMouseEvent) -> None:
+        x, y = self.get_xy(event.pos())
+        if x is None:
+            return
+
+        self.segments[x][y] = self.current_color
+        self.update()
+
+    def mouseReleaseEvent(self, event: QtGui.QMouseEvent) -> None:
+        self.current_pos = (-1, -1)
+
+    def get_xy(self, point):
+        x = int(point.x() / self.tile_size)
+        y = int(point.y() / self.tile_size)
+
+        if self.current_pos == (x, y):
+            return None, None
+        if x < 0 or x >= 8:
+            return None, None
+        if y < 0 or y >= 8:
+            return None, None
+
+        self.current_pos = (x, y)
+        return x, y
 
     def wheelEvent(self, event: QtGui.QWheelEvent) -> None:
         index = self.glyph_index
@@ -158,26 +199,44 @@ class MyEditor(QtWidgets.QWidget):
 
         self.read_glyph(index)
 
+    def add(self):
+        self.file.add(self.glyph_index)
+        self.selectionChanged.emit()
+
+    def remove(self):
+        self.file.remove(self.glyph_index)
+        self.selectionChanged.emit()
+
 
 class MainWindow(QtWidgets.QMainWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
 
+        # GUI
+        self.editor = MyEditor()
+        self.editor.selectionChanged.connect(self.__new_selection)
+
+        # actions
         self.quit = QtWidgets.QAction(self.tr("&Quit"))
         self.quit.setShortcut('Ctrl+Q')
         self.quit.triggered.connect(self.close)
+
+        self.add = QtWidgets.QAction(self.tr("&Add"))
+        self.add.triggered.connect(self.editor.add)
+
+        self.remove = QtWidgets.QAction(self.tr("&Remove"))
+        self.remove.triggered.connect(self.editor.remove)
 
         self.status = QtWidgets.QLabel()
 
         tool_bar = self.addToolBar(self.tr("Tools"))
         tool_bar.addAction(self.quit)
+        tool_bar.addAction(self.add)
+        tool_bar.addAction(self.remove)
         tool_bar.addWidget(self.status)
 
-        self.editor = MyEditor()
-        self.editor.selectionChanged.connect(self.__new_selection)
-
+        # layout
         self.setCentralWidget(self.editor)
-
         self.__new_selection()
 
     def __new_selection(self):
