@@ -47,6 +47,9 @@ static void display_init(uint8_t addr);
 static void display_flush(uint8_t addr);
 
 
+#include "glyphs.h"
+
+
 void oled_task(void* pvParameters)
 {
 	i2c_master_init();
@@ -168,15 +171,21 @@ void display_flush(uint8_t addr)
 		buffer[i] = 0x55;// i;
 	buffer[0] = SSD1306_SET_START_LINE;
 
-	size_t pos = 0;
+	size_t pos = 1;
 	for (int k=0; k<9; ++k)
 	{
 		for (int i=0; i<8; ++i)
-			buffer[pos+1+i] = 0;
+			buffer[pos+i] = 0;
 		pos += 8;
 		for (int i=0; i<8; ++i)
-			buffer[pos+1+i] = 0xff;
+			buffer[pos+i] = 0xff;
 		pos += 8;
+	}
+
+	for (int g=0; g<sizeof(glyphs); ++g)
+	{
+		for (int i=0; i<8; ++i)
+			buffer[pos+g] = glyphs[g];
 	}
 
 	esp_err_t ret = i2c_master_write_slave(addr, buffer, 1025);
