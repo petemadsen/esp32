@@ -6,9 +6,38 @@ from PyQt5 import QtCore, QtWidgets, QtGui
 from PyQt5.QtWidgets import QMessageBox
 
 
+class MyFileParser():
+    def __init__(self, filename):
+        self.lines = []
+
+        with open(filename, "r") as file:
+            for line in file:
+                self.parse_line(line)
+
+    def parse_line(self, line):
+        fields = line.split(",")
+        if len(fields) == 9:
+            bytes = []
+            for i in range(8):
+                b = int(fields[i].strip(), 16)
+                bytes.append(b)
+            print(bytes)
+            self.lines.append(bytes)
+
+    def to_file(self, filename):
+        with open(filename, "w") as file:
+            for line in self.lines:
+                file.write("--L\n")
+
+    def get(self, index):
+        return self.lines[index]
+
+
 class MyEditor(QtWidgets.QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
+
+        self.file = MyFileParser("../main/glyphs.h")
 
         self.segments = []
         for cols in range(8):
