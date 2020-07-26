@@ -32,6 +32,9 @@ class MyFileParser():
     def get(self, index):
         return self.lines[index]
 
+    def size(self):
+        return len(self.lines)
+
 
 class MyEditor(QtWidgets.QWidget):
     def __init__(self, parent=None):
@@ -40,15 +43,29 @@ class MyEditor(QtWidgets.QWidget):
         self.file = MyFileParser("../main/glyphs.h")
 
         self.segments = []
-        for cols in range(8):
+        for s in range(8):
             col = []
-            for x in range(8):
+            for m in [0x80, 0x40, 0x20, 0x10, 0x08, 0x04, 0x02, 0x01]:
                 col.append(0)
             self.segments.append(col)
 
         self.colors = [QtCore.Qt.gray, QtCore.Qt.black]
 
         self.setMinimumSize(400, 400)
+
+        self.glyph_index = 2
+        self.read_glyph(self.glyph_index)
+
+    def read_glyph(self, index):
+        glyph = self.file.get(index)
+        self.glyph_index = index
+
+        for s in range(8):
+            g = glyph[s]
+            for x, m in enumerate([0x80, 0x40, 0x20, 0x10, 0x08, 0x04, 0x02, 0x01]):
+                self.segments[s][x] = (g & m) == m
+
+        self.update()
 
     @property
     def size(self):
@@ -71,6 +88,18 @@ class MyEditor(QtWidgets.QWidget):
 
         self.segments[x][y] = (self.segments[x][y] + 1) % 2
         self.update()
+
+    def wheelEvent(self, event: QtGui.QWheelEvent) -> None:
+        if event.angleDelta().y() < 0:
+            if self.glyph_index == 0:
+                return
+            self.glyph_index -= 1
+        else:
+            if self.glyph_index + 1 >= self.file.size():
+                return
+            self.glyph_index += 1
+
+        self.read_glyph(self.glyph_index)
 
 
 class MainWindow(QtWidgets.QMainWindow):
