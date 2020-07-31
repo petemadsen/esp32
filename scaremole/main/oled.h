@@ -8,4 +8,7 @@
 void oled_task(void* pvParameters);
 
 
+void oled_print(const char* text);
+
+
 #endif

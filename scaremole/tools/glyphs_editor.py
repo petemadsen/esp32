@@ -28,14 +28,15 @@ class MyFileParser:
     def to_file(self, filename=None):
         lines = []
 
-        lines.append("#ifndef PROJECT_GLYPH_H")
-        lines.append("#define PROJECT_GLYPH_H")
+        lines.append("#ifndef PROJECT_GLYPHS_H")
+        lines.append("#define PROJECT_GLYPHS_H")
         lines.append("")
-        lines.append("const uint8_t glyph[] = {")
+        lines.append("const uint8_t glyphs[] = {")
 
-        for glyphs in self.glyphs:
+        for i, glyphs in enumerate(self.glyphs):
             line = ", ".join(f"0x{n:02x}" for n in glyphs)
-            lines.append(f"\t{line},")
+            comment = f"\t//{i}" if (i % 10) == 0 else ""
+            lines.append(f"\t{line},{comment}")
 
         lines.append("};")
         lines.append("#endif\n")
@@ -72,11 +73,12 @@ class MyEditor(QtWidgets.QWidget):
         super().__init__(parent)
 
         self.file = MyFileParser("../main/glyphs.h")
+        self.bit_mask = [0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80]
 
         self.segments = []
         for s in range(8):
             col = []
-            for m in [0x80, 0x40, 0x20, 0x10, 0x08, 0x04, 0x02, 0x01]:
+            for m in self.bit_mask:
                 col.append(0)
             self.segments.append(col)
 
@@ -85,6 +87,7 @@ class MyEditor(QtWidgets.QWidget):
         self.current_pos = (-1, -1)
 
         self.setMinimumSize(400, 400)
+        self.setFocus()
 
         self.glyph_index = -1
         self.read_glyph(2)
@@ -98,7 +101,7 @@ class MyEditor(QtWidgets.QWidget):
 
         for s in range(8):
             g = glyph[s]
-            for x, m in enumerate([0x80, 0x40, 0x20, 0x10, 0x08, 0x04, 0x02, 0x01]):
+            for x, m in enumerate(self.bit_mask):
                 self.segments[s][x] = (g & m) == m
 
         self.update()
@@ -115,7 +118,7 @@ class MyEditor(QtWidgets.QWidget):
         glyph = []
         for s in range(8):
             b8 = 0
-            for x, m in enumerate([0x80, 0x40, 0x20, 0x10, 0x08, 0x04, 0x02, 0x01]):
+            for x, m in enumerate(self.bit_mask):
                 if self.segments[s][x]:
                     b8 |= m
             glyph.append(b8)
@@ -186,9 +189,20 @@ class MyEditor(QtWidgets.QWidget):
         self.current_pos = (x, y)
         return x, y
 
-    def wheelEvent(self, event: QtGui.QWheelEvent) -> None:
+#    def wheelEvent(self, event: QtGui.QWheelEvent) -> None:
+#        self.next_glyph(event.angleDelta().y() > 0)
+
+    def keyPressEvent(self, event: QtGui.QKeyEvent) -> None:
+        if event.key() == QtCore.Qt.Key_Down:
+            self.next_glyph(False)
+        elif event.key() == QtCore.Qt.Key_Up:
+            self.next_glyph(True)
+
+        super().keyPressEvent(event)
+
+    def next_glyph(self, back):
         index = self.glyph_index
-        if event.angleDelta().y() > 0:
+        if back:
             if index == 0:
                 return
             index -= 1
@@ -196,8 +210,11 @@ class MyEditor(QtWidgets.QWidget):
             if index + 1 >= self.file.size():
                 return
             index += 1
-
         self.read_glyph(index)
+
+    def set_glyph(self, pos):
+        if pos >= 0 and pos < self.file.size():
+            self.read_glyph(pos)
 
     def add(self):
         self.file.add(self.glyph_index)
@@ -229,11 +246,17 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.status = QtWidgets.QLabel()
 
+        self.pos = QtWidgets.QSpinBox()
+        self.pos.setMinimum(0)
+        self.pos.setMaximum(127)
+        self.pos.valueChanged.connect(self.editor.set_glyph)
+
         tool_bar = self.addToolBar(self.tr("Tools"))
         tool_bar.addAction(self.quit)
         tool_bar.addAction(self.add)
         tool_bar.addAction(self.remove)
         tool_bar.addWidget(self.status)
+        tool_bar.addWidget(self.pos)
 
         # layout
         self.setCentralWidget(self.editor)

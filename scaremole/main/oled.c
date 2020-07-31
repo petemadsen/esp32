@@ -47,12 +47,41 @@ static void display_init(uint8_t addr);
 static void display_flush(uint8_t addr);
 
 
+#if 1
 #include "glyphs.h"
+#else
+const uint8_t glyphs[] = {
+	0x00, 0x03, 0x0e, 0x38, 0x60, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x7f, 0x41, 0x41, 0x7f, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x7f, 0x00, 0x00,
+	0x00, 0x00, 0x4f, 0x49, 0x49, 0x79, 0x00, 0x00,	// 50
+	0x00, 0x00, 0x49, 0x49, 0x49, 0x7f, 0x00, 0x00,
+	0x00, 0x00, 0x78, 0x08, 0x08, 0x7f, 0x00, 0x00,
+	0x00, 0x00, 0x79, 0x49, 0x49, 0x4f, 0x00, 0x00,
+	0x00, 0x00, 0x7f, 0x49, 0x49, 0x4f, 0x00, 0x00,
+	0x00, 0x00, 0x40, 0x40, 0x40, 0x7f, 0x00, 0x00,
+	0x00, 0x00, 0x7f, 0x49, 0x49, 0x7f, 0x00, 0x00,
+	0x00, 0x00, 0x79, 0x49, 0x49, 0x7f, 0x00, 0x00,
+	0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x7d, 0x01,
+	0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x7d, 0x01,
+};
+#endif
 
 
 void oled_task(void* pvParameters)
 {
-	i2c_master_init();
+	esp_err_t ret;
+
+	do {
+		ret = i2c_master_init();
+		if (ret != ESP_OK)
+		{
+			ESP_LOGE(MY_TAG, "I2C master init error: %s", esp_err_to_name(ret));
+			vTaskDelay(60 * 1000 / portTICK_PERIOD_MS);
+		}
+	} while(ret != ESP_OK);
+
+	ESP_LOGI(MY_TAG, "Ready to go.");
 
 	for (;;)
 	{
@@ -68,7 +97,7 @@ void oled_task(void* pvParameters)
 				display_flush(addr);
 			}
 		}
-		ESP_LOGE(MY_TAG, "I2C scanning finished: %d found", found_devices);
+		ESP_LOGI(MY_TAG, "I2C scanning finished: %d found", found_devices);
 
 		vTaskDelay(60 * 1000 / portTICK_PERIOD_MS);
 	}
@@ -172,6 +201,7 @@ void display_flush(uint8_t addr)
 	buffer[0] = SSD1306_SET_START_LINE;
 
 	size_t pos = 1;
+#if 0
 	for (int k=0; k<9; ++k)
 	{
 		for (int i=0; i<8; ++i)
@@ -181,16 +211,39 @@ void display_flush(uint8_t addr)
 			buffer[pos+i] = 0xff;
 		pos += 8;
 	}
+#endif
 
-	for (int g=0; g<sizeof(glyphs); ++g)
+#if 0
+	for (int g=0; g<sizeof(glyphs) && pos < sizeof(buffer); g += 8)
 	{
+		printf("..%i (%i)\n", pos, g);
 		for (int i=0; i<8; ++i)
-			buffer[pos+g] = glyphs[g];
+			buffer[pos+i] = glyphs[g+i];
+		pos += 8;
 	}
+#endif
 
-	esp_err_t ret = i2c_master_write_slave(addr, buffer, 1025);
+	oled_print("-0123456789+");
+
+	esp_err_t ret = i2c_master_write_slave(addr, buffer, sizeof(buffer));
 	if (ret == ESP_OK)
 		ESP_LOGE(MY_TAG, "flush good");
 	else
 		ESP_LOGE(MY_TAG, "flush bad");
+}
+
+
+void oled_print(const char* text)
+{
+	char ch;
+
+	int pos = 1;
+
+	while ((ch = *text++))
+	{
+		int g = (int)ch * 8;
+		for (int i=0; i<8; ++i)
+			buffer[pos+i] = glyphs[g+i];
+		pos += 8;
+	}
 }
