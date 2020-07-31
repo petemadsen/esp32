@@ -20,6 +20,7 @@ set(COMPONENT_SRCS
 	scaremole.c
 	system/my_settings.c
 	system/my_i2c.c
+	system/one_wire.c
 )
 
 register_component()
