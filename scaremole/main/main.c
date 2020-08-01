@@ -19,6 +19,7 @@
 #include "voltage.h"
 #include "scaremole.h"
 #include "oled.h"
+#include "ds18b20.h"
 
 
 #define MODE_TEMP
@@ -36,6 +37,8 @@ void app_main()
 //	xTaskCreate(shutters_task, "shutters_task", 4096, NULL, 5, NULL);
 
 	xTaskCreate(oled_task, "oled_task", 4096, NULL, 5, NULL);
+
+	xTaskCreate(ds18b20_task, "ds18b20_task", 4096, NULL, 5, NULL);
 
 #else
 	scaremole_run();

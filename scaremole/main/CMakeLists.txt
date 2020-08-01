@@ -18,6 +18,7 @@ set(COMPONENT_SRCS
 	my_shutters.c
 	voltage.c
 	scaremole.c
+	ds18b20.c
 	system/my_settings.c
 	system/my_i2c.c
 	system/one_wire.c
