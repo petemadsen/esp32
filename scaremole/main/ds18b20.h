@@ -8,4 +8,7 @@
 void ds18b20_task(void* pvParameters);
 
 
+float ds18b20_last_temp();
+
+
 #endif

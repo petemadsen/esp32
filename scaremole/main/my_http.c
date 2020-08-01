@@ -10,6 +10,7 @@
 #include "my_http.h"
 #include "ota.h"
 #include "voltage.h"
+#include "ds18b20.h"
 
 
 static void reboot_task(void* arg);
@@ -96,12 +97,14 @@ esp_err_t status_handler(httpd_req_t* req)
 						  " free-ram %u\n"
 						  " wifi-reconnects %u\n"
 						  " voltage %.2f\n"
+						  " temp_board %.2f\n"
 						  " uptime %lld\n",
 						  PROJECT_VERSION,
 						  PROJECT_NAME,
 						  esp_get_free_heap_size(),
 						  settings_boot_counter(),
 						  voltage_get(),
+						  ds18b20_last_temp(),
 						  uptime);
 	httpd_resp_send(req, buf, buflen);
 

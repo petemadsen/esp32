@@ -36,7 +36,7 @@ esp_err_t one_wire_reset(gpio_num_t pin)
 }
 
 
-esp_err_t one_wire_write(gpio_num_t pin, uint8_t data)
+esp_err_t one_wire_write(gpio_num_t pin, int data)
 {
 	gpio_set_direction(pin, GPIO_MODE_OUTPUT);
 
@@ -52,20 +52,17 @@ esp_err_t one_wire_write(gpio_num_t pin, uint8_t data)
 }
 
 
-esp_err_t one_wire_read(gpio_num_t pin, uint8_t* reply)
+int one_wire_read(gpio_num_t pin)
 {
-	*reply = 0;
+	int bits = 0;
 
 	for (int i=0; i<8; ++i)
 	{
-//		gpio_set_direction(pin, GPIO_MODE_INPUT);
-
-		*reply |= read_bit(pin);
-		*reply <<= 1;
+		bits |= (read_bit(pin) << i);
 		ets_delay_us(15);
 	}
 
-	return ESP_OK;
+	return bits;
 }
 
 

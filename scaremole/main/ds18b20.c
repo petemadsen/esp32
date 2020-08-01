@@ -16,7 +16,11 @@ static const char* MY_TAG = "scaremole/ds18b20";
 #define CONVERT			0x44
 #define READ_SCRATCHPAD	0xbe
 
+#define FAMILY_CODE		0x28
+
+
 static gpio_num_t m_pin = GPIO_NUM_32;
+static float m_last_temp = -666;
 
 
 static float read_temp();
@@ -36,23 +40,25 @@ void ds18b20_task(void* pvParameters)
 			one_wire_write(m_pin, READ_ROM);
 
 			for (int i=0; i<8; ++i)
-				one_wire_read(m_pin, &data[i]);
+				data[i] = one_wire_read(m_pin);
+
+			if (data[0] != FAMILY_CODE)
+				ESP_LOGW(MY_TAG, "Not my family: 0x%02x", data[0]);
 
 			for (int i=0; i<8; ++i)
 				ESP_LOGI(MY_TAG, "DATA[%d] = 0x%02x", i, data[i]);
 		}
 
-		ESP_LOGI(MY_TAG, "TEMP = %.2f", read_temp());
+		m_last_temp = read_temp();
+		ESP_LOGI(MY_TAG, "TEMP = %.2f", m_last_temp);
 
-		vTaskDelay(10 * 1000 / portTICK_PERIOD_MS);
+		vTaskDelay(60 * 1000 / portTICK_PERIOD_MS);
 	};
 }
 
 
 static float read_temp()
 {
-	uint8_t data[2];
-
 	esp_err_t ret = one_wire_reset(m_pin);
 	ESP_LOGI(MY_TAG, "tRESET: %s", esp_err_to_name(ret));
 
@@ -66,11 +72,17 @@ static float read_temp()
 
 	one_wire_write(m_pin, SKIP_ROM);
 	one_wire_write(m_pin, READ_SCRATCHPAD);
-	one_wire_read(m_pin, &data[0]);
-	one_wire_read(m_pin, &data[1]);
+	int temp1 = one_wire_read(m_pin);
+	int temp2 = one_wire_read(m_pin);
 
 	ret = one_wire_reset(m_pin);
-	ESP_LOGI(MY_TAG, "tRESET: %s", esp_err_to_name(ret));
+	ESP_LOGI(MY_TAG, "tRESET: %s (%d %d)", esp_err_to_name(ret), temp1, temp2);
 
-	return ((float)data[0] + ((float)data[0] * 256.0)) / 16.0;
+	return ((float)temp1 + ((float)temp2 * 256.0)) / 16.0;
+}
+
+
+float ds18b20_last_temp()
+{
+	return m_last_temp;
 }

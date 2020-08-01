@@ -25,6 +25,44 @@
 #define MODE_TEMP
 
 
+static const char* MY_TAG = "scaremole/main";
+
+
+static void main_task(void* params)
+{
+	uint8_t addr = OLED_INVALID_DEVICE;
+
+	for (;;)
+	{
+		addr = oled_init();
+		if (addr != OLED_INVALID_DEVICE)
+			break;
+
+		ESP_LOGE(MY_TAG, "Could not find an OLED display.");
+		vTaskDelay(60 * 1000 / portTICK_PERIOD_MS);
+	}
+
+	ESP_LOGI(MY_TAG, "OLED at: 0x%02x", addr);
+
+	char buffer[20];
+
+	for (;;)
+	{
+		ESP_LOGI(MY_TAG, "--RUN");
+
+		float temp = ds18b20_last_temp();
+		snprintf(buffer, sizeof(buffer), "%.2f °C", temp);
+		ESP_LOGI(MY_TAG, "[DISPLAY] %s", buffer);
+
+		oled_clear(addr);
+		oled_print(buffer);
+		oled_flush(addr);
+
+		vTaskDelay(60 * 1000 / portTICK_PERIOD_MS);
+	}
+}
+
+
 void app_main()
 {
 	ESP_ERROR_CHECK(settings_init());
@@ -36,7 +74,7 @@ void app_main()
 
 //	xTaskCreate(shutters_task, "shutters_task", 4096, NULL, 5, NULL);
 
-	xTaskCreate(oled_task, "oled_task", 4096, NULL, 5, NULL);
+	xTaskCreate(main_task, "main_task", 4096, NULL, 5, NULL);
 
 	xTaskCreate(ds18b20_task, "ds18b20_task", 4096, NULL, 5, NULL);
 

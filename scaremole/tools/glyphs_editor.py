@@ -248,7 +248,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.pos = QtWidgets.QSpinBox()
         self.pos.setMinimum(0)
-        self.pos.setMaximum(127)
+        self.pos.setMaximum(256)
         self.pos.valueChanged.connect(self.editor.set_glyph)
 
         tool_bar = self.addToolBar(self.tr("Tools"))
