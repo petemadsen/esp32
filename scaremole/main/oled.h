@@ -17,7 +17,7 @@ uint8_t oled_init();
 void oled_clear(uint8_t addr);
 
 
-void oled_print(const char* text);
+void oled_print(int x, int y, const char* text);
 
 
 void oled_flush(uint8_t addr);

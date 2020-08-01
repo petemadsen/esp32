@@ -7,6 +7,8 @@
 #include <esp_system.h>
 #include <esp_log.h>
 
+#include <string.h>
+
 #include <nvs_flash.h>
 
 #include "system/my_settings.h"
@@ -51,11 +53,19 @@ static void main_task(void* params)
 		ESP_LOGI(MY_TAG, "--RUN");
 
 		float temp = ds18b20_last_temp();
-		snprintf(buffer, sizeof(buffer), "%.2f °C", temp);
+		snprintf(buffer, sizeof(buffer), "%.2f C", temp);
 		ESP_LOGI(MY_TAG, "[DISPLAY] %s", buffer);
 
 		oled_clear(addr);
-		oled_print(buffer);
+		oled_print(1, 1, buffer);
+		oled_print(1, 2, buffer);
+		oled_print(1, 3, "line 3");
+		oled_print(2, 4, "line 4");
+		oled_print(3, 5, "line 5");
+		oled_print(4, 6, "line 6");
+		oled_print(5, 7, "line 7");
+		oled_print(1, 8, "012345678901234567890");
+		oled_print(6, 9, "line 9");
 		oled_flush(addr);
 
 		vTaskDelay(60 * 1000 / portTICK_PERIOD_MS);

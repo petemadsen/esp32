@@ -40,7 +40,9 @@ static const char* MY_TAG = "scaremole/oled";
 #define LCD_WIDTH	128
 #define LCD_HEIGHT	64
 
+
 static uint8_t buffer[1024 + 1];
+static size_t buffer_pointer = 0;
 
 
 static void display_init(uint8_t addr);
@@ -175,6 +177,8 @@ void oled_clear(uint8_t addr)
 	for (int i=0; i<1025; ++i)
 		buffer[i] = 0;
 	buffer[0] = SSD1306_SET_START_LINE;
+
+	buffer_pointer = 1;
 }
 
 
@@ -184,21 +188,28 @@ void oled_flush(uint8_t addr)
 	if (ret == ESP_OK)
 		ESP_LOGE(MY_TAG, "flush good");
 	else
-		ESP_LOGE(MY_TAG, "flush bad");
+		ESP_LOGE(MY_TAG, "flush ĵbad");
 }
 
 
-void oled_print(const char* text)
+void oled_print(int x, int y, const char* text)
 {
 	char ch;
 
-	int pos = 1;
+	if (x < 1 || x > LCD_WIDTH / 8)
+		return;
+	if (y < 1 || y > LCD_HEIGHT / 8)
+		return;
+
+	buffer_pointer = 1 + (y - 1) * LCD_WIDTH + (x - 1) * 8;
 
 	while ((ch = *text++))
 	{
 		int g = (int)ch * 8;
 		for (int i=0; i<8; ++i)
-			buffer[pos+i] = glyphs[g+i];
-		pos += 8;
+			buffer[buffer_pointer + i] = glyphs[g+i];
+		buffer_pointer += 8;
+		if (buffer_pointer >= sizeof(buffer))
+			break;
 	}
 }
