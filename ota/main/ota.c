@@ -41,6 +41,8 @@
 static char* ota_url;
 
 
+// FIXME: does not work with current config
+#define CONFIG_CONSOLE_UART_NUM 0
 
 
 static const char* MY_TAG = "ota";
@@ -50,8 +52,8 @@ static char ota_read_buf[BUFFSIZE + 1] = { 0 };
 
 static void http_cleanup(esp_http_client_handle_t client)
 {
-    esp_http_client_close(client);
-    esp_http_client_cleanup(client);
+	esp_http_client_close(client);
+	esp_http_client_cleanup(client);
 }
 
 
@@ -64,7 +66,7 @@ static void __attribute__((noreturn)) ota_fatal_error()
 	{
 		vTaskDelay(60 * 1000 / portTICK_PERIOD_MS);
 		esp_restart();
-    }
+	}
 }
 
 
@@ -261,15 +263,15 @@ void ota_task(void *pvParameter)
 	if (configured != running)
 	{
 		ESP_LOGW(MY_TAG, "Configured OTA boot partition at offset 0x%08x, but running from offset 0x%08x",
-                 configured->address, running->address);
+				 configured->address, running->address);
 		ESP_LOGW(MY_TAG, "(This can happen if either the OTA boot data or preferred boot image become corrupted somehow.)");
-    }
+	}
 	ESP_LOGI(MY_TAG, "Running partition type %d subtype %d (offset 0x%08x)",
-             running->type, running->subtype, running->address);
+			 running->type, running->subtype, running->address);
 
 	// -- wait for wifi
 	xEventGroupWaitBits(wifi_event_group, WIFI_CONNECTED,
-                        false, true, portMAX_DELAY);
+						false, true, portMAX_DELAY);
 	ESP_LOGI(MY_TAG, "Connected to Wifi! Start to connect to server....");
 	vTaskDelay(1000 / portTICK_PERIOD_MS);
 
