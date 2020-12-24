@@ -24,13 +24,15 @@
 
 #include <esp32/rom/uart.h>
 
+#include <errno.h>
+
 #include "config.h"
 #include "common.h"
 #include "system/wifi.h"
 #include "system/my_settings.h"
 
 
-#define BUFFSIZE			1024
+#define BUFFSIZE			2048
 #define DEFAULT_FILENAME	"peterpan.bin"
 
 #define CFG_OTA_FILENAME		"filename"
@@ -50,13 +52,11 @@ static const char* MY_TAG = "ota";
 static char ota_read_buf[BUFFSIZE + 1] = { 0 };
 
 
-#if 0
 static void http_cleanup(esp_http_client_handle_t client)
 {
 	esp_http_client_close(client);
 	esp_http_client_cleanup(client);
 }
-#endif
 
 
 static void __attribute__((noreturn)) ota_fatal_error()
@@ -97,6 +97,10 @@ static int do_connect(esp_http_client_handle_t client)
 
 static bool do_download(esp_http_client_handle_t client)
 {
+	int file_size = esp_http_client_get_content_length(client);
+	ESP_LOGI(MY_TAG, "Firmware size: %d", file_size);
+
+
 	esp_err_t err;
 
 	// update handle:
@@ -104,12 +108,9 @@ static bool do_download(esp_http_client_handle_t client)
 	esp_ota_handle_t update_handle = 0 ;
 	const esp_partition_t* update_partition = NULL;
 
-	int file_size = esp_http_client_get_content_length(client);
-	double next_progress = 9.0;
-	ESP_LOGE(MY_TAG, "SIZE: %d", file_size);
-
 	update_partition = esp_ota_get_next_update_partition(NULL);
-	ESP_LOGI(MY_TAG, "Writing to partition subtype %d at offset 0x%x",
+	ESP_LOGI(MY_TAG, "Writing to partition '%s' subtype %d at offset 0x%x",
+			 update_partition->label,
 			 update_partition->subtype, update_partition->address);
 	assert(update_partition != NULL);
 	if (update_partition == NULL)
@@ -118,51 +119,68 @@ static bool do_download(esp_http_client_handle_t client)
 		return false;
 	}
 
-	err = esp_ota_begin(update_partition, OTA_SIZE_UNKNOWN, &update_handle);
+	err = esp_ota_begin(update_partition, OTA_WITH_SEQUENTIAL_WRITES, &update_handle);
 	if (err != ESP_OK)
 	{
-		ESP_LOGE(MY_TAG, "esp_ota_begin failed (%s)", esp_err_to_name(err));
+		ESP_LOGE(MY_TAG, "esp_ota_begin() failed (%s)", esp_err_to_name(err));
 		return false;
 	}
-	ESP_LOGI(MY_TAG, "esp_ota_begin succeeded");
+	ESP_LOGI(MY_TAG, "esp_ota_begin() succeeded");
 
 	int binary_file_length = 0;
+	int zero_len_packets = 0;
 	// deal with all receive packet
-	while (1)
+	while (binary_file_length != file_size)
 	{
 		int data_read = esp_http_client_read(client, ota_read_buf, BUFFSIZE);
-		if (data_read < 0)
+		ESP_LOGI(MY_TAG, "[Received] %.1f%% (%d) [%d] %d bytes",
+				 (float)binary_file_length / (float)file_size * 100.0,
+				 errno, zero_len_packets, data_read);
+		if (data_read > 0)
 		{
-			ESP_LOGE(MY_TAG, "Error: SSL data read error");
-			return false;
-		}
-		else if (data_read > 0)
-		{
+			zero_len_packets = 0;
 			err = esp_ota_write(update_handle, (const void*)ota_read_buf, data_read);
 			if (err != ESP_OK)
 			{
+				ESP_LOGE(MY_TAG, "esp_ota_begin() failed (%s)", esp_err_to_name(err));
 				return false;
 			}
 			binary_file_length += data_read;
-
-			double progress = (double)binary_file_length / (double)file_size * 100.0;
-			if (progress > next_progress)
-			{
-				ESP_LOGI(MY_TAG, "Received: %.1f%%", progress);
-				next_progress += 10.0;
-			}
 		}
-		else if (data_read == 0)
+		else
 		{
-			ESP_LOGI(MY_TAG, "Connection closed, all data received");
-			break;
+//			ESP_LOGE(MY_TAG, "Error: SSL data read error");
+//			http_cleanup(client);
+//			return false;
+			/*
+			 * As esp_http_client_read never returns negative error code, we rely on
+			 * `errno` to check for underlying transport connectivity closure if any
+			 */
+			if (errno == ECONNRESET || errno == ENOTCONN) {
+				ESP_LOGE(MY_TAG, "Connection closed, errno = %d", errno);
+				break;
+			}
+			if (esp_http_client_is_complete_data_received(client)) {
+				ESP_LOGI(MY_TAG, "Connection closed");
+				break;
+			}
+			if (++zero_len_packets == 10)
+			{
+				ESP_LOGE(MY_TAG, "Too many zero packets.");
+				break;
+			}
 		}
 	}
 	ESP_LOGI(MY_TAG, "Total received: %d / %d", binary_file_length, file_size);
+	if (binary_file_length != file_size)
+	{
+		ESP_LOGE(MY_TAG, "No all bytes received!");
+		return false;
+	}
 
 	if (esp_ota_end(update_handle) != ESP_OK)
 	{
-		ESP_LOGE(MY_TAG, "esp_ota_end failed!");
+		ESP_LOGE(MY_TAG, "esp_ota_end() failed!");
 		return false;
 	}
 
@@ -196,8 +214,11 @@ static int download_and_install()
 	esp_http_client_config_t config = {
 		.url = ota_url,
 //        .cert_pem = (char *)server_cert_pem_start,
-//		.timeout_ms = 2000,
+		.timeout_ms = 2000,
 	};
+
+	ESP_LOGI(MY_TAG, "Connecting to: %s", ota_url);
+
 	esp_http_client_handle_t client = esp_http_client_init(&config);
 	if (client == NULL)
 	{
@@ -286,7 +307,7 @@ void ota_task(void *pvParameter)
 		ESP_LOGI(MY_TAG, "Attempt #%d", (i+1));
 
 		int retcode = download_and_install();
-		found = retcode == 200;
+		found = (retcode == 200);
 		if (retcode == 404)
 		{
 			ESP_LOGW(MY_TAG, "File not on server. Stop.");
@@ -310,7 +331,7 @@ void ota_task(void *pvParameter)
 	// Oops, will reboot into OTA but after a deep sleep.
 	if (!found)
 	{
-		ESP_LOGE(MY_TAG, "Update failed. Rebooting into OTA. Deep sleep.");
+		ESP_LOGE(MY_TAG, "Update failed. Rebooting into OTA. Deep sleep for 5 minutes.");
 		vTaskDelay(10000 / portTICK_PERIOD_MS);
 
 //		wifi_stop();

@@ -28,7 +28,7 @@ void app_main()
 	ESP_LOGI(MY_TAG, "%s", ota_get_url());
 	vTaskDelay(5000 / portTICK_PERIOD_MS);
 
-	wifi_init(false);
+	wifi_init(true);
 
 	xTaskCreate(&ota_task, "ota_task", 16 * 1024, NULL, 5, NULL);
 

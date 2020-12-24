@@ -112,7 +112,6 @@ void wifi_init(bool fixed_ip)
 	{
 		esp_netif_t* my_sta = esp_netif_create_default_wifi_sta();
 		esp_netif_dhcpc_stop(my_sta);
-//		tcpip_adapter_dhcpc_stop(TCPIP_ADAPTER_IF_STA); // no DHCP
 
 		esp_netif_ip_info_t ipInfo;
 		inet_pton(AF_INET, CONFIG_ADDRESS, &ipInfo.ip);
