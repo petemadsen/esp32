@@ -6,7 +6,7 @@
 
 #include <esp_system.h>
 #include <esp_wifi.h>
-#include <esp_event_loop.h>
+#include <esp_event.h>
 #include <esp_log.h>
 
 #include <driver/gpio.h>
@@ -72,7 +72,7 @@ static void event_handler(void* arg, esp_event_base_t event_base,
 	else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP)
 	{
 		ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
-		ESP_LOGI(MY_TAG, "Got ip: %s", ip4addr_ntoa(&event->ip_info.ip));
+		ESP_LOGI(MY_TAG, "Got ip: " IPSTR, IP2STR(&event->ip_info.ip));
 		gpio_set_level(PROJECT_LED_PIN, PROJECT_LED_PIN_ON);
 		xEventGroupSetBits(wifi_event_group, WIFI_CONNECTED);
 
@@ -105,7 +105,7 @@ void wifi_init(bool fixed_ip)
 	gpio_set_direction(PROJECT_LED_PIN, GPIO_MODE_OUTPUT);
 
 	// -- wifi
-    tcpip_adapter_init();
+	esp_netif_init();
 	ESP_ERROR_CHECK(esp_event_loop_create_default());
 
 	if (fixed_ip)
