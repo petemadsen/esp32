@@ -31,7 +31,9 @@ static const char* MY_TAG = PROJECT_TAG("wifi");
 EventGroupHandle_t wifi_event_group;
 const EventBits_t WIFI_CONNECTED = BIT0;
 const EventBits_t WIFI_DISCONNECTED = BIT1;
+
 static bool reconnect = true;
+static bool run_httpd = true;
 
 static httpd_handle_t server = NULL;
 
@@ -70,16 +72,17 @@ static void event_handler(void* arg, esp_event_base_t event_base,
 	else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP)
 	{
 		ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
-		ESP_LOGI(MY_TAG, "Got ip: %s", ip4addr_ntoa(&event->ip_info.ip));
+		ESP_LOGI(MY_TAG, "Got ip: " IPSTR, IP2STR(&event->ip_info.ip));
 		gpio_set_level(PROJECT_LED_PIN, PROJECT_LED_PIN_ON);
 		xEventGroupSetBits(wifi_event_group, WIFI_CONNECTED);
 
-		if (*http == NULL)
+		if (run_httpd && *http == NULL)
 		{
 			*http = http_start();
 		}
 
 		// set DNS
+#if 0
 		{
 			ip_addr_t d;
 			d.type = IPADDR_TYPE_V4;
@@ -90,6 +93,7 @@ static void event_handler(void* arg, esp_event_base_t event_base,
 //			ip_addr_set_ip4_u32(&dns_addr, htonl(dhcp_get_option_value(dhcp, DHCP_OPTION_IDX_DNS_SERVER + n)));
 //			dns_setserver(n, &dns_addr);
 		}
+#endif
 	}
 }
 
@@ -101,18 +105,20 @@ void wifi_init(bool fixed_ip)
 	gpio_set_direction(PROJECT_LED_PIN, GPIO_MODE_OUTPUT);
 
 	// -- wifi
-    tcpip_adapter_init();
+	ESP_ERROR_CHECK(esp_netif_init());
 	ESP_ERROR_CHECK(esp_event_loop_create_default());
 
 	if (fixed_ip)
 	{
-		tcpip_adapter_dhcpc_stop(TCPIP_ADAPTER_IF_STA); // no DHCP
+		esp_netif_t* my_sta = esp_netif_create_default_wifi_sta();
+		esp_netif_dhcpc_stop(my_sta);
+//		tcpip_adapter_dhcpc_stop(TCPIP_ADAPTER_IF_STA); // no DHCP
 
-		tcpip_adapter_ip_info_t ipInfo;
+		esp_netif_ip_info_t ipInfo;
 		inet_pton(AF_INET, CONFIG_ADDRESS, &ipInfo.ip);
 		inet_pton(AF_INET, CONFIG_GATEWAY, &ipInfo.gw);
 		inet_pton(AF_INET, CONFIG_NETMASK, &ipInfo.netmask);
-		tcpip_adapter_set_ip_info(TCPIP_ADAPTER_IF_STA, &ipInfo);
+		esp_netif_set_ip_info(my_sta, &ipInfo);
 	}
 
 	wifi_event_group = xEventGroupCreate();

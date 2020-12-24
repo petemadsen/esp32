@@ -105,18 +105,20 @@ void wifi_init(bool fixed_ip)
 	gpio_set_direction(PROJECT_LED_PIN, GPIO_MODE_OUTPUT);
 
 	// -- wifi
-	esp_netif_init();
+	ESP_ERROR_CHECK(esp_netif_init());
 	ESP_ERROR_CHECK(esp_event_loop_create_default());
 
 	if (fixed_ip)
 	{
-		tcpip_adapter_dhcpc_stop(TCPIP_ADAPTER_IF_STA); // no DHCP
+		esp_netif_t* my_sta = esp_netif_create_default_wifi_sta();
+		esp_netif_dhcpc_stop(my_sta);
+//		tcpip_adapter_dhcpc_stop(TCPIP_ADAPTER_IF_STA); // no DHCP
 
-		tcpip_adapter_ip_info_t ipInfo;
+		esp_netif_ip_info_t ipInfo;
 		inet_pton(AF_INET, CONFIG_ADDRESS, &ipInfo.ip);
 		inet_pton(AF_INET, CONFIG_GATEWAY, &ipInfo.gw);
 		inet_pton(AF_INET, CONFIG_NETMASK, &ipInfo.netmask);
-		tcpip_adapter_set_ip_info(TCPIP_ADAPTER_IF_STA, &ipInfo);
+		esp_netif_set_ip_info(my_sta, &ipInfo);
 	}
 
 	wifi_event_group = xEventGroupCreate();

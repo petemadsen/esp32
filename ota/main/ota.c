@@ -9,7 +9,7 @@
 #include <freertos/event_groups.h>
 
 #include <esp_system.h>
-#include <esp_event_loop.h>
+#include <esp_event.h>
 #include <esp_log.h>
 #include <esp_ota_ops.h>
 #include <esp_http_client.h>
@@ -22,7 +22,7 @@
 #include <nvs.h>
 #include <nvs_flash.h>
 
-#include <rom/uart.h>
+#include <esp32/rom/uart.h>
 
 #include "config.h"
 #include "common.h"
@@ -50,11 +50,13 @@ static const char* MY_TAG = "ota";
 static char ota_read_buf[BUFFSIZE + 1] = { 0 };
 
 
+#if 0
 static void http_cleanup(esp_http_client_handle_t client)
 {
 	esp_http_client_close(client);
 	esp_http_client_cleanup(client);
 }
+#endif
 
 
 static void __attribute__((noreturn)) ota_fatal_error()
@@ -222,6 +224,7 @@ static int download_and_install()
 }
 
 
+#if 0
 static bool find_and_activate()
 {
 	// no update found, try to boot a valid ota partition
@@ -251,6 +254,7 @@ static bool find_and_activate()
 
 	return false;
 }
+#endif
 
 
 void ota_task(void *pvParameter)

@@ -13,7 +13,7 @@ extern EventGroupHandle_t wifi_event_group;
 extern const EventBits_t WIFI_CONNECTED;
 
 
-void wifi_init(bool b);
+void wifi_init(bool fixed_ip);
 
 
 void wifi_stop();
