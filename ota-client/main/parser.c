@@ -36,7 +36,7 @@ static const char* run_ota();
 static void reboot_me(void* pvParameters);
 
 
-static const char* MY_TAG = "xmastree/parser";
+static const char* MY_TAG = PROJECT_TAG("parser");
 
 
 static char buffer[160];

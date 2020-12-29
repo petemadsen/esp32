@@ -9,6 +9,12 @@
 
 esp_err_t ota_init(void);
 
+
+esp_err_t ota_set_download_url(const char* url);
+// buffer will be created with malloc() and must be freed with free().
+esp_err_t ota_download_url(const char** buffer);
+
+
 /**
  * @brief Marks the factory parition as *boot*.
  * @return NULL on sucess. Error string otherwise.

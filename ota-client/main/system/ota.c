@@ -62,9 +62,21 @@ esp_err_t ota_init()
 	char* ota_file = malloc(1025);
 	snprintf(ota_file, 1024,
 			 PROJECT_SHUTTERS_ADDRESS "/ota/file/%s", ota_project_name());
-	esp_err_t err = settings_set_str(STORAGE_OTA, CFG_OTA_URL, ota_file, false);
+	esp_err_t err = ota_set_download_url(ota_file);
 	free(ota_file);
 	return err;
+}
+
+
+esp_err_t ota_set_download_url(const char* url)
+{
+	return settings_set_str(STORAGE_OTA, CFG_OTA_URL, url, false);
+}
+
+
+esp_err_t ota_download_url(const char** buffer)
+{
+	return settings_get_str(STORAGE_OTA, CFG_OTA_URL, buffer, false);
 }
 
 

@@ -3,6 +3,8 @@
  */
 #include <lwip/apps/sntp.h>
 
+#include <esp_log.h>
+
 #include "my_http.h"
 #include "common.h"
 
@@ -16,10 +18,14 @@ static void reboot_task(void* arg);
 
 static esp_err_t status_handler(httpd_req_t* req);
 static esp_err_t ota_handler(httpd_req_t* req);
+static esp_err_t set_handler(httpd_req_t* req);
 
 
 static const char* RET_OK = "OK";
 static const char* RET_ERR = "ERR";
+
+
+static const char* MY_TAG = PROJECT_TAG("http");
 
 
 static httpd_uri_t basic_handlers[] = {
@@ -32,6 +38,11 @@ static httpd_uri_t basic_handlers[] = {
 		.uri	= "/ota",
 		.method	= HTTP_GET,
 		.handler= ota_handler,
+	},
+	{
+		.uri	= "/set",
+		.method	= HTTP_GET,
+		.handler= set_handler,
 	}
 };
 
@@ -89,6 +100,10 @@ esp_err_t status_handler(httpd_req_t* req)
 
 	const size_t bufsize = 320;
 	char* buf = malloc(bufsize);
+
+	char* download_url = NULL;
+	ota_download_url(&download_url);
+
 	int buflen = snprintf(buf, bufsize,
 							"ident %s\n"
 							" sha256 %s\n"
@@ -98,7 +113,9 @@ esp_err_t status_handler(httpd_req_t* req)
 							" wifi-reconnects %u\n"
 							" ota %d\n"
 							" boots %d\n"
-							" uptime %lld\n",
+							" uptime %lld\n"
+							//
+							" download-url %s\n",
 							ota_project_name(),
 							ota_sha256(),
 							//
@@ -107,10 +124,13 @@ esp_err_t status_handler(httpd_req_t* req)
 							wifi_reconnects(),
 							ota_has_update_partition(),
 							settings_boot_counter(),
-							uptime);
+							uptime,
+							//
+							download_url);
 	httpd_resp_send(req, buf, buflen);
 
 	free(buf);
+	free(download_url);
 	return ESP_OK;
 }
 
@@ -134,4 +154,26 @@ static void reboot_task(void* arg)
 {
 	vTaskDelay(3000 / portTICK_PERIOD_MS);
 	esp_restart();
+}
+
+
+esp_err_t set_handler(httpd_req_t* req)
+{
+	const char* ret = RET_ERR;
+
+	size_t buf_len = httpd_req_get_url_query_len(req) + 1;
+	if (buf_len > 1)
+	{
+		char* buf = malloc(buf_len);
+		if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK)
+		{
+			ESP_LOGI(MY_TAG, "New download URL: %s", buf);
+			ota_set_download_url(buf);
+			ret = RET_OK;
+		}
+		free(buf);
+	}
+
+	httpd_resp_send(req, ret, strlen(ret));
+	return ESP_OK;
 }
