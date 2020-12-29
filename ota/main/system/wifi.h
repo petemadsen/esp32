@@ -18,4 +18,11 @@ void wifi_init(bool fixed_ip);
 
 void wifi_stop();
 
+
+unsigned int wifi_reconnects();
+
+
+const char* wifi_ssid();
+
+
 #endif

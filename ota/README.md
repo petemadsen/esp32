@@ -15,10 +15,12 @@ WiFi configuration in config.h
 
 ## How does it work?
 
-* Try to download EXAMPLE_FILENAME several times.
+* Try to download FILENAME several times.
   * If successful, download, install and boot into it.
   * Otherwise, try to find a valid OTA image and boot into it.
 * Finally, simply reboot.
+
+FILENAME is read from NVS or is "ota.bin" if not found.
 
 ## Todo
 

@@ -22,6 +22,8 @@
 #include <nvs.h>
 #include <nvs_flash.h>
 
+#include <driver/gpio.h>
+
 #include <esp32/rom/uart.h>
 
 #include <errno.h>
@@ -33,7 +35,7 @@
 
 
 #define BUFFSIZE			2048
-#define DEFAULT_FILENAME	"peterpan.bin"
+#define DEFAULT_FILENAME	"ota"
 
 #define CFG_OTA_FILENAME		"filename"
 #define CFG_OTA_URL				"url"
@@ -127,11 +129,15 @@ static bool do_download(esp_http_client_handle_t client)
 	}
 	ESP_LOGI(MY_TAG, "esp_ota_begin() succeeded");
 
+	int led_status = PROJECT_LED_PIN_ON;
 	int binary_file_length = 0;
 	int zero_len_packets = 0;
 	// deal with all receive packet
 	while (binary_file_length != file_size)
 	{
+		gpio_set_level(PROJECT_LED_PIN, led_status);
+		led_status = !led_status;
+
 		int data_read = esp_http_client_read(client, ota_read_buf, BUFFSIZE);
 		ESP_LOGI(MY_TAG, "[Received] %.1f%% (%d) [%d] %d bytes",
 				 (float)binary_file_length / (float)file_size * 100.0,
@@ -143,6 +149,7 @@ static bool do_download(esp_http_client_handle_t client)
 			if (err != ESP_OK)
 			{
 				ESP_LOGE(MY_TAG, "esp_ota_begin() failed (%s)", esp_err_to_name(err));
+				esp_ota_end(update_handle);
 				return false;
 			}
 			binary_file_length += data_read;
@@ -171,10 +178,12 @@ static bool do_download(esp_http_client_handle_t client)
 			}
 		}
 	}
+	gpio_set_level(PROJECT_LED_PIN, PROJECT_LED_PIN_ON);
+
 	ESP_LOGI(MY_TAG, "Total received: %d / %d", binary_file_length, file_size);
 	if (binary_file_length != file_size)
 	{
-		ESP_LOGE(MY_TAG, "No all bytes received!");
+		ESP_LOGE(MY_TAG, "Not all bytes received!");
 		return false;
 	}
 
@@ -301,13 +310,17 @@ void ota_task(void *pvParameter)
 	vTaskDelay(1000 / portTICK_PERIOD_MS);
 
 	// -- start
+	const int max_tries = 5;
 	bool found = false;
-	for (int i=0; i<5 && !found; ++i)
+	for (int i=0; i<max_tries; ++i)
 	{
-		ESP_LOGI(MY_TAG, "Attempt #%d", (i+1));
+		ESP_LOGI(MY_TAG, "Attempt %d/%d", (i+1), max_tries);
 
 		int retcode = download_and_install();
 		found = (retcode == 200);
+		if (found)
+			break;
+
 		if (retcode == 404)
 		{
 			ESP_LOGW(MY_TAG, "File not on server. Stop.");
@@ -339,7 +352,7 @@ void ota_task(void *pvParameter)
 		esp_deep_sleep(300LL * 1000000LL);
 	}
 
-	ESP_LOGI(MY_TAG, "Ready to restart system!");
+	ESP_LOGI(MY_TAG, "Ready to reboot system!");
 	vTaskDelay(1000 / portTICK_PERIOD_MS);
 	esp_restart();
 }

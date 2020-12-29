@@ -37,10 +37,13 @@ static bool run_httpd = true;
 
 static httpd_handle_t server = NULL;
 
+static unsigned int num_reconnects;
+static void connect_task(void* pvParameters);
+
 
 
 static void event_handler(void* arg, esp_event_base_t event_base,
-								int32_t event_id, void* event_data)
+						  int32_t event_id, void* event_data)
 {
 	httpd_handle_t* http = (httpd_handle_t*)arg;
 
@@ -59,8 +62,9 @@ static void event_handler(void* arg, esp_event_base_t event_base,
 
 		if (reconnect)
 		{
+			ESP_LOGI(MY_TAG, "Reconnecting...");
+			++num_reconnects;
 			esp_wifi_connect();
-			ESP_LOGI(MY_TAG, "Retry to connect to the AP");
 		}
 
 		if (*http)
@@ -71,7 +75,7 @@ static void event_handler(void* arg, esp_event_base_t event_base,
 	}
 	else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP)
 	{
-		ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
+		ip_event_got_ip_t* event = (ip_event_got_ip_t*)event_data;
 		ESP_LOGI(MY_TAG, "Got ip: " IPSTR, IP2STR(&event->ip_info.ip));
 		gpio_set_level(PROJECT_LED_PIN, PROJECT_LED_PIN_ON);
 		xEventGroupSetBits(wifi_event_group, WIFI_CONNECTED);
@@ -94,6 +98,10 @@ static void event_handler(void* arg, esp_event_base_t event_base,
 //			dns_setserver(n, &dns_addr);
 		}
 #endif
+	}
+	else
+	{
+		ESP_LOGE(MY_TAG, "Unhandled event: %s / %d", event_base, event_id);
 	}
 }
 
@@ -118,6 +126,8 @@ void wifi_init(bool fixed_ip)
 		inet_pton(AF_INET, CONFIG_GATEWAY, &ipInfo.gw);
 		inet_pton(AF_INET, CONFIG_NETMASK, &ipInfo.netmask);
 		esp_netif_set_ip_info(my_sta, &ipInfo);
+
+		esp_netif_set_hostname(my_sta, PROJECT_NAME);
 	}
 
 	wifi_event_group = xEventGroupCreate();
@@ -142,7 +152,7 @@ void wifi_init(bool fixed_ip)
 
 	// save power
 //	esp_wifi_set_ps(WIFI_PS_MIN_MODEM);
-	esp_wifi_set_ps(WIFI_PS_MAX_MODEM);
+//	esp_wifi_set_ps(WIFI_PS_MAX_MODEM);
 }
 
 
@@ -150,4 +160,22 @@ void wifi_stop()
 {
 	reconnect = false;
 	ESP_ERROR_CHECK(esp_wifi_stop());
+}
+
+
+unsigned int wifi_reconnects()
+{
+	return num_reconnects;
+}
+
+
+const char* wifi_ssid()
+{
+	return CONFIG_SSID;
+}
+
+
+static void connect_task(void* pvParameters)
+{
+
 }
