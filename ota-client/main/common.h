@@ -12,8 +12,6 @@
 #define GEEKCREIT_DEVKIT_V1		2	// has one led: 2
 
 
-#define PROJECT_NAME "ota-client"
-#define PROJECT_VERSION "2020-12-22/0"
 #define PROJECT_BOARD GEEKCREIT_DEVKIT_V1
 #define PROJECT_TAG(x) PROJECT_NAME "/" x
 
@@ -22,8 +20,6 @@
 #else
 #define PROJECT_SHUTTERS_ADDRESS "http://192.168.1.51:8080"
 #endif
-
-extern unsigned int g_wifi_reconnects;
 
 
 #if PROJECT_BOARD == GEEKWORK_EASY_KIT_C1

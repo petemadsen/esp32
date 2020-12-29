@@ -21,6 +21,9 @@
 #include "config.h"
 #include "common.h"
 
+#include "system/wifi.h"
+#include "system/ota.h"
+
 
 static const char* HELP = "HELP: status ota exit quit reboot mode NUM modedesc NUM ident\n";
 static const char* RET_ERR = "ERR\n";
@@ -52,10 +55,10 @@ const char* parse_input(char* data, int data_len)
 
 	if (strstr(line, "status") == line)
 	{
-		sprintf(buffer, "version: %s free-ram: %d wifi-reconnects: %u",
-				PROJECT_VERSION,
+		sprintf(buffer, "version %s free-ram %u wifi-reconnects %u",
+				ota_sha256(),
 				esp_get_free_heap_size(),
-				g_wifi_reconnects);
+				wifi_reconnects());
 	}
 	else if (strstr(line, "ota") == line)
 	{

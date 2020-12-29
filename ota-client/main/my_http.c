@@ -5,8 +5,10 @@
 
 #include "my_http.h"
 #include "common.h"
-#include "system/ota.h"
 
+#include "system/ota.h"
+#include "system/wifi.h"
+#include "system/my_settings.h"
 
 
 static void reboot_task(void* arg);
@@ -88,17 +90,23 @@ esp_err_t status_handler(httpd_req_t* req)
 	const size_t bufsize = 320;
 	char* buf = malloc(bufsize);
 	int buflen = snprintf(buf, bufsize,
-							"version %s\n"
+							"ident %s\n"
+							" sha256 %s\n"
+							//
 							" free-ram %u\n"
 							" wifi %s\n"
 							" wifi-reconnects %u\n"
 							" ota %d\n"
+							" boots %d\n"
 							" uptime %lld\n",
-							PROJECT_VERSION,
+							ota_project_name(),
+							ota_sha256(),
+							//
 							esp_get_free_heap_size(),
-							CONFIG_SSID,
-							g_wifi_reconnects,
-							ota_has_factory(),
+							wifi_ssid(),
+							wifi_reconnects(),
+							ota_has_update_partition(),
+							settings_boot_counter(),
 							uptime);
 	httpd_resp_send(req, buf, buflen);
 

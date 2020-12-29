@@ -22,7 +22,13 @@ bool ota_need_update(void);
 void ota_reboot_task(void* arg);
 
 
-bool ota_has_factory();
+bool ota_has_update_partition();
+
+
+const char* ota_sha256();
+
+
+const char* ota_project_name();
 
 
 #endif

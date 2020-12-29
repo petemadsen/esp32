@@ -23,14 +23,19 @@
 #define CFG_OTA_URL		"url"
 
 
+static const char* ERR_NOOTA = "NOOTA";
 static const char* ERR_NOFACTORY = "NOFACTORY";
 static const char* ERR_NOBOOT = "NOBOOT";
 
-static const char* OTA_URL = PROJECT_SHUTTERS_ADDRESS "/ota/" PROJECT_NAME "?" PROJECT_VERSION;
-static const char* OTA_FILE = PROJECT_SHUTTERS_ADDRESS "/ota/file/" PROJECT_NAME ".bin";
+//static const char* OTA_URL = PROJECT_SHUTTERS_ADDRESS "/ota/" PROJECT_NAME "?" PROJECT_VERSION;
+//static const char* OTA_FILE = PROJECT_SHUTTERS_ADDRESS "/ota/file/" PROJECT_NAME;
 
 #define RCV_BUFLEN 32
 static char m_rcv_buffer[RCV_BUFLEN];
+
+
+static char m_sha256[65];
+static char m_project_name[33];
 
 
 static const char* MY_TAG = PROJECT_TAG("ota");
@@ -38,7 +43,28 @@ static const char* MY_TAG = PROJECT_TAG("ota");
 
 esp_err_t ota_init()
 {
-	return settings_set_str(STORAGE_OTA, CFG_OTA_URL, OTA_FILE, false);
+	const esp_app_desc_t* app = esp_ota_get_app_description();
+
+	char* p = m_sha256;
+	for (int i=0; i<32; ++i, p += 2)
+		sprintf(p, "%02x", app->app_elf_sha256[i]);
+	m_sha256[64] = 0;
+
+	strncpy(m_project_name, app->project_name, 32);
+	m_project_name[32] = 0;
+
+	ESP_LOGE(MY_TAG, "VERSION..: %s", app->version);
+	ESP_LOGE(MY_TAG, "PROJECT..: %s", m_project_name);
+	ESP_LOGE(MY_TAG, "TIME.....: %s", app->time);
+	ESP_LOGE(MY_TAG, "DATE.....: %s", app->date);
+	ESP_LOGE(MY_TAG, "SHA256...: %s", m_sha256);
+
+	char* ota_file = malloc(1025);
+	snprintf(ota_file, 1024,
+			 PROJECT_SHUTTERS_ADDRESS "/ota/file/%s", ota_project_name());
+	esp_err_t err = settings_set_str(STORAGE_OTA, CFG_OTA_URL, ota_file, false);
+	free(ota_file);
+	return err;
 }
 
 
@@ -50,14 +76,17 @@ void ota_reboot_task(void* arg)
 }
 
 
-bool ota_has_factory()
+bool ota_has_update_partition()
 {
-	return esp_partition_find_first(ESP_PARTITION_TYPE_APP, ESP_PARTITION_SUBTYPE_ANY, "factory");
+	return esp_ota_get_next_update_partition(NULL);
 }
 
 
 const char* ota_reboot()
 {
+	if (!ota_has_update_partition())
+		return ERR_NOOTA;
+
 	const esp_partition_t* factory = esp_partition_find_first(ESP_PARTITION_TYPE_APP, ESP_PARTITION_SUBTYPE_ANY, "factory");
 	if (!factory)
 		return ERR_NOFACTORY;
@@ -85,8 +114,7 @@ static esp_err_t _http_event_handle(esp_http_client_event_t *evt)
 		ESP_LOGI(MY_TAG, "HTTP_EVENT_HEADER_SENT");
 		break;
 	case HTTP_EVENT_ON_HEADER:
-		ESP_LOGI(MY_TAG, "HTTP_EVENT_ON_HEADER");
-		printf("%.*s", evt->data_len, (char*)evt->data);
+		ESP_LOGI(MY_TAG, "HTTP_EVENT_ON_HEADER (%.*s)", evt->data_len, (char*)evt->data);
 		break;
 	case HTTP_EVENT_ON_DATA:
 		ESP_LOGI(MY_TAG, "HTTP_EVENT_ON_DATA, len=%d is_chunked=%d",
@@ -95,7 +123,7 @@ static esp_err_t _http_event_handle(esp_http_client_event_t *evt)
 		if (evt->data_len < RCV_BUFLEN)
 		{
 			strncpy(m_rcv_buffer, (char*)evt->data, evt->data_len);
-			ESP_LOGI(MY_TAG, "ooook(%s)", m_rcv_buffer);
+			ESP_LOGI(MY_TAG, "HTTP_EVENT_ON_DATA (%s)", m_rcv_buffer);
 		}
 		break;
 	case HTTP_EVENT_ON_FINISH:
@@ -112,15 +140,21 @@ static esp_err_t _http_event_handle(esp_http_client_event_t *evt)
 
 bool ota_need_update()
 {
+	size_t ota_url_len = 160;
+	char* ota_url = malloc(ota_url_len + 1);
+	snprintf(ota_url, ota_url_len,
+			 PROJECT_SHUTTERS_ADDRESS "/ota/%s?%s",
+			 ota_project_name(), m_sha256);
+
 	bool need_update = false;
 	m_rcv_buffer[0] = 0;
 
-	ESP_LOGI(MY_TAG, "Checking for update: %s", OTA_URL);
+	ESP_LOGI(MY_TAG, "Checking for update: %s", ota_url);
 
 	esp_http_client_config_t request = {
-		.url = OTA_URL,
+		.url = ota_url,
 		.event_handler = _http_event_handle,
-		.timeout_ms = 1000,
+		.timeout_ms = 2000,
 	};
 	esp_http_client_handle_t client = esp_http_client_init(&request);
 	esp_err_t err = esp_http_client_perform(client);
@@ -130,17 +164,24 @@ bool ota_need_update()
 		int size = esp_http_client_get_content_length(client);
 		ESP_LOGI(MY_TAG, "received[%d,%d]: %s", status, size, m_rcv_buffer);
 
-		need_update = status == 200 && strlen(m_rcv_buffer) != 0 && strcmp(m_rcv_buffer, PROJECT_VERSION);
-		if (status == 200 && strlen(m_rcv_buffer) != 0)
-		{
-			need_update = strcmp(m_rcv_buffer, PROJECT_VERSION);
-			ESP_LOGI(MY_TAG, "Version compare '%s' == '%s' ==> %d",
-					 m_rcv_buffer, PROJECT_VERSION, need_update);
-		}
+		need_update = (status == 200);
 	}
 	else
 		ESP_LOGI(MY_TAG, "Could not download info.");
 
+	free(ota_url);
 	esp_http_client_cleanup(client);
 	return need_update;
+}
+
+
+const char* ota_sha256()
+{
+	return m_sha256;
+}
+
+
+const char* ota_project_name()
+{
+	return m_project_name;
 }

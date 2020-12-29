@@ -1,8 +1,9 @@
 /**
  * This code is public domain.
  */
-#include "my_settings.h"
+#include "system/my_settings.h"
 #include "common.h"
+#include "system/ota.h"
 
 #include <esp_log.h>
 
@@ -24,9 +25,12 @@ static const char* MY_TAG = PROJECT_TAG("settings");
 static int32_t m_boot_counter = 1;
 
 
+static void print_all_keys(const char* storage);
+
+
 esp_err_t settings_init()
 {
-	ESP_LOGI(MY_TAG, "%s / %s / %d", PROJECT_NAME, PROJECT_VERSION, PROJECT_BOARD);
+	ESP_LOGI(MY_TAG, "%s / %s / %d", ota_project_name(), ota_sha256(), PROJECT_BOARD);
 
 	// -- initialize nvs.
 	esp_err_t err = nvs_flash_init();
@@ -56,9 +60,11 @@ esp_err_t settings_init()
 
 	// Example of nvs_get_stats() to get the number of used entries and free entries:
 	nvs_stats_t nvs_stats;
-	err = nvs_get_stats(APP_STORAGE, &nvs_stats);
+	err = nvs_get_stats(NVS_DEFAULT_PART_NAME, &nvs_stats);
 	ESP_LOGI(MY_TAG, "UsedEntries %zu FreeEntries %zu AllEntries %zu",
 			 nvs_stats.used_entries, nvs_stats.free_entries, nvs_stats.total_entries);
+
+	print_all_keys(STORAGE_APP);
 
 	ESP_LOGI(MY_TAG, "Error: %s/%d", esp_err_to_name(err), err);
 	return ESP_OK;
@@ -234,6 +240,82 @@ esp_err_t settings_clear(const char* storage)
 
 	nvs_close(handle);
 	return err;
+}
+
+
+static void print_all_keys(const char* namespace)
+{
+	ESP_LOGE(MY_TAG, "PRINT_ALL_KEYS: %s", namespace);
+
+	nvs_iterator_t it = nvs_entry_find(NVS_DEFAULT_PART_NAME, namespace, NVS_TYPE_ANY);
+	while (it != NULL)
+	{
+		nvs_entry_info_t info;
+		nvs_entry_info(it, &info);
+		it = nvs_entry_next(it);
+		switch (info.type)
+		{
+		case NVS_TYPE_STR:
+			{
+				char* buffer = NULL;
+				settings_get_str(namespace, info.key, &buffer, false);
+				ESP_LOGE(MY_TAG, "%s [%s]", info.key, buffer);
+				if (buffer)
+					free(buffer);
+			}
+			break;
+		case NVS_TYPE_I32:
+			{
+				int32_t value;
+				settings_get_int32(namespace, info.key, &value, false);
+				ESP_LOGE(MY_TAG, "%s [%d]", info.key, value);
+			}
+			break;
+		default:
+			ESP_LOGE(MY_TAG, "%s, 0x%x", info.key, info.type);
+			break;
+		}
+	}
+
+	ESP_LOGE(MY_TAG, "DONE: %s", namespace);
+}
+
+
+size_t settings_get_all(const char* namespace, const char** buffer, size_t buffer_len)
+{
+	char* p = *buffer;
+
+	nvs_iterator_t it = nvs_entry_find(NVS_DEFAULT_PART_NAME, namespace, NVS_TYPE_ANY);
+	while (it != NULL)
+	{
+		nvs_entry_info_t info;
+		nvs_entry_info(it, &info);
+		it = nvs_entry_next(it);
+
+		if (buffer_len < strlen(info.key) + 5)
+		{
+			ESP_LOGE(MY_TAG, "Too many entries.");
+			// we will fill the trailing chars with "." to indicate there is more.
+			while (--buffer_len)
+			{
+				*p = '.';
+				p += 1;
+			}
+			break;
+		}
+
+		strcpy(p, info.key);
+		p += strlen(info.key);
+		*p = ' ';
+		p += 1;
+		buffer_len -= strlen(info.key) + 1;
+	}
+
+	buffer_len = p - *buffer;
+	if (buffer_len)
+		--buffer_len;
+
+	return buffer_len;
 }
 
 
