@@ -45,5 +45,12 @@ async def main():
     await asyncio.sleep(30)
 
 
-asyncio.run(main())
 
+
+#asyncio.run(main())
+
+
+loop = asyncio.get_event_loop()
+loop.create_task(neopixel_task())
+loop.create_task(http_server_task())
+loop.run_forever()
