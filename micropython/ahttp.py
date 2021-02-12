@@ -13,15 +13,19 @@ async def neopixel_task():
 
 
 async def handle_request(reader, writer):
-    bytes_in = await reader.readline()
-    print("request: %s" % bytes_in)
+    while True:
+        bytes_in = await reader.readline()
+        line = bytes_in.decode().strip()
+        print("LINE %s" % line)
+        if not line:
+            break
     print(writer.get_extra_info("peername"))
-#    reader.close()
 
     writer.write(b"thank you\r\n")
     await writer.drain()
+
     writer.close()
-#    await writer.wait_closed()
+    await writer.wait_closed()
 
 
 async def http_server_task():
